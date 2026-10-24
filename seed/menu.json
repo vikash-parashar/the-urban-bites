@@ -1,0 +1,516 @@
+{
+  "_source": "Transcribed from the Urban Bites menu board photo (2026-10-24). Prices in INR. null price = not printed on the board; hidden from online ordering until the owner sets it.",
+  "business": {
+    "name": "The Urban Bites",
+    "tagline": "Tasty · Fresh · Hygienic · Quality",
+    "phone": "+918398907216",
+    "address": "Julana Bypass, near Brahmanwas, Haryana",
+    "lat": 29.113493,
+    "lng": 76.416352
+  },
+  "categories": [
+    {
+      "id": "momos",
+      "name": "Momos",
+      "name_hi": "मोमोज आईटम",
+      "items": [
+        {
+          "id": "momos",
+          "name": "Momos",
+          "name_hi": "मोमोज",
+          "full": 70,
+          "image": "momos"
+        },
+        {
+          "id": "kurkure-momos",
+          "name": "Kurkure Momos",
+          "name_hi": "कुरकुरे मोमोज",
+          "full": 120,
+          "image": "momos"
+        },
+        {
+          "id": "tandoori-momos",
+          "name": "Tandoori Momos",
+          "name_hi": "तन्दूरी मोमोज",
+          "full": 120,
+          "image": "momos"
+        },
+        {
+          "id": "afghani-momos",
+          "name": "Afghani Momos",
+          "name_hi": "अफगानी मोमोज",
+          "full": 120,
+          "image": "momos"
+        },
+        {
+          "id": "paneer-momos",
+          "name": "Paneer Momos",
+          "name_hi": "पनीर मोमोज",
+          "full": 120,
+          "image": "momos"
+        }
+      ]
+    },
+    {
+      "id": "chaap",
+      "name": "Chaap",
+      "name_hi": "चाप आईटम",
+      "items": [
+        {
+          "id": "gravy-chaap",
+          "name": "Gravy Chaap",
+          "name_hi": "ग्रेवी चाप",
+          "full": 220,
+          "half": 150,
+          "image": "chaap"
+        },
+        {
+          "id": "malai-chaap",
+          "name": "Malai Chaap",
+          "name_hi": "मलाई चाप",
+          "full": 230,
+          "half": 160,
+          "image": "chaap"
+        },
+        {
+          "id": "tandoori-chaap",
+          "name": "Tandoori Chaap",
+          "name_hi": "तन्दूरी चाप",
+          "full": 230,
+          "half": 160,
+          "image": "chaap"
+        },
+        {
+          "id": "lemon-chaap",
+          "name": "Lemon Chaap",
+          "name_hi": "लेमन चाप",
+          "full": 210,
+          "half": 150,
+          "image": "chaap"
+        },
+        {
+          "id": "hariyali-chaap",
+          "name": "Hariyali Chaap",
+          "name_hi": "हरियाली चाप",
+          "full": 220,
+          "half": 150,
+          "image": "chaap"
+        },
+        {
+          "id": "afghani-chaap",
+          "name": "Afghani Chaap",
+          "name_hi": "अफगानी चाप",
+          "full": 240,
+          "half": 160,
+          "image": "chaap"
+        }
+      ]
+    },
+    {
+      "id": "paneer",
+      "name": "Paneer & Sabzi",
+      "name_hi": "सब्जी आईटम",
+      "items": [
+        {
+          "id": "matar-paneer",
+          "name": "Matar Paneer",
+          "name_hi": "मटर पनीर",
+          "full": 240,
+          "half": 160,
+          "image": "kadhai-paneer"
+        },
+        {
+          "id": "shahi-paneer",
+          "name": "Shahi Paneer",
+          "name_hi": "शाही पनीर",
+          "full": 250,
+          "half": 160,
+          "image": "kadhai-paneer"
+        },
+        {
+          "id": "butter-paneer-masala",
+          "name": "Butter Paneer Masala",
+          "name_hi": "बटर पनीर मसाला",
+          "full": 240,
+          "half": 160,
+          "image": "kadhai-paneer"
+        },
+        {
+          "id": "kadhai-paneer",
+          "name": "Kadhai Paneer",
+          "name_hi": "कढ़ाई पनीर",
+          "full": 240,
+          "half": 160,
+          "image": "kadhai-paneer"
+        },
+        {
+          "id": "paneer-tikka",
+          "name": "Paneer Tikka",
+          "name_hi": "पनीर टिक्का",
+          "full": 250,
+          "half": 170,
+          "image": "paneer-tikka"
+        },
+        {
+          "id": "paneer-pasanda",
+          "name": "Paneer Pasanda",
+          "name_hi": "पनीर पसन्दा",
+          "full": 240,
+          "half": 160,
+          "image": "kadhai-paneer"
+        },
+        {
+          "id": "mushroom-special",
+          "name": "Mushroom Special",
+          "name_hi": "मसरूम स्पेशल",
+          "full": 260,
+          "half": 170,
+          "image": "kadhai-paneer"
+        }
+      ]
+    },
+    {
+      "id": "chinese",
+      "name": "Chinese",
+      "name_hi": "चाइनीज़",
+      "items": [
+        {
+          "id": "paneer-chilli",
+          "name": "Paneer Chilli",
+          "name_hi": "पनीर चिल्ली",
+          "full": 270,
+          "image": "chilli-paneer"
+        },
+        {
+          "id": "manchurian",
+          "name": "Manchurian",
+          "name_hi": "मनच्यूरियन",
+          "full": 140,
+          "image": "chilli-paneer"
+        },
+        {
+          "id": "fried-rice",
+          "name": "Fried Rice",
+          "name_hi": "फ्राई राईस",
+          "full": 140,
+          "image": "chilli-paneer"
+        }
+      ]
+    },
+    {
+      "id": "snacks",
+      "name": "Fries & Snacks",
+      "name_hi": "फिंगर आईटम",
+      "items": [
+        {
+          "id": "finger-chips",
+          "name": "Finger Chips",
+          "name_hi": "फिंगर चिप्स",
+          "full": 90,
+          "image": "fries"
+        },
+        {
+          "id": "finger-chilli",
+          "name": "Finger Chilli",
+          "name_hi": "फिंगर चिली",
+          "full": 160,
+          "image": "honey-chilli"
+        },
+        {
+          "id": "finger-peri-peri",
+          "name": "Finger Peri-Peri",
+          "name_hi": "फिंगर परी-परी",
+          "full": 110,
+          "image": "fries"
+        },
+        {
+          "id": "finger-honey-chilli",
+          "name": "Finger Honey Chilli",
+          "name_hi": "फिंगर हनी चिली",
+          "full": 120,
+          "image": "honey-chilli"
+        },
+        {
+          "id": "sweet-corn-masala",
+          "name": "Sweet Corn Masala",
+          "name_hi": "स्वीट कोर्न मसाला",
+          "full": 100,
+          "image": "peanut-masala"
+        },
+        {
+          "id": "chana-masala",
+          "name": "Chana Masala",
+          "name_hi": "चना मसाला",
+          "full": 80,
+          "image": "chana-masala"
+        },
+        {
+          "id": "peanut-masala",
+          "name": "Peanut Masala",
+          "name_hi": "पिनट मसाला",
+          "full": 110,
+          "image": "peanut-masala"
+        }
+      ]
+    },
+    {
+      "id": "breads",
+      "name": "Naan, Roti & Paratha",
+      "name_hi": "नान, रोटी व परांठा",
+      "items": [
+        {
+          "id": "garlic-naan",
+          "name": "Garlic Naan",
+          "name_hi": "गारलीक नान",
+          "full": 70,
+          "image": "naan"
+        },
+        {
+          "id": "ginger-naan",
+          "name": "Ginger Naan",
+          "name_hi": "जनजर नान",
+          "full": 70,
+          "image": "naan",
+          "_check": "board reads 'जनजर नान'; confirm name with owner"
+        },
+        {
+          "id": "omiya-naan",
+          "name": "Omiya Naan",
+          "name_hi": "ओमिया नान",
+          "full": 60,
+          "image": "naan",
+          "_check": "board reads 'ओमिया नान'; confirm name with owner"
+        },
+        {
+          "id": "plain-naan",
+          "name": "Plain Naan",
+          "name_hi": "प्लेन नान",
+          "full": 50,
+          "image": "naan"
+        },
+        {
+          "id": "tandoori-roti",
+          "name": "Tandoori Roti",
+          "name_hi": "तन्दूरी रोटी",
+          "full": 20,
+          "image": "naan"
+        },
+        {
+          "id": "missi-roti",
+          "name": "Missi Roti",
+          "name_hi": "मेसी रोटी",
+          "full": 35,
+          "image": "naan"
+        },
+        {
+          "id": "tandoori-paratha",
+          "name": "Tandoori Paratha",
+          "name_hi": "तन्दूरी परांठा",
+          "full": 60,
+          "image": "paratha"
+        },
+        {
+          "id": "lachha-paratha",
+          "name": "Lachha Paratha",
+          "name_hi": "लच्छा परांठा",
+          "full": 80,
+          "image": "paratha"
+        },
+        {
+          "id": "paneer-paratha",
+          "name": "Paneer Paratha",
+          "name_hi": "पनीर परांठा",
+          "full": 80,
+          "image": "paratha"
+        },
+        {
+          "id": "aloo-paratha",
+          "name": "Aloo Paratha",
+          "name_hi": "आलु परांठा",
+          "full": 60,
+          "image": "paratha"
+        },
+        {
+          "id": "pyaz-paratha",
+          "name": "Pyaz Paratha",
+          "name_hi": "प्याज परांठा",
+          "full": 60,
+          "image": "paratha"
+        },
+        {
+          "id": "mix-paratha",
+          "name": "Mix Paratha",
+          "name_hi": "मिक्स परांठा",
+          "full": 80,
+          "image": "paratha"
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "name": "Chai, Coffee & Sides",
+      "name_hi": "चाय, कॉफी व रायता",
+      "items": [
+        {
+          "id": "shakkar-chai",
+          "name": "Special Shakkar Wali Chai",
+          "name_hi": "स्पे. शक्कर वाली चाय",
+          "full": null,
+          "image": "chai"
+        },
+        {
+          "id": "cold-coffee",
+          "name": "Cold Coffee",
+          "name_hi": "कोल्ड कॉफी",
+          "full": 80,
+          "image": "cold-coffee"
+        },
+        {
+          "id": "lassi",
+          "name": "Lassi",
+          "name_hi": "लस्सी",
+          "full": null,
+          "image": "raita"
+        },
+        {
+          "id": "dahi",
+          "name": "Dahi",
+          "name_hi": "दही",
+          "full": null,
+          "image": "raita"
+        },
+        {
+          "id": "plain-raita",
+          "name": "Plain Raita",
+          "name_hi": "प्लेन रायता",
+          "full": null,
+          "image": "raita"
+        },
+        {
+          "id": "green-raita",
+          "name": "Green Raita",
+          "name_hi": "ग्रीन रायता",
+          "full": null,
+          "image": "raita"
+        },
+        {
+          "id": "special-raita",
+          "name": "Special Raita",
+          "name_hi": "स्पेशल रायता",
+          "full": null,
+          "image": "raita"
+        }
+      ]
+    },
+    {
+      "id": "cold-drinks",
+      "name": "Cold Drinks",
+      "name_hi": "कोल्ड ड्रिंक्स",
+      "items": [
+        {
+          "id": "pepsi-250",
+          "name": "Pepsi 250 ml",
+          "name_hi": "पेप्सी",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "coca-cola-250",
+          "name": "Coca-Cola 250 ml",
+          "name_hi": "कोका-कोला",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "thums-up-250",
+          "name": "Thums Up 250 ml",
+          "name_hi": "थम्स अप",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "sprite-250",
+          "name": "Sprite 250 ml",
+          "name_hi": "स्प्राइट",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "maaza-250",
+          "name": "Maaza 250 ml",
+          "name_hi": "माज़ा",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "cold-drink-750",
+          "name": "Cold Drink 750 ml",
+          "name_hi": "कोल्ड ड्रिंक 750 ml",
+          "full": 40,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "red-bull",
+          "name": "Red Bull 250 ml",
+          "name_hi": "रेड बुल",
+          "full": 125,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "water-1l",
+          "name": "Mineral Water 1 L",
+          "name_hi": "पानी की बोतल",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        }
+      ]
+    },
+    {
+      "id": "packaged-snacks",
+      "name": "Chips & Snacks",
+      "name_hi": "चिप्स व स्नैक्स",
+      "items": [
+        {
+          "id": "lays",
+          "name": "Lay's Chips",
+          "name_hi": "लेज़ चिप्स",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "kurkure",
+          "name": "Kurkure",
+          "name_hi": "कुरकुरे",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "choco-pie",
+          "name": "Choco Pie",
+          "name_hi": "चोको पाई",
+          "full": 10,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        },
+        {
+          "id": "dairy-milk",
+          "name": "Cadbury Dairy Milk",
+          "name_hi": "डेरी मिल्क",
+          "full": 20,
+          "image": "",
+          "_check": "MRP guess; confirm with owner"
+        }
+      ]
+    }
+  ]
+}

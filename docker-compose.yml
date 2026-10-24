@@ -1,0 +1,29 @@
+# Local dev: Postgres + the API. `docker compose up -d`, then seed the menu and staff once:
+#   docker compose run --rm -v ./seed:/seed api-seed -menu /seed/menu.json
+#   docker compose run --rm -e STAFF_PASSWORD='...' api-seed -add-staff -email you@example.com -name Vikash -role admin
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ub
+      POSTGRES_PASSWORD: ub
+      POSTGRES_DB: urbanbites
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+  api:
+    build: ./api
+    depends_on: [db]
+    ports: ["8080:8080"]
+    environment:
+      DATABASE_URL: postgres://ub:ub@db:5432/urbanbites?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret}
+      ALLOWED_ORIGINS: "*"
+  api-seed:
+    build: ./api
+    depends_on: [db]
+    profiles: [tools]
+    entrypoint: ["/usr/local/bin/seed"]
+    environment:
+      DATABASE_URL: postgres://ub:ub@db:5432/urbanbites?sslmode=disable
+volumes:
+  pgdata:
