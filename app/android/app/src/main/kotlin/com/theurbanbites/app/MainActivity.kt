@@ -1,4 +1,4 @@
-package `in`.theurbanbites.urban_bites
+package com.theurbanbites.app
 
 import io.flutter.embedding.android.FlutterActivity
 
