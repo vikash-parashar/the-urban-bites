@@ -1,0 +1,19 @@
+# Render blueprint: the Go API on Render's free plan in Singapore (next to Neon).
+# Render → New → Blueprint → pick this repo. It asks for DATABASE_URL; JWT_SECRET is generated.
+services:
+  - type: web
+    name: the-urban-bites-api
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /v1/shop
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://theurbanbites.in,https://www.theurbanbites.in,https://the-urban-bites.pages.dev
