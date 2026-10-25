@@ -17,6 +17,12 @@ const demoOwnerEmail = 'owner@demo.in';
 const demoAdminEmail = 'admin@demo.in';
 const demoPassword = 'urban1234';
 
+// Manjeet's own Gmail accounts as owner logins, for showing him the demo (demo build only).
+const demoManjeetOwners = [
+  ('manjeet7216@gmail.com', 'Manjeet Sharma', 'UrbanDemo@2026'),
+  ('manjeetsharma839890@gmail.com', 'Manjeet Sharma', 'UrbanDemo@2027'),
+];
+
 class DemoServer {
   DemoServer._();
   static final DemoServer instance = DemoServer._();
@@ -37,6 +43,13 @@ class DemoServer {
     final shop = _s!['shop'] as Map<String, dynamic>;
     shop.putIfAbsent('upi_id', () => 'demo.urbanbites@upi');
     shop.putIfAbsent('upi_name', () => 'The Urban Bites');
+    // Add Manjeet's demo owner logins to demo data saved before they existed.
+    final users = _s!['users'] as List;
+    for (final (email, name, pw) in demoManjeetOwners) {
+      if (!users.any((u) => (u as Map)['email'] == email)) {
+        users.add({'id': _id(), 'email': email, 'name': name, 'role': 'owner', 'active': true, 'created_at': _now(), 'last_login_at': null, 'password': pw});
+      }
+    }
     return _s!;
   }
 
