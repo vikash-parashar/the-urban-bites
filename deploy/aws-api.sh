@@ -2,7 +2,7 @@
 # Builds the Go API and deploys it to AWS Lambda behind an API Gateway HTTP API.
 # Safe to run again: it updates the code and settings if they already exist.
 #
-# Needs: aws CLI signed in (aws configure), Go 1.24+, zip.
+# Needs: aws CLI signed in (aws configure), Go 1.25+, zip.
 # Env:
 #   DATABASE_URL     Neon connection string (with sslmode=require)
 #   JWT_SECRET       long random string, e.g. `openssl rand -base64 48` (keep it; changing it signs everyone out)
