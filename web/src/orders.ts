@@ -45,6 +45,7 @@ export function useTracking(order: PlacedOrder | undefined) {
   const [data, setData] = useState<Tracking | null>(null)
   const [error, setError] = useState('')
   const [clockOffset, setClockOffset] = useState(0)
+  const [nonce, setNonce] = useState(0)
 
   useEffect(() => {
     if (!order) return
@@ -63,15 +64,15 @@ export function useTracking(order: PlacedOrder | undefined) {
       }
       timer = window.setTimeout(tick, document.hidden ? POLL_MS * 3 : POLL_MS)
     }
-    setData(null)
+    if (nonce === 0) setData(null)
     tick()
     return () => {
       stop = true
       clearTimeout(timer)
     }
-  }, [order?.id])
+  }, [order?.id, nonce])
 
-  return { data, error, clockOffset }
+  return { data, error, clockOffset, refresh: () => setNonce((n) => n + 1) }
 }
 
 // Re-renders every second while a countdown is showing.

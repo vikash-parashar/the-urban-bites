@@ -2,6 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { lookup, type Cart } from './cart'
 import { isPreview } from './api'
 import { rupees } from './menu'
+import type { ReactNode } from 'react'
+import { googleMaps, social } from './social'
+import { checkMobile, cleanMobile, tenDigits } from './kit'
 import { fetchBadge, fetchRegulars, loadMe, tierLevel, type Badge, type Offer, type Regular, type Shop, type Tier, defaultTiers } from './shop'
 
 // ---- Free delivery banner ----
@@ -110,7 +113,7 @@ export function Regulars({ localOrders }: { localOrders: number }) {
   const [regulars, setRegulars] = useState<Regular[]>([])
   const [tiers, setTiers] = useState<Tier[]>(defaultTiers)
   const [monthlyMin, setMonthlyMin] = useState(3)
-  const [phone, setPhone] = useState(() => loadMe()?.phone ?? '')
+  const [phone, setPhone] = useState(() => tenDigits(loadMe()?.phone))
   const [mine, setMine] = useState<Badge | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -130,7 +133,7 @@ export function Regulars({ localOrders }: { localOrders: number }) {
     setBusy(true)
     setError('')
     try {
-      setMine(await fetchBadge(phone, localOrders))
+      setMine(await fetchBadge(`+91${phone}`, localOrders))
     } catch (err) {
       setMine(null)
       setError(err instanceof Error ? err.message : 'Could not check right now.')
@@ -139,13 +142,60 @@ export function Regulars({ localOrders }: { localOrders: number }) {
     }
   }
 
+  const podium = [regulars[1], regulars[0], regulars[2]] // silver, gold, bronze
+  const rest = regulars.slice(3)
+  const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+
   return (
-    <section className="regulars" id="regulars" aria-labelledby="regulars-title">
-      <div className="menu-head">
-        <p className="eyebrow">Eat more, earn a badge</p>
-        <h2 id="regulars-title">Urban Regulars</h2>
-        <p className="menu-sub">Every finished order counts, whether you order here, in the app, or at the counter. Give your phone number when you order at the cart.</p>
+    <section className="regulars wall" id="regulars" aria-labelledby="regulars-title">
+      <div className="wall-sign" aria-hidden="true">
+        <span className="wall-bulbs" />
       </div>
+      <div className="menu-head wall-head">
+        <p className="eyebrow">Urban Regulars · {new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</p>
+        <h2 id="regulars-title"><span className="wall-hall">Wall of</span> <span className="wall-fame">Fame</span></h2>
+        <p className="menu-sub">The biggest foodies of the month, in lights. Every finished order counts: website, app or at the counter. {monthlyMin} orders this month puts your name up here.</p>
+      </div>
+
+      {regulars.length === 0 ? (
+        <div className="wall-empty">
+          <span className="wall-crown" aria-hidden="true">👑</span>
+          <p><strong>This spot is waiting for you.</strong> Be the first foodie on the wall this month.</p>
+          <a className="btn btn-gold" href="#menu">Order now</a>
+        </div>
+      ) : (
+        <>
+          <ol className="podium" aria-label="Top three this month">
+            {podium.map((r, i) => {
+              if (!r) return <li key={i} className="podium-spot empty" aria-hidden="true" />
+              const place = i === 1 ? 1 : i === 0 ? 2 : 3
+              return (
+                <li key={`${r.name}-${r.phone_hint}`} className={`podium-spot place-${place}`}>
+                  {place === 1 && <span className="wall-crown" aria-hidden="true">👑</span>}
+                  <span className="avatar" aria-hidden="true">{initials(r.name)}</span>
+                  <strong className="podium-name">{r.name}</strong>
+                  <small>{r.phone_hint}</small>
+                  <span className="podium-count">{r.month_orders} orders</span>
+                  <BadgeMedal name={r.badge} />
+                  <span className="plinth"><b>{place}</b>{place === 1 && <em>Foodie of the month</em>}</span>
+                </li>
+              )
+            })}
+          </ol>
+          {rest.length > 0 && (
+            <div className="wall-ticker" aria-label="More regulars this month">
+              <div className="wall-run">
+                {[...rest, ...rest].map((r, i) => (
+                  <span key={i} aria-hidden={i >= rest.length}>
+                    ⭐ <b>{r.name}</b> {r.phone_hint} · {r.month_orders} orders
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {isPreview && <p className="tracker-note preview-note">Preview: sample names. On the live site these are real customers who ordered this month (first name and last two digits only).</p>}
 
       <div className="reg-grid">
         <ol className="tiers">
@@ -157,35 +207,17 @@ export function Regulars({ localOrders }: { localOrders: number }) {
           ))}
         </ol>
 
-        <div className="board-card">
-          <h3>Top this month</h3>
-          {regulars.length === 0 ? (
-            <p className="menu-sub">Nobody yet. {monthlyMin} orders this month puts you on the board.</p>
-          ) : (
-            <ol className="leaders">
-              {regulars.map((r, i) => (
-                <li key={`${r.name}-${r.phone_hint}`} className={i === 0 ? 'top' : ''}>
-                  <span className="rank">{i + 1}</span>
-                  <span className="who">
-                    <strong>{r.name}</strong> <small>{r.phone_hint}</small>
-                    {i === 0 && <em className="fotm">Foodie of the month</em>}
-                  </span>
-                  <span className="count">{r.month_orders} orders</span>
-                  <BadgeMedal name={r.badge} />
-                </li>
-              ))}
-            </ol>
-          )}
-          {isPreview && <p className="tracker-note preview-note">Preview: sample leaderboard.</p>}
-        </div>
-
         <form className="board-card check-badge" onSubmit={check}>
-          <h3>Check your badge</h3>
+          <h3>Am I on the wall?</h3>
           <label className="field" htmlFor="badge-phone">
-            Your phone number
-            <input id="badge-phone" inputMode="tel" required pattern="[0-9+ ]{10,14}" placeholder="10-digit mobile" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            Your mobile number
+            <span className="phone-in">
+              <span className="cc" aria-hidden="true">🇮🇳 +91</span>
+              <input id="badge-phone" inputMode="numeric" required maxLength={10} placeholder="98765 43210" value={phone}
+                onChange={(e) => setPhone(cleanMobile(e.target.value))} />
+            </span>
           </label>
-          <button className="btn btn-ghost" disabled={busy}>{busy ? 'Checking…' : 'Check'}</button>
+          <button className="btn btn-gold" disabled={busy || checkMobile(phone) !== ''}>{busy ? 'Checking…' : 'Check my badge'}</button>
           {error && <p className="error" role="alert">{error}</p>}
           {mine && <BadgeResult b={mine} />}
         </form>
@@ -217,4 +249,78 @@ export function ShopNotice({ shop }: { shop: Shop }) {
       {shop.notice || 'Call 83989 07216 or visit the cart.'}
     </div>
   )
+}
+
+// ---- Our promise ----
+
+const promises = [
+  { icon: '😋', title: 'Taste you come back for', hi: 'ऐसा स्वाद, बार-बार आओ', text: 'Recipes cooked the same way every night, so your favourite always tastes like your favourite.' },
+  { icon: '🧼', title: 'Spotless kitchen', hi: 'पूरी सफ़ाई', text: 'Clean counters, clean hands, clean oil. You can watch every plate being made.' },
+  { icon: '🥇', title: 'Only the best ingredients', hi: 'सबसे अच्छी सामग्री', text: 'Fresh paneer, fresh vegetables and pure masalas. Nothing old, nothing cheap.' },
+  { icon: '🔥', title: 'Made fresh to order', hi: 'ताज़ा, गरमा-गरम', text: 'Nothing sits waiting. Your food goes from the tawa to your plate.' },
+]
+
+export function Promise() {
+  return (
+    <section className="promise" aria-labelledby="promise-title">
+      <div className="menu-head">
+        <p className="eyebrow">Our promise</p>
+        <h2 id="promise-title">
+          <span>Quality, taste, cleanliness.</span>
+          <span className="promise-gold">No match anywhere.</span>
+        </h2>
+        <p className="promise-hi" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में कोई मुकाबला नहीं</p>
+      </div>
+      <ul className="promise-grid">
+        {promises.map((p) => (
+          <li key={p.title} className="promise-card">
+            <span className="promise-icon" aria-hidden="true">{p.icon}</span>
+            <h3>{p.title}</h3>
+            <p className="promise-card-hi" lang="hi">{p.hi}</p>
+            <p>{p.text}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+// ---- Follow and rate ----
+
+export function Social({ lat, lng }: { lat: number; lng: number }) {
+  const links = [
+    social.instagram && { href: social.instagram, cls: 'ig', label: 'Instagram', sub: 'Reels from the cart' },
+    social.facebook && { href: social.facebook, cls: 'fb', label: 'Facebook', sub: 'Offers and news' },
+    { href: social.googleReview || googleMaps(lat, lng), cls: 'gg', label: social.googleReview ? 'Rate us on Google' : 'Find us on Google', sub: social.googleReview ? '⭐⭐⭐⭐⭐ takes 10 seconds' : 'Maps and directions' },
+    { href: social.whatsapp, cls: 'wa', label: 'WhatsApp', sub: 'Order or ask a question' },
+  ].filter(Boolean) as { href: string; cls: string; label: string; sub: string }[]
+  return (
+    <section className="social" aria-labelledby="social-title">
+      <h2 id="social-title">Loved it? Tell everyone.</h2>
+      <p className="menu-sub">Follow the cart, share a photo of your plate, or leave a review. It helps a small family business more than you'd think.</p>
+      <div className="social-links">
+        {links.map((l) => (
+          <a key={l.cls} className={`social-btn ${l.cls}`} href={l.href} target="_blank" rel="noopener">
+            <span className="social-ico" aria-hidden="true">{socialIcon[l.cls]}</span>
+            <span><strong>{l.label}</strong><small>{l.sub}</small></span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+const socialIcon: Record<string, ReactNode> = {
+  ig: (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" /></svg>
+  ),
+  fb: (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M14 8h3V4h-3c-2.8 0-4.5 1.8-4.5 4.6V11H7v4h2.5v9h4v-9h3l.5-4h-3.5V9c0-.6.4-1 1-1z" /></svg>
+  ),
+  gg: (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z" /></svg>
+  ),
+  wa: (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 .9-2.3c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.8-.1 1.3z" /></svg>
+  ),
 }

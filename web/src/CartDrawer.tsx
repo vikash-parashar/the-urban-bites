@@ -4,6 +4,7 @@ import { business, rupees } from './menu'
 import { placeOrder, type OrderRequest, type PlacedOrder } from './api'
 import { deliveryFee, distanceKm, loadMe, saveMe, type Shop } from './shop'
 import Tracker from './Tracker'
+import { checkAddress, checkFirstName, checkLastName, checkMobile, cleanMobile, cleanName, itemKind, tenDigits } from './kit'
 
 interface Props {
   cart: Cart
@@ -24,6 +25,19 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
   const [error, setError] = useState('')
   const [loc, setLoc] = useState<Loc>({ state: 'idle' })
   const me = loadMe()
+  const [first, setFirst] = useState(me?.first ?? me?.name?.split(' ')[0] ?? '')
+  const [last, setLast] = useState(me?.last ?? me?.name?.split(' ').slice(1).join(' ') ?? '')
+  const [mobile, setMobile] = useState(tenDigits(me?.phone))
+  const [address, setAddress] = useState(me?.address ?? '')
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => ({ ...t, [k]: true }))
+  const errs = {
+    first: checkFirstName(first),
+    last: checkLastName(last),
+    mobile: checkMobile(mobile),
+    address: fulfilment === 'delivery' ? checkAddress(address) : '',
+  }
+  const show = (k: keyof typeof errs) => (touched[k] ? errs[k] : '')
 
   useEffect(() => {
     if (!open) return
@@ -62,9 +76,14 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!canOrder) return
+    if (Object.values(errs).some(Boolean)) {
+      setTouched({ first: true, last: true, mobile: true, address: true })
+      setError('Please fix the highlighted fields.')
+      return
+    }
     const f = new FormData(e.currentTarget)
-    const name = String(f.get('name')).trim()
-    const phone = String(f.get('phone')).trim()
+    const name = [first.trim(), last.trim()].filter(Boolean).join(' ')
+    const phone = `+91${mobile}`
     setBusy(true)
     setError('')
     try {
@@ -74,16 +93,16 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
           customer_name: name,
           customer_phone: phone,
           fulfilment,
-          address: delivery ? String(f.get('address')) : undefined,
+          address: delivery ? address.trim() : undefined,
           note: String(f.get('note') || '') || undefined,
-          payment_method: payment,
+          payment_method: shop.upi_id ? payment : 'cash',
           items: lines.map((l) => ({ item_id: l.itemId, size: l.size, qty: l.qty })),
           ...(delivery && loc.state === 'ok' ? { lat: loc.lat, lng: loc.lng } : {}),
         },
         total,
         lines,
       )
-      saveMe({ name, phone })
+      saveMe({ name, phone, first: first.trim(), last: last.trim(), address: address.trim() || undefined })
       onPlaced(placed)
       cart.dispatch({ type: 'clear' })
     } catch (err) {
@@ -106,7 +125,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
 
         {tracking ? (
           <>
-            <Tracker order={tracking} phone={me?.phone} />
+            <Tracker order={tracking} phone={me?.phone} shop={shop} />
             {tracking.lines?.length ? (
               <button className="btn btn-ghost" onClick={() => cart.dispatch({ type: 'fill', lines: tracking.lines! })}>Order the same again</button>
             ) : null}
@@ -136,6 +155,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
                 const onOffer = l.size === 'full' && offerPrice(item) != null
                 return (
                   <li key={`${l.itemId}-${l.size}`}>
+                    <span className="line-emoji" aria-hidden="true">{itemKind(item.name).emoji}</span>
                     <div>
                       <strong>{item.name}</strong>
                       {(item.half != null || onOffer) && (
@@ -187,20 +207,38 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
               <div className="total-row"><span>Total</span><strong>{rupees(total)}</strong></div>
             </div>
 
-            <label className="field" htmlFor="co-name">
-              Name
-              <input id="co-name" name="name" required autoComplete="name" defaultValue={me?.name} />
-            </label>
+            <div className="field-row">
+              <label className="field" htmlFor="co-first">
+                First name *
+                <input id="co-first" required autoComplete="given-name" value={first} maxLength={28}
+                  onChange={(e) => setFirst(cleanName(e.target.value))} onBlur={() => touch('first')} aria-invalid={!!show('first')} aria-describedby="co-first-err" />
+                {show('first') && <span className="field-err" id="co-first-err">{show('first')}</span>}
+              </label>
+              <label className="field" htmlFor="co-last">
+                Last name
+                <input id="co-last" autoComplete="family-name" value={last} maxLength={28}
+                  onChange={(e) => setLast(cleanName(e.target.value))} onBlur={() => touch('last')} aria-invalid={!!show('last')} />
+                {show('last') && <span className="field-err">{show('last')}</span>}
+              </label>
+            </div>
             <label className="field" htmlFor="co-phone">
-              Phone
-              <input id="co-phone" name="phone" required inputMode="tel" pattern="[0-9+ ]{10,14}" autoComplete="tel" placeholder="10-digit mobile" defaultValue={me?.phone} />
-              <span className="opt">Your orders count toward your Urban Regulars badge.</span>
+              Mobile number *
+              <span className={`phone-in ${show('mobile') ? 'bad' : ''}`}>
+                <span className="cc" aria-hidden="true">🇮🇳 +91</span>
+                <input id="co-phone" required inputMode="numeric" autoComplete="tel-national" placeholder="98765 43210" value={mobile} maxLength={10}
+                  onChange={(e) => setMobile(cleanMobile(e.target.value))} onBlur={() => touch('mobile')} aria-invalid={!!show('mobile')} aria-describedby="co-phone-help" />
+                <span className="count" aria-hidden="true">{mobile.length}/10</span>
+              </span>
+              {show('mobile') ? <span className="field-err">{show('mobile')}</span>
+                : <span className="opt" id="co-phone-help">Your bill and order updates come to this number. Orders count toward your Urban Regulars badge.</span>}
             </label>
             {delivery && (
               <>
                 <label className="field" htmlFor="co-address">
-                  Delivery address
-                  <textarea id="co-address" name="address" required rows={2} placeholder="House, street, landmark" />
+                  Delivery address *
+                  <textarea id="co-address" required rows={2} maxLength={200} placeholder="House no., street, village, landmark" value={address}
+                    onChange={(e) => setAddress(e.target.value)} onBlur={() => touch('address')} aria-invalid={!!show('address')} />
+                  {show('address') && <span className="field-err">{show('address')}</span>}
                 </label>
                 <div className="locate">
                   <button type="button" className="btn btn-ghost btn-sm" onClick={locate} disabled={loc.state === 'busy'}>
@@ -221,15 +259,16 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
             )}
             <label className="field" htmlFor="co-note">
               Note for the kitchen <span className="opt">optional</span>
-              <input id="co-note" name="note" placeholder="Less spicy, extra chutney…" />
+              <input id="co-note" name="note" maxLength={120} placeholder="Less spicy, extra chutney…" />
             </label>
 
             <fieldset className="seg">
               <legend>Payment</legend>
-              {(['cash', 'online'] as const).map((v) => (
+              {(shop.upi_id ? (['cash', 'online'] as const) : (['cash'] as const)).map((v) => (
                 <label key={v} className={payment === v ? 'on' : ''}>
                   <input type="radio" name="payment" id={`pay-${v}`} checked={payment === v} onChange={() => setPayment(v)} />
-                  {v === 'cash' ? (delivery ? 'Cash on delivery' : 'Pay at the counter') : 'Pay online (UPI / card)'}
+                  <span className="pay-emoji" aria-hidden="true">{v === 'cash' ? '💵' : '📲'}</span>
+                  {v === 'cash' ? (delivery ? 'Cash on delivery' : 'Pay at the counter') : 'Pay now with UPI'}
                 </label>
               ))}
             </fieldset>

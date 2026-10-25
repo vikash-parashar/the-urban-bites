@@ -1,3 +1,4 @@
+import { cleanMobile } from './kit'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { SignedOut, staffApi, type OfferInput, type StaffOrder } from './staffApi'
 import { rupees } from './menu'
@@ -83,7 +84,7 @@ export function WalkIn({ onSignedOut }: { onSignedOut: () => void }) {
     const r = await guard(
       staffApi.counterSale({
         customer_name: String(f.get('name') || ''),
-        customer_phone: String(f.get('phone') || ''),
+        customer_phone: f.get('phone') ? `+91${String(f.get('phone'))}` : '',
         payment_method: payment,
         ...(picked.length ? { items: picked.map(([item_id, qty]) => ({ item_id, size: 'full', qty })) } : { amount: amt }),
       }),
@@ -109,7 +110,7 @@ export function WalkIn({ onSignedOut }: { onSignedOut: () => void }) {
       )}
       <form className="walkin" onSubmit={save}>
         <div className="walkin-who">
-          <label className="field" htmlFor="wi-phone">Customer phone <span className="opt">for the badge</span><input id="wi-phone" name="phone" inputMode="tel" pattern="[0-9+ ]{10,14}" placeholder="10-digit mobile" /></label>
+          <label className="field" htmlFor="wi-phone">Customer phone <span className="opt">for the badge</span><span className="phone-in"><span className="cc" aria-hidden="true">+91</span><input id="wi-phone" name="phone" inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}" title="10-digit mobile starting with 6, 7, 8 or 9" placeholder="98765 43210" onInput={(e) => { e.currentTarget.value = cleanMobile(e.currentTarget.value) }} /></span></label>
           <label className="field" htmlFor="wi-name">Name <span className="opt">optional</span><input id="wi-name" name="name" /></label>
           <fieldset className="seg">
             <legend>Paid by</legend>
@@ -281,6 +282,7 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
     patch({
       min_order_delivery: n('min_d'), min_order_pickup: n('min_p'), free_delivery_min: n('free_min'),
       free_delivery_km: n('free_km'), max_delivery_km: n('max_km'), delivery_fee: n('fee'), notice: String(f.get('notice') || ''),
+      upi_id: String(f.get('upi_id') || '').trim(), upi_name: String(f.get('upi_name') || '').trim() || 'The Urban Bites',
     })
   }
 
@@ -318,6 +320,12 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
           <label className="field" htmlFor="sh-fee">Delivery charge otherwise ₹<input id="sh-fee" name="fee" inputMode="numeric" defaultValue={shop.delivery_fee} /></label>
         </div>
         <label className="field" htmlFor="sh-notice">Notice on the website <span className="opt">optional, e.g. "Closed on Tuesday"</span><input id="sh-notice" name="notice" maxLength={200} defaultValue={shop.notice} /></label>
+        <h3 className="panel-h">📲 UPI payments</h3>
+        <p className="menu-sub">Customers pay with GPay, PhonePe or Paytm straight to this UPI ID. No fees. Leave empty to take cash only.</p>
+        <div className="add-staff">
+          <label className="field" htmlFor="sh-upi">UPI ID<input id="sh-upi" name="upi_id" autoComplete="off" placeholder="8398907216@ybl" pattern="[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}" title="Looks like name@bank, for example 8398907216@ybl" defaultValue={shop.upi_id} /></label>
+          <label className="field" htmlFor="sh-upi-name">Name shown in UPI apps<input id="sh-upi-name" name="upi_name" maxLength={50} defaultValue={shop.upi_name} /></label>
+        </div>
         <button className="btn btn-gold">Save rules</button>
       </form>
 

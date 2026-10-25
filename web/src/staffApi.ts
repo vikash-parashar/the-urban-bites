@@ -23,6 +23,7 @@ export interface StaffOrder {
   status: string
   payment_method: 'cash' | 'online'
   payment_status: 'pending' | 'paid' | 'refunded'
+  payment_ref?: string | null
   source: 'web' | 'app' | 'counter'
   subtotal: number
   delivery_fee: number

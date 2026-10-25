@@ -44,7 +44,7 @@ func (s *Server) badge(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) regulars(w http.ResponseWriter, r *http.Request) {
-	list, err := s.Store.Leaderboard(r.Context(), 5)
+	list, err := s.Store.Leaderboard(r.Context(), 12)
 	if err != nil {
 		writeErr(w, r, err)
 		return

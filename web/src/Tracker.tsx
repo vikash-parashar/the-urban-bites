@@ -5,6 +5,8 @@ import { useNow, useTracking } from './orders'
 import { rupees } from './menu'
 import { fetchBadge, type Badge } from './shop'
 import { BadgeResult } from './Extras'
+import { BillCard, UpiPay, billFrom } from './PayBill'
+import type { Shop } from './shop'
 
 const pickupSteps: { key: OrderStatus; label: string }[] = [
   { key: 'placed', label: 'Order received' },
@@ -40,8 +42,8 @@ function headline(status: OrderStatus, delivery: boolean, hasTime: boolean) {
   }
 }
 
-export default function Tracker({ order, phone }: { order: PlacedOrder; phone?: string }) {
-  const { data, error, clockOffset } = useTracking(order)
+export default function Tracker({ order, phone, shop }: { order: PlacedOrder; phone?: string; shop: Shop }) {
+  const { data, error, clockOffset, refresh } = useTracking(order)
   const [badge, setBadge] = useState<Badge | null>(null)
   const finished = data?.status === 'completed'
   useEffect(() => {
@@ -122,6 +124,11 @@ export default function Tracker({ order, phone }: { order: PlacedOrder; phone?: 
           The owner set {data.prep_minutes} minutes for this order. This page updates on its own.
         </p>
       )}
+      {shop.upi_id && data && data.status !== 'cancelled' && data.payment_status !== 'paid' && (data.payment_method ?? order.payment_method) === 'online' && (
+        <UpiPay shop={shop} order={order} amount={data.total} sentRef={data.payment_ref} onSent={refresh} />
+      )}
+      {data?.payment_status === 'paid' && <p className="upi-paid">✅ Paid{data.payment_ref ? ` · UPI ref ${data.payment_ref}` : ''}</p>}
+      <BillCard bill={billFrom(order, data)} phone={phone} />
       {badge && (
         <div className="tracker-badge">
           <p className="eyebrow">Urban Regulars</p>

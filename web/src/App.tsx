@@ -10,7 +10,8 @@ import Menu from './Menu'
 import CartDrawer from './CartDrawer'
 import Gallery from './Gallery'
 import HeroSound from './HeroSound'
-import { DeliveryBanner, Offers, Regulars, ShopNotice } from './Extras'
+import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
+import Intro from './Intro'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -59,7 +60,14 @@ export default function App() {
           const len = p.getTotalLength()
           gsap.set(p, { strokeDasharray: len, strokeDashoffset: len })
         })
-        const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
+        // Wait for the opening card (Intro) on the first visit of the session.
+        let introShowing = false
+        try {
+          introShowing = !sessionStorage.getItem('ub-intro')
+        } catch {
+          /* storage blocked */
+        }
+        const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: introShowing ? 2.2 : 0 })
         tl.to(roof, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut', stagger: 0.15 })
           .fromTo('.roof', { opacity: 0.3 }, { opacity: 1, duration: 0.5, ease: 'steps(6)' }, '-=0.3')
           .from('.hero-the', { y: 20, opacity: 0, duration: 0.5 }, '-=0.6')
@@ -116,8 +124,10 @@ export default function App() {
 
   return (
     <div ref={root}>
+      <Intro />
       <header className="topbar">
         <a className="brand" href="#top" aria-label="The Urban Bites, back to top">
+          <img className="brand-mark" src="/brand/mark-256.png" alt="" width={36} height={36} />
           <span className="brand-urban">Urban</span>
           <span className="brand-bites">Bites</span>
         </a>
@@ -160,6 +170,7 @@ export default function App() {
             <li>Hygienic</li>
             <li>Quality</li>
           </ul>
+          <p className="hero-motto" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में कोई मुकाबला नहीं</p>
           <div className="hero-cta">
             <a className="btn btn-gold" href="#menu">See the menu</a>
             <a className="btn btn-ghost" href={`tel:${business.phone}`}>Call 83989 07216</a>
@@ -187,6 +198,8 @@ export default function App() {
       </div>
 
       <DeliveryBanner shop={shop} />
+
+      <OurPromise />
 
 
       <Offers offers={offers} cart={cart} onOpenCart={openCart} />
@@ -253,8 +266,11 @@ export default function App() {
 
       <Gallery />
 
+      <Social lat={business.lat} lng={business.lng} />
+
       <footer className="footer">
         <span className="brand">
+          <img className="brand-mark" src="/brand/mark-256.png" alt="" width={44} height={44} />
           <span className="brand-urban">The Urban</span>
           <span className="brand-bites">Bites</span>
         </span>

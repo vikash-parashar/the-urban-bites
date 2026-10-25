@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { categories as bundled, dishImage, rupees, type Category, type MenuItem, type Size } from './menu'
 import { offerPrice, registerMenu, type Cart } from './cart'
 import { fetchMenu } from './api'
+import { categoryEmoji, itemKind } from './kit'
 
 // offersVersion changes when today's offers load, so offer prices re-render.
 export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersion: number }) {
@@ -65,7 +66,7 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
             className="tab"
             onClick={() => setActive(c.id)}
           >
-            <span>{c.name}</span>
+            <span><i className="tab-emoji" aria-hidden="true">{categoryEmoji[c.id] ?? itemKind(c.items[0]?.name ?? '', c.name).emoji}</i>{c.name}</span>
             <small lang="hi">{c.name_hi}</small>
           </button>
         ))}
@@ -73,7 +74,7 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
 
       <div className="dishes" id="menu-panel" role={q ? 'region' : 'tabpanel'} aria-labelledby={q ? undefined : `tab-${active}`} aria-label={q ? 'Search results' : undefined} ref={grid} data-offers={offersVersion}>
         {shown.map((item) => (
-          <Dish key={item.id} item={item} cart={cart} />
+          <Dish key={item.id} item={item} cart={cart} category={categories.find((c) => c.items.includes(item))?.name ?? ''} />
         ))}
         {q && shown.length === 0 && (
           <p className="menu-sub">Nothing called "{query.trim()}" on the board. Try another word, or call us and ask.</p>
@@ -83,7 +84,8 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
   )
 }
 
-function Dish({ item, cart }: { item: MenuItem; cart: Cart }) {
+function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: string }) {
+  const kind = itemKind(item.name, category)
   const [size, setSize] = useState<Size>('full')
   const offer = offerPrice(item)
   const price = size === 'half' ? item.half : offer ?? item.full
@@ -96,14 +98,19 @@ function Dish({ item, cart }: { item: MenuItem; cart: Cart }) {
       {item.image ? (
         <div className="dish-img">
           <img src={dishImage(item.image)} alt="" loading="lazy" />
+          <span className={`dish-badge ${kind.drink ? 'drink' : ''}`} aria-hidden="true">{kind.emoji}</span>
         </div>
       ) : (
-        <div className="dish-img dish-tile" aria-hidden="true">
+        <div className={`dish-img dish-tile ${kind.drink ? 'drink' : ''}`} aria-hidden="true">
+          <span className="dish-tile-emoji">{kind.emoji}</span>
           <span>{item.name.replace(/\s+\d.*$/, '')}</span>
         </div>
       )}
       <div className="dish-body">
-        <p className="dish-hi" lang="hi">{item.name_hi}</p>
+        <p className="dish-hi" lang="hi">
+          <span className={`kind-tag ${kind.drink ? 'drink' : ''}`}>{kind.drink ? '🥤 Drink' : '🍽️ Food'}</span>
+          {item.name_hi}
+        </p>
         <h3>{item.name}</h3>
         {item.half != null && (
           <div className="sizes" role="radiogroup" aria-label={`${item.name} plate size`}>

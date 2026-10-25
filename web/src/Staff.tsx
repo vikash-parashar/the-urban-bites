@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { loadSession, signIn, signOut, SignedOut, staffApi, type Earnings, type Staff, type StaffAccount, type StaffOrder } from './staffApi'
 import { rupees } from './menu'
 import { CustomerTag, OffersEditor, ShopSettings, sourceLabel, WalkIn } from './StaffExtras'
+import { billText, itemKind, whatsappBill, type Bill } from './kit'
 
 const statusLabel: Record<string, string> = {
   placed: 'New', accepted: 'Accepted', preparing: 'Cooking', ready: 'Ready',
@@ -182,6 +183,14 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
   )
 }
 
+function staffBill(o: StaffOrder): Bill {
+  return {
+    number: o.number, when: new Date(o.created_at), customer: o.customer_name, lines: o.items,
+    subtotal: o.subtotal, delivery_fee: o.delivery_fee, delivery: o.fulfilment === 'delivery', total: o.total,
+    payment: `${o.payment_method === 'cash' ? 'Cash' : 'UPI'} · ${o.payment_status === 'paid' ? 'Paid' : 'Not paid yet'}${o.payment_ref ? ` (ref ${o.payment_ref})` : ''}`,
+  }
+}
+
 function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; onUpdate: (u: { status?: string; prep_minutes?: number; payment_status?: string }) => void }) {
   const [custom, setCustom] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -208,13 +217,20 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
       {o.note && <p className="note">Note: {o.note}</p>}
       <ul className="lines">
         {o.items.map((l, i) => (
-          <li key={i}><div><strong>{l.qty}× {l.name}</strong>{l.size === 'half' && <small>Half plate</small>}</div><span /><span className="line-total">{rupees(l.qty * l.unit_price)}</span></li>
+          <li key={i}><span className="line-emoji" aria-hidden="true">{itemKind(l.name).emoji}</span><div><strong>{l.qty}× {l.name}</strong>{l.size === 'half' && <small>Half plate</small>}</div><span /><span className="line-total">{rupees(l.qty * l.unit_price)}</span></li>
         ))}
       </ul>
       {o.fulfilment === 'delivery' && (
         <div className="sums"><div><span>Items</span><span>{rupees(o.subtotal)}</span></div><div><span>Delivery</span><span className={o.delivery_fee === 0 ? 'free' : ''}>{o.delivery_fee === 0 ? 'Free' : rupees(o.delivery_fee)}</span></div></div>
       )}
-      <div className="total-row"><span>{o.payment_method === 'cash' ? 'Cash' : 'Online'} · {o.payment_status === 'paid' ? 'Paid' : 'Not paid yet'}</span><strong>{rupees(o.total)}</strong></div>
+      <div className="total-row"><span>{o.payment_method === 'cash' ? 'Cash' : 'UPI'} · {o.payment_status === 'paid' ? 'Paid' : 'Not paid yet'}</span><strong>{rupees(o.total)}</strong></div>
+      {o.payment_ref && (
+        <p className="upi-ref-staff">📲 UPI ref <strong className="selectable">{o.payment_ref}</strong>{o.payment_status !== 'paid' && ' · match it with your bank or UPI app, then Mark paid'}</p>
+      )}
+      <div className="bill-actions">
+        <a className="btn btn-wa btn-sm" target="_blank" rel="noopener" href={whatsappBill(staffBill(o), o.customer_phone)}>Send bill on WhatsApp</a>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(staffBill(o)))}>Copy bill</button>
+      </div>
 
       {active && (
         <>

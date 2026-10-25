@@ -16,6 +16,9 @@ export interface Shop {
   cart_lat: number | null
   cart_lng: number | null
   notice: string
+  // The owner's UPI ID. Empty means cash only.
+  upi_id: string
+  upi_name: string
   updated_at?: string
 }
 
@@ -65,6 +68,8 @@ export const defaultShop: Shop = {
   cart_lat: 29.113493,
   cart_lng: 76.416352,
   notice: '',
+  upi_id: '',
+  upi_name: 'The Urban Bites',
 }
 
 export const defaultTiers: Tier[] = [
@@ -95,7 +100,8 @@ async function get<T>(path: string): Promise<T> {
 
 // useShop loads the shop rules and today's offers once per visit.
 export function useShop() {
-  const [shop, setShop] = useState<Shop>(defaultShop)
+  // The preview shows UPI with a demo ID so the payment screen can be seen.
+  const [shop, setShop] = useState<Shop>(isPreview ? { ...defaultShop, upi_id: 'demo.urbanbites@upi' } : defaultShop)
   const [offers, setOffers] = useState<Offer[]>(isPreview ? sampleOffers : [])
   useEffect(() => {
     if (isPreview) return
@@ -114,9 +120,13 @@ export async function fetchRegulars(): Promise<{ regulars: Regular[]; tiers: Tie
   if (isPreview) {
     return {
       regulars: [
-        { name: 'Sample', phone_hint: '••42', month_orders: 9, badge: 'Gold Regular' },
-        { name: 'Sample', phone_hint: '••07', month_orders: 6, badge: 'Regular' },
-        { name: 'Sample', phone_hint: '••90', month_orders: 4, badge: 'Regular' },
+        { name: 'Ravi', phone_hint: '••42', month_orders: 14, badge: 'Gold Regular' },
+        { name: 'Priya', phone_hint: '••07', month_orders: 11, badge: 'Gold Regular' },
+        { name: 'Aman', phone_hint: '••90', month_orders: 8, badge: 'Regular' },
+        { name: 'Neha', phone_hint: '••15', month_orders: 6, badge: 'Regular' },
+        { name: 'Sunil', phone_hint: '••63', month_orders: 5, badge: 'Regular' },
+        { name: 'Pooja', phone_hint: '••28', month_orders: 4, badge: 'Regular' },
+        { name: 'Deepak', phone_hint: '••71', month_orders: 3, badge: 'Regular' },
       ],
       tiers: defaultTiers,
       monthly_min: 3,
@@ -154,6 +164,9 @@ const ME = 'urban-bites-me'
 export interface Me {
   name: string
   phone: string
+  first?: string
+  last?: string
+  address?: string
 }
 export function loadMe(): Me | null {
   try {
