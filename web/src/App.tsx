@@ -127,7 +127,7 @@ export default function App() {
       <Intro />
       <header className="topbar">
         <a className="brand" href="#top" aria-label="The Urban Bites, back to top">
-          <img className="brand-mark" src="/brand/mark-256.png" alt="" width={36} height={36} />
+          <img className="brand-mark" src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={36} height={36} />
           <span className="brand-urban">Urban</span>
           <span className="brand-bites">Bites</span>
         </a>
@@ -270,7 +270,7 @@ export default function App() {
 
       <footer className="footer">
         <span className="brand">
-          <img className="brand-mark" src="/brand/mark-256.png" alt="" width={44} height={44} />
+          <img className="brand-mark" src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={44} height={44} />
           <span className="brand-urban">The Urban</span>
           <span className="brand-bites">Bites</span>
         </span>

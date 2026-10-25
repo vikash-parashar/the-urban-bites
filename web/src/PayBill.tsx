@@ -108,7 +108,7 @@ export function BillCard({ bill, phone }: { bill: Bill; phone?: string }) {
   return (
     <div className="bill" id="bill">
       <div className="bill-print">
-        <img src="/brand/mark-256.png" alt="" width={44} height={44} />
+        <img src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={44} height={44} />
         <p className="bill-shop">THE URBAN BITES</p>
         <p className="bill-small">Julana Bypass, near Brahmanwas, Haryana · 83989 07216</p>
         <p className="bill-small">Bill #{bill.number} · {bill.when.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>

@@ -35,7 +35,7 @@ export default function Intro() {
     <div className={`intro ${state === 'leaving' ? 'leaving' : ''}`} onClick={() => setState('leaving')} aria-hidden="true">
       <div className="intro-glow" />
       <div className="intro-mark">
-        <img src="/brand/mark-256.png" alt="" width={150} height={150} />
+        <img src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={150} height={150} />
         <svg viewBox="0 0 512 512" className="intro-roof"><path d="M96 214 L256 104 L416 214" /></svg>
         <span className="intro-steam"><i /><i /><i /></span>
       </div>
