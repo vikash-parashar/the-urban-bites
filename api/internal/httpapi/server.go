@@ -51,6 +51,7 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/menu", s.getMenu)
 		r.Post("/orders", s.createOrder)
 		r.Get("/orders/{id}", s.trackOrder)
+		r.Post("/orders/{id}/payment", s.paymentRef)
 		r.Get("/shop", s.getShop)
 		r.Get("/offers", s.liveOffers)
 		r.Get("/badge", s.badge)
@@ -93,6 +94,15 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// customerMessage drops the sentinel prefix ("invalid request: ") so people see only the useful part.
+func customerMessage(err error) string {
+	msg := err.Error()
+	if _, after, ok := strings.Cut(msg, ": "); ok {
+		return after
+	}
+	return msg
+}
+
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, store.ErrNotFound):
@@ -111,7 +121,9 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		}
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": msg, "code": code})
 	case errors.Is(err, store.ErrInvalid), errors.Is(err, store.ErrUnavailable):
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": customerMessage(err)})
+	case errors.Is(err, store.ErrConflict):
+		writeJSON(w, http.StatusConflict, map[string]string{"error": customerMessage(err)})
 	case errors.Is(err, store.ErrDuplicate):
 		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 	case errors.Is(err, auth.ErrWeakPassword):
@@ -173,7 +185,8 @@ func (s *Server) getMenu(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"categories": menu})
 }
 
-var phoneRe = regexp.MustCompile(`^\+?[0-9 ]{10,14}$`)
+// Names: letters (any script, so Hindi works), spaces, dots and apostrophes.
+var nameRe = regexp.MustCompile(`^[\p{L}][\p{L}\p{M} .']{1,59}$`)
 
 func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	var in store.NewOrder
@@ -183,10 +196,16 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	in.CustomerName = strings.TrimSpace(in.CustomerName)
 	in.CustomerPhone = strings.TrimSpace(in.CustomerPhone)
-	if in.CustomerName == "" || len(in.CustomerName) > 80 || !phoneRe.MatchString(in.CustomerPhone) {
-		writeErr(w, r, fmt.Errorf("%w: name and a 10-digit phone number are required", store.ErrInvalid))
+	if !nameRe.MatchString(in.CustomerName) {
+		writeErr(w, r, fmt.Errorf("%w: enter your name (letters only, 2 to 60 characters)", store.ErrInvalid))
 		return
 	}
+	phone, err := store.NormalizePhone(in.CustomerPhone)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	in.CustomerPhone = phone
 	in.Source = "web"
 	if r.Header.Get("X-Client") == "app" {
 		in.Source = "app"
@@ -221,18 +240,24 @@ func (s *Server) trackOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id":           o.ID,
-		"number":       o.Number,
-		"status":       o.Status,
-		"fulfilment":   o.Fulfilment,
-		"subtotal":     o.Subtotal,
-		"delivery_fee": o.DeliveryFee,
-		"total":        o.Total,
-		"prep_minutes": o.PrepMinutes,
-		"ready_at":     o.ReadyAt,
-		"server_time":  time.Now().UTC(),
-		"items":        o.Items,
-		"events":       o.Events,
+		"id":             o.ID,
+		"number":         o.Number,
+		"status":         o.Status,
+		"fulfilment":     o.Fulfilment,
+		"subtotal":       o.Subtotal,
+		"delivery_fee":   o.DeliveryFee,
+		"total":          o.Total,
+		"prep_minutes":   o.PrepMinutes,
+		"ready_at":       o.ReadyAt,
+		"server_time":    time.Now().UTC(),
+		"customer_name":  o.CustomerName,
+		"created_at":     o.CreatedAt,
+		"payment_method": o.PaymentMethod,
+		"payment_status": o.PaymentStatus,
+		"payment_ref":    o.PaymentRef,
+		"delivery_km":    o.DeliveryKm,
+		"items":          o.Items,
+		"events":         o.Events,
 	})
 }
 
@@ -426,3 +451,29 @@ func (s *Server) earnings(w http.ResponseWriter, r *http.Request) {
 }
 
 func errInvalid(msg string) error { return fmt.Errorf("%w: %s", store.ErrInvalid, msg) }
+
+// paymentRef saves the UPI reference number a customer enters after paying from a UPI app.
+func (s *Server) paymentRef(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"t"`
+		Ref   string `json:"ref"`
+	}
+	if err := decode(r, &in); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	o, err := s.Store.Order(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(in.Token), []byte(o.TrackToken)) != 1 {
+		writeErr(w, r, store.ErrNotFound)
+		return
+	}
+	if err := s.Store.SetPaymentRef(r.Context(), o.ID, in.Ref); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

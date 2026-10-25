@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -20,6 +21,8 @@ type Shop struct {
 	CartLat          *float64  `json:"cart_lat"`
 	CartLng          *float64  `json:"cart_lng"`
 	Notice           string    `json:"notice"`
+	UpiID            string    `json:"upi_id"`
+	UpiName          string    `json:"upi_name"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
@@ -27,10 +30,10 @@ func (s *Store) Shop(ctx context.Context) (*Shop, error) {
 	var sh Shop
 	err := s.db.QueryRow(ctx, `
 		SELECT accepting_orders, min_order_delivery, min_order_pickup, free_delivery_min, free_delivery_km::float8,
-			max_delivery_km::float8, delivery_fee, cart_lat, cart_lng, notice, updated_at
+			max_delivery_km::float8, delivery_fee, cart_lat, cart_lng, notice, upi_id, upi_name, updated_at
 		FROM shop_settings WHERE id = 1`).
 		Scan(&sh.AcceptingOrders, &sh.MinOrderDelivery, &sh.MinOrderPickup, &sh.FreeDeliveryMin, &sh.FreeDeliveryKm,
-			&sh.MaxDeliveryKm, &sh.DeliveryFee, &sh.CartLat, &sh.CartLng, &sh.Notice, &sh.UpdatedAt)
+			&sh.MaxDeliveryKm, &sh.DeliveryFee, &sh.CartLat, &sh.CartLng, &sh.Notice, &sh.UpiID, &sh.UpiName, &sh.UpdatedAt)
 	return &sh, err
 }
 
@@ -45,7 +48,12 @@ type ShopUpdate struct {
 	CartLat          *float64 `json:"cart_lat"`
 	CartLng          *float64 `json:"cart_lng"`
 	Notice           *string  `json:"notice"`
+	UpiID            *string  `json:"upi_id"`
+	UpiName          *string  `json:"upi_name"`
 }
+
+// A UPI ID (VPA) looks like name@bank: 2-256 of letters, digits, dot, dash or underscore, then @ and the handle.
+var upiRe = regexp.MustCompile(`^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$`)
 
 func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 	for _, v := range []*int{u.MinOrderDelivery, u.MinOrderPickup, u.FreeDeliveryMin, u.DeliveryFee} {
@@ -68,6 +76,20 @@ func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 		}
 		u.Notice = &n
 	}
+	if u.UpiID != nil {
+		v := strings.TrimSpace(*u.UpiID)
+		if v != "" && !upiRe.MatchString(v) {
+			return nil, fmt.Errorf("%w: UPI ID should look like name@bank, for example 8398907216@ybl", ErrInvalid)
+		}
+		u.UpiID = &v
+	}
+	if u.UpiName != nil {
+		v := strings.TrimSpace(*u.UpiName)
+		if v == "" || len(v) > 50 {
+			return nil, fmt.Errorf("%w: the name shown in UPI apps must be 1 to 50 characters", ErrInvalid)
+		}
+		u.UpiName = &v
+	}
 	_, err := s.db.Exec(ctx, `
 		UPDATE shop_settings SET
 			accepting_orders   = COALESCE($1, accepting_orders),
@@ -80,10 +102,12 @@ func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 			cart_lat           = COALESCE($8, cart_lat),
 			cart_lng           = COALESCE($9, cart_lng),
 			notice             = COALESCE($10, notice),
+			upi_id             = COALESCE($11, upi_id),
+			upi_name           = COALESCE($12, upi_name),
 			updated_at         = now()
 		WHERE id = 1`,
 		u.AcceptingOrders, u.MinOrderDelivery, u.MinOrderPickup, u.FreeDeliveryMin, u.FreeDeliveryKm,
-		u.MaxDeliveryKm, u.DeliveryFee, u.CartLat, u.CartLng, u.Notice)
+		u.MaxDeliveryKm, u.DeliveryFee, u.CartLat, u.CartLng, u.Notice, u.UpiID, u.UpiName)
 	if err != nil {
 		return nil, err
 	}

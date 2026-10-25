@@ -121,9 +121,13 @@ func (s *Server) counterSale(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	if in.CustomerPhone != "" && !phoneRe.MatchString(in.CustomerPhone) {
-		writeErr(w, r, errInvalid("phone must be 10 digits, or leave it empty"))
-		return
+	if in.CustomerPhone != "" {
+		phone, err := store.NormalizePhone(in.CustomerPhone)
+		if err != nil {
+			writeErr(w, r, err)
+			return
+		}
+		in.CustomerPhone = phone
 	}
 	o, err := s.Store.CreateCounterSale(r.Context(), in)
 	if err == nil {

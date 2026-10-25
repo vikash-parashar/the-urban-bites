@@ -21,6 +21,22 @@ func PhoneKey(phone string) string {
 	return d[len(d)-10:]
 }
 
+// NormalizePhone accepts an Indian mobile number typed any common way ("98765 43210", "+91 9876543210",
+// "09876543210") and returns it as +91 followed by 10 digits. Indian mobiles start with 6, 7, 8 or 9.
+func NormalizePhone(phone string) (string, error) {
+	d := nonDigit.ReplaceAllString(phone, "")
+	switch {
+	case len(d) == 12 && strings.HasPrefix(d, "91"):
+		d = d[2:]
+	case len(d) == 11 && strings.HasPrefix(d, "0"):
+		d = d[1:]
+	}
+	if len(d) != 10 || d[0] < '6' {
+		return "", fmt.Errorf("%w: enter a 10-digit mobile number starting with 6, 7, 8 or 9", ErrInvalid)
+	}
+	return "+91" + d, nil
+}
+
 // Badge tiers by completed orders, counting website, app and walk-in (counter) orders with a phone number.
 type Tier struct {
 	Name string `json:"name"`

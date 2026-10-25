@@ -30,6 +30,7 @@ var (
 	ErrNotFound     = errors.New("not found")
 	ErrInvalid      = errors.New("invalid request")
 	ErrUnavailable  = errors.New("item unavailable")
+	ErrConflict     = errors.New("conflict")
 )
 
 type Store struct {
@@ -260,6 +261,7 @@ type Order struct {
 	Status        Status      `json:"status"`
 	PaymentMethod string      `json:"payment_method"`
 	PaymentStatus string      `json:"payment_status"`
+	PaymentRef    *string     `json:"payment_ref,omitempty"`
 	Source        string      `json:"source"`
 	Subtotal      int         `json:"subtotal"`
 	DeliveryFee   int         `json:"delivery_fee"`
@@ -398,12 +400,12 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 }
 
 const orderCols = `id, number, track_token, customer_name, COALESCE(customer_phone, ''), fulfilment, address, note, status,
-	payment_method, payment_status, source, subtotal, delivery_fee, delivery_km::float8, total, prep_minutes, ready_at, created_at, updated_at`
+	payment_method, payment_status, payment_ref, source, subtotal, delivery_fee, delivery_km::float8, total, prep_minutes, ready_at, created_at, updated_at`
 
 func scanOrder(row pgx.Row) (*Order, error) {
 	var o Order
 	err := row.Scan(&o.ID, &o.Number, &o.TrackToken, &o.CustomerName, &o.CustomerPhone, &o.Fulfilment, &o.Address, &o.Note,
-		&o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.Source, &o.Subtotal, &o.DeliveryFee, &o.DeliveryKm, &o.Total,
+		&o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentRef, &o.Source, &o.Subtotal, &o.DeliveryFee, &o.DeliveryKm, &o.Total,
 		&o.PrepMinutes, &o.ReadyAt, &o.CreatedAt, &o.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -620,4 +622,23 @@ func (s *Store) Earnings(ctx context.Context, from, to time.Time) (*Earnings, er
 		e.TopItems = append(e.TopItems, t)
 	}
 	return e, rows.Err()
+}
+
+var utrRe = regexp.MustCompile(`^[A-Za-z0-9]{6,35}$`)
+
+// SetPaymentRef stores the UPI reference a customer typed after paying online. The owner still marks
+// the order paid after checking the bank app; this only saves the number to match against.
+func (s *Store) SetPaymentRef(ctx context.Context, id, ref string) error {
+	ref = strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(ref), " ", ""))
+	if !utrRe.MatchString(ref) {
+		return fmt.Errorf("%w: the UPI reference is the 12-digit number in your UPI app's payment details", ErrInvalid)
+	}
+	tag, err := s.db.Exec(ctx, `UPDATE orders SET payment_ref = $2, updated_at = now() WHERE id = $1 AND payment_status <> 'paid'`, id, ref)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("%w: this order is already paid", ErrConflict)
+	}
+	return nil
 }
