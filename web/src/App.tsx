@@ -1,3 +1,4 @@
+import { ThemePicker } from './ThemePicker'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -125,21 +126,22 @@ export default function App() {
   return (
     <div ref={root}>
       <Intro />
+      <ThemePicker />
       <header className="topbar">
         <a className="brand" href="#top" aria-label="The Urban Bites, back to top">
           <img className="brand-mark" src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={36} height={36} />
           <span className="brand-urban">Urban</span>
           <span className="brand-bites">Bites</span>
         </a>
-        <nav className="topnav">
-          <a href="#menu">Menu</a>
-          {offers.length > 0 && <a href="#offers">Offers</a>}
-          <a href="#regulars" className="hide-sm">Regulars</a>
-          <a href="#visit">Visit</a>
-          <button className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
-            Order <span className="cart-count">{cart.count}</span>
-          </button>
+        <nav className="topnav" aria-label="Sections">
+          <a href="#menu"><span aria-hidden="true">🍽️</span>Menu</a>
+          {offers.length > 0 && <a href="#offers"><span aria-hidden="true">🔥</span>Offers</a>}
+          <a href="#regulars"><span aria-hidden="true">👑</span>Regulars</a>
+          <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
         </nav>
+        <button className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
+          <span aria-hidden="true">🛒</span><span className="cart-label">Order</span><span className="cart-count">{cart.count}</span>
+        </button>
       </header>
       <ShopNotice shop={shop} />
 
