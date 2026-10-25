@@ -33,6 +33,10 @@ class DemoServer {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     _s = raw != null ? jsonDecode(raw) as Map<String, dynamic> : await _seed();
+    // Demo data saved by an older version of the app has no UPI settings.
+    final shop = _s!['shop'] as Map<String, dynamic>;
+    shop.putIfAbsent('upi_id', () => 'demo.urbanbites@upi');
+    shop.putIfAbsent('upi_name', () => 'The Urban Bites');
     return _s!;
   }
 
@@ -95,6 +99,8 @@ class DemoServer {
         'cart_lat': _cartLat,
         'cart_lng': _cartLng,
         'notice': '',
+        'upi_id': 'demo.urbanbites@upi',
+        'upi_name': 'The Urban Bites',
       },
       'offers': [
         {'id': _id(), 'period': 'day', 'title': 'Malai Chaap at ₹199', 'description': 'Full plate, today only.', 'item_id': 'malai-chaap', 'offer_price': 199, 'starts_on': today, 'ends_on': today, 'active': true},
@@ -257,6 +263,10 @@ class DemoServer {
       case ('GET', '/v1/shop'):
         out = shop;
       case ('PATCH', '/v1/owner/shop'):
+        final upi = b['upi_id'] as String?;
+        if (upi != null && upi.isNotEmpty && !RegExp(r'^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}$').hasMatch(upi)) {
+          throw ApiException(422, 'UPI ID should look like name@bank, for example 8398907216@ybl');
+        }
         shop.addAll(b);
         out = shop;
       case ('GET', '/v1/offers') || ('GET', '/v1/owner/offers'):
@@ -275,8 +285,8 @@ class DemoServer {
       case ('POST', '/v1/orders'):
         if (shop['accepting_orders'] != true) throw ApiException(422, "We're not taking online orders right now. Call 8398907216 or visit the cart.");
         final name = (b['customer_name'] as String? ?? '').trim();
-        final phone = (b['customer_phone'] as String? ?? '').trim();
-        if (name.isEmpty || !RegExp(r'^\+?[0-9 ]{10,14}$').hasMatch(phone)) throw ApiException(422, 'Name and a 10-digit phone number are required.');
+        if (!RegExp(r"^[\p{L}][\p{L}\p{M} .']{1,59}$", unicode: true).hasMatch(name)) throw ApiException(422, 'enter your name (letters only, 2 to 60 characters)');
+        final phone = normalizePhone(b['customer_phone'] as String? ?? '');
         final fulfilment = b['fulfilment'] as String? ?? 'pickup';
         double? km;
         if (b['lat'] != null && b['lng'] != null) km = _km((b['lat'] as num).toDouble(), (b['lng'] as num).toDouble());
@@ -309,7 +319,8 @@ class DemoServer {
       case ('POST', '/v1/owner/counter-sales'):
         final items = (b['items'] as List?) ?? [];
         final lines = [for (final l in items) ((l as Map)['item_id'] as String, (l['size'] ?? 'full') as String, (l['qty'] as num).toInt())];
-        final o = _build((b['customer_name'] as String?) ?? 'Walk-in', (b['customer_phone'] as String?) ?? '', 'pickup', null, null,
+        final rawPhone = ((b['customer_phone'] as String?) ?? '').trim();
+        final o = _build((b['customer_name'] as String?)?.trim().isNotEmpty == true ? b['customer_name'] as String : 'Walk-in', rawPhone.isEmpty ? '' : normalizePhone(rawPhone), 'pickup', null, null,
             b['payment_method'] as String? ?? 'cash', 'counter', lines);
         if (lines.isEmpty) {
           final amt = (b['amount'] as num?)?.toInt() ?? 0;
@@ -345,6 +356,17 @@ class DemoServer {
       final o = orders.where((o) => o['id'] == seg[3] && o['track_token'] == query?['t']).firstOrNull;
       if (o == null) throw ApiException(404, 'Order not found.');
       return {...o, 'server_time': _now()};
+    }
+    // /v1/orders/{id}/payment: the customer's UPI reference
+    if (method == 'POST' && seg.length == 5 && seg[2] == 'orders' && seg[4] == 'payment') {
+      final o = orders.where((o) => o['id'] == seg[3] && o['track_token'] == b['t']).firstOrNull;
+      if (o == null) throw ApiException(404, 'Order not found.');
+      final ref = (b['ref'] as String? ?? '').replaceAll(' ', '').toUpperCase();
+      if (!RegExp(r'^[A-Z0-9]{6,35}$').hasMatch(ref)) throw ApiException(422, 'enter the UPI reference number from your payment app (6 to 35 letters or digits)');
+      if (o['payment_status'] == 'paid') throw ApiException(409, 'this order is already paid');
+      o['payment_ref'] = ref;
+      o['updated_at'] = _now();
+      return null;
     }
     // /v1/owner/orders/{id}
     if (method == 'PATCH' && seg.length == 5 && seg[3] == 'orders') {
@@ -467,4 +489,18 @@ class DemoServer {
     final a = pow(sin(dLat / 2), 2) + cos(_cartLat * r) * cos(lat * r) * pow(sin(dLng / 2), 2);
     return (2 * 6371 * asin(sqrt(a)) * 100).round() / 100;
   }
+}
+
+/// Same rule as the server's store.NormalizePhone: 10 digits starting 6 to 9, stored as +91XXXXXXXXXX.
+String normalizePhone(String phone) {
+  var d = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+  if (d.startsWith('+91')) {
+    d = d.substring(3);
+  } else if (d.startsWith('91') && d.length == 12) {
+    d = d.substring(2);
+  } else if (d.startsWith('0') && d.length == 11) {
+    d = d.substring(1);
+  }
+  if (!RegExp(r'^[6-9][0-9]{9}$').hasMatch(d)) throw ApiException(422, 'enter a 10-digit mobile number starting with 6, 7, 8 or 9');
+  return '+91$d';
 }

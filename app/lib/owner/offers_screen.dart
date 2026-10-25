@@ -58,9 +58,9 @@ class _OffersScreenState extends State<OffersScreen> {
             onRefresh: () async => _reload(),
             child: ListView(padding: pagePad(context, bottom: 96), children: [
               const Text('Offers', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-              const Text('These show on the website and in the app.', style: TextStyle(color: Brand.muted)),
+              Text('These show on the website and in the app.', style: TextStyle(color: Brand.muted)),
               const SizedBox(height: 12),
-              if (list.isEmpty) const Text('No offers yet. Tap New offer.', style: TextStyle(color: Brand.muted)),
+              if (list.isEmpty) Text('No offers yet. Tap New offer.', style: TextStyle(color: Brand.muted)),
               for (final o in list)
                 Card(
                   child: ListTile(
@@ -74,7 +74,7 @@ class _OffersScreenState extends State<OffersScreen> {
                     trailing: Wrap(spacing: 4, children: [
                       IconButton(tooltip: 'Edit', icon: const Icon(Icons.edit), onPressed: () => _edit(o)),
                       if (o.active && o.endsOn.compareTo(today) >= 0)
-                        IconButton(tooltip: 'End now', icon: const Icon(Icons.stop_circle_outlined, color: Brand.danger), onPressed: () => _end(o)),
+                        IconButton(tooltip: 'End now', icon: Icon(Icons.stop_circle_outlined, color: Brand.danger), onPressed: () => _end(o)),
                     ]),
                   ),
                 ),

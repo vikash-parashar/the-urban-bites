@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../customer/menu_screen.dart';
+import '../brand_widgets.dart';
 import '../theme.dart';
 import 'earnings_screen.dart';
 import 'menu_editor_screen.dart';
@@ -54,12 +55,13 @@ class _OwnerHomeState extends State<OwnerHome> {
     final wide = MediaQuery.sizeOf(context).width >= 720;
 
     final appBar = AppBar(
-      title: const Wordmark(),
+      title: const Wordmark(size: 20),
       actions: [
+        const ThemeToggle(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Center(
-            child: Text('${staff?.name ?? ''} · ${admin ? 'Admin' : 'Owner'}', style: const TextStyle(color: Brand.muted)),
+            child: Text('${staff?.name ?? ''} · ${admin ? 'Admin' : 'Owner'}', style: TextStyle(color: Brand.muted)),
           ),
         ),
         IconButton(tooltip: 'Sign out', icon: const Icon(Icons.logout), onPressed: _signOut),

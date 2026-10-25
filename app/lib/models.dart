@@ -107,6 +107,8 @@ class Order {
   /// Finished orders on this phone number, and its badge (owner lists only).
   final int customerOrders;
   final String? customerBadge;
+  /// UPI reference (UTR) the customer typed after paying.
+  final String? paymentRef;
 
   Order({
     required this.id,
@@ -130,6 +132,7 @@ class Order {
     required this.items,
     required this.customerOrders,
     required this.customerBadge,
+    this.paymentRef,
   });
 
   factory Order.fromJson(Map<String, dynamic> j) => Order(
@@ -154,10 +157,12 @@ class Order {
         items: ((j['items'] ?? []) as List).map((e) => OrderLine.fromJson(e as Map<String, dynamic>)).toList(),
         customerOrders: _int(j['customer_orders']) ?? 0,
         customerBadge: j['customer_badge'] as String?,
+        paymentRef: j['payment_ref'] as String?,
       );
 
   bool get isDelivery => fulfilment == 'delivery';
   bool get isActive => status != 'completed' && status != 'cancelled';
+  bool get isPaid => paymentStatus == 'paid';
 }
 
 /// What the customer keeps on the phone to track an order they placed.
@@ -277,6 +282,9 @@ class Shop {
   final double? cartLat;
   final double? cartLng;
   final String notice;
+  /// The owner's UPI ID (like 8398907216@ybl). Empty means UPI is not set up yet.
+  final String upiId;
+  final String upiName;
 
   Shop({
     required this.acceptingOrders,
@@ -289,6 +297,8 @@ class Shop {
     required this.cartLat,
     required this.cartLng,
     required this.notice,
+    this.upiId = '',
+    this.upiName = 'The Urban Bites',
   });
 
   /// The API's defaults, used until the real rules load.
@@ -308,7 +318,11 @@ class Shop {
         cartLat: (j['cart_lat'] as num?)?.toDouble(),
         cartLng: (j['cart_lng'] as num?)?.toDouble(),
         notice: (j['notice'] ?? '') as String,
+        upiId: (j['upi_id'] ?? '') as String,
+        upiName: (j['upi_name'] ?? 'The Urban Bites') as String,
       );
+
+  bool get hasUpi => upiId.isNotEmpty;
 
   int minFor(String fulfilment) => fulfilment == 'delivery' ? minOrderDelivery : minOrderPickup;
 

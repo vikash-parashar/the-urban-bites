@@ -70,11 +70,11 @@ class _MenuEditorScreenState extends State<MenuEditorScreen> {
         }
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
         return ListView(padding: pagePad(context, maxWidth: 900), children: [
-          const Text('Tap a price to change it. Switch an item off when it runs out.', style: TextStyle(color: Brand.muted)),
+          Text('Tap a price to change it. Switch an item off when it runs out.', style: TextStyle(color: Brand.muted)),
           for (final c in snap.data!) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(0, 20, 0, 6),
-              child: Text('${c.name}  ${c.nameHi}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Brand.gold)),
+              child: Text('${c.name}  ${c.nameHi}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Brand.gold)),
             ),
             for (final i in c.items)
               Card(

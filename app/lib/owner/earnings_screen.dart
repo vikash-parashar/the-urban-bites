@@ -47,7 +47,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
         FutureBuilder<Earnings>(
           future: _data,
           builder: (context, snap) {
-            if (snap.hasError) return Text(snap.error.toString(), style: const TextStyle(color: Brand.danger));
+            if (snap.hasError) return Text(snap.error.toString(), style: TextStyle(color: Brand.danger));
             if (!snap.hasData) return const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()));
             final e = snap.data!;
             final maxDay = e.days.fold<int>(1, (m, d) => d.revenue > m ? d.revenue : m);
@@ -56,8 +56,8 @@ class _EarningsScreenState extends State<EarningsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Earned', style: TextStyle(color: Brand.muted)),
-                    Text(rupees(e.revenue), style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Brand.gold)),
+                    Text('Earned', style: TextStyle(color: Brand.muted)),
+                    Text(rupees(e.revenue), style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Brand.gold)),
                     const SizedBox(height: 8),
                     Wrap(spacing: 24, runSpacing: 8, children: [
                       _Stat('Orders', '${e.orders}'),
@@ -76,7 +76,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(children: [
-                      SizedBox(width: 90, child: Text(d.day.substring(5), style: const TextStyle(color: Brand.muted))),
+                      SizedBox(width: 90, child: Text(d.day.substring(5), style: TextStyle(color: Brand.muted))),
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
@@ -90,7 +90,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
               const SizedBox(height: 16),
               const Text('Best sellers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               if (e.topItems.isEmpty)
-                const Padding(padding: EdgeInsets.only(top: 8), child: Text('No completed orders in this period yet.', style: TextStyle(color: Brand.muted))),
+                Padding(padding: const EdgeInsets.only(top: 8), child: Text('No completed orders in this period yet.', style: TextStyle(color: Brand.muted))),
               for (final t in e.topItems)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -114,7 +114,7 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(color: Brand.muted, fontSize: 12)),
+      Text(label, style: TextStyle(color: Brand.muted, fontSize: 12)),
       Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
     ]);
   }

@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../api.dart';
+import '../brand_widgets.dart';
 import '../models.dart';
+import '../receipt.dart';
 import '../theme.dart';
 
 /// Live orders from the website and the app. Refreshes every 10 s and alerts on new orders.
@@ -28,6 +33,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   bool _firstLoad = true;
   Timer? _poll;
   Timer? _tick;
+  Timer? _ring;
+  List<Order> _ringing = [];
 
   @override
   void initState() {
@@ -43,6 +50,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void dispose() {
     _poll?.cancel();
     _tick?.cancel();
+    _ring?.cancel();
     super.dispose();
   }
 
@@ -54,6 +62,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
       _seen.addAll(list.map((o) => o.id));
       if (!_firstLoad && fresh.isNotEmpty) _alert(fresh);
       _firstLoad = false;
+      // Stop ringing once every ringing order has been accepted or cancelled (maybe from the website).
+      if (_ringing.isNotEmpty && !list.any((o) => o.status == 'placed' && _ringing.any((r) => r.id == o.id))) _stopRing();
       setState(() {
         orders = list;
         clockOffset = serverNow.difference(DateTime.now());
@@ -71,22 +81,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  /// Rings and vibrates every few seconds until the owner opens the order or taps "Got it",
+  /// so a new order isn't missed in a noisy kitchen.
   void _alert(List<Order> fresh) {
-    SystemSound.play(SystemSoundType.alert);
+    setState(() => _ringing = [..._ringing, ...fresh]);
+    _buzz();
+    _ring?.cancel();
+    var n = 0;
+    _ring = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (++n > 30) return _stopRing(); // about two minutes
+      _buzz();
+    });
+  }
+
+  Future<void> _buzz() async {
     HapticFeedback.heavyImpact();
-    final o = fresh.first;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      backgroundColor: Brand.gold,
-      duration: const Duration(seconds: 8),
-      content: Text(
-        fresh.length == 1 ? 'New order #${o.number} from ${o.customerName} · ${rupees(o.total)}' : '${fresh.length} new orders',
-        style: const TextStyle(color: Brand.night, fontWeight: FontWeight.w800),
-      ),
-      action: SnackBarAction(label: 'Open', textColor: Brand.night, onPressed: () => _select(o)),
-    ));
+    HapticFeedback.vibrate();
+    try {
+      await FlutterRingtonePlayer().playNotification(volume: 1, asAlarm: false);
+    } catch (_) {
+      SystemSound.play(SystemSoundType.alert);
+    }
+  }
+
+  void _stopRing() {
+    _ring?.cancel();
+    _ring = null;
+    try {
+      FlutterRingtonePlayer().stop();
+    } catch (_) {}
+    if (mounted) setState(() => _ringing = []);
   }
 
   void _select(Order o) {
+    if (_ringing.any((r) => r.id == o.id)) _stopRing();
     final wide = MediaQuery.sizeOf(context).width >= 900;
     setState(() => selectedId = o.id);
     if (!wide) {
@@ -107,10 +135,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final selected = orders.where((o) => o.id == selectedId).firstOrNull;
     return Row(children: [
       SizedBox(width: 380, child: list),
-      const VerticalDivider(width: 1, color: Brand.line),
+      VerticalDivider(width: 1, color: Brand.line),
       Expanded(
         child: selected == null
-            ? const Center(child: Text('Pick an order to see it here.', style: TextStyle(color: Brand.muted)))
+            ? Center(child: Text('Pick an order to see it here.', style: TextStyle(color: Brand.muted)))
             : OrderDetail(key: ValueKey(selected.id), orderId: selected.id, initial: selected, clockOffset: clockOffset, onChanged: _load),
       ),
     ]);
@@ -118,6 +146,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   Widget _list() {
     return Column(children: [
+      if (_ringing.isNotEmpty) _RingBanner(orders: _ringing, onOpen: () => _select(_ringing.first), onDismiss: _stopRing),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
         child: Row(children: [
@@ -133,14 +162,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
         ]),
       ),
-      if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!, style: const TextStyle(color: Brand.danger))),
+      if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!, style: TextStyle(color: Brand.danger))),
       Expanded(
         child: loading
             ? const Center(child: CircularProgressIndicator())
             : orders.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
-                      padding: EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(24),
                       child: Text('No open orders. New ones from the website and the app show up here and ring the tablet.',
                           textAlign: TextAlign.center, style: TextStyle(color: Brand.muted)),
                     ),
@@ -226,10 +255,15 @@ class _OrderTile extends StatelessWidget {
               Text(rupees(o.total), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             ]),
             const SizedBox(height: 6),
-            Text('${o.customerName} · ${o.isDelivery ? 'Delivery' : 'Pickup'} · ${o.paymentMethod == 'cash' ? 'Cash' : 'Online'} · ${sourceLabel(o.source)}',
-                style: const TextStyle(color: Brand.muted)),
+            Text('${o.customerName} · ${o.isDelivery ? 'Delivery' : 'Pickup'} · ${o.paymentMethod == 'cash' ? 'Cash' : 'UPI'}${o.isPaid ? ' ✓' : ''} · ${sourceLabel(o.source)}',
+                style: TextStyle(color: Brand.muted)),
             CustomerTag(order: o),
-            Text(o.items.map((l) => '${l.qty}× ${l.name}${l.size == 'half' ? ' (H)' : ''}').join(', '),
+            if (o.paymentRef != null && !o.isPaid)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('📲 UPI ref ${o.paymentRef} · check and mark paid', style: TextStyle(color: Brand.neonGlow, fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            Text(o.items.map((l) => '${itemKind(l.name).emoji} ${l.qty}× ${l.name}${l.size == 'half' ? ' (H)' : ''}').join(', '),
                 maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
             Text(
@@ -331,23 +365,34 @@ class _OrderDetailState extends State<OrderDetail> {
         const SizedBox(width: 12),
         StatusPill(o.status),
         const Spacer(),
-        Text(time, style: const TextStyle(color: Brand.muted)),
+        Text(time, style: TextStyle(color: Brand.muted)),
       ]),
       const SizedBox(height: 12),
-      SelectableText(o.customerPhone.isEmpty ? o.customerName : '${o.customerName} · ${o.customerPhone}',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      Row(children: [
+        Expanded(
+          child: SelectableText(o.customerPhone.isEmpty ? o.customerName : '${o.customerName} · ${o.customerPhone}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        ),
+        if (o.customerPhone.isNotEmpty)
+          IconButton.filledTonal(
+            tooltip: 'Call ${o.customerName}',
+            onPressed: () => launchUrl(Uri(scheme: 'tel', path: o.customerPhone)),
+            icon: const Icon(Icons.call_rounded),
+          ),
+      ]),
       Text(
         '${o.isDelivery ? 'Delivery to: ${o.address ?? ''}${o.deliveryKm != null ? ' · about ${o.deliveryKm!.toStringAsFixed(1)} km' : ''}' : 'Pickup at the cart'} · from the ${sourceLabel(o.source).toLowerCase()}',
-        style: const TextStyle(color: Brand.muted),
+        style: TextStyle(color: Brand.muted),
       ),
       const SizedBox(height: 4),
       CustomerTag(order: o),
-      if (o.note != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Note: ${o.note}', style: const TextStyle(color: Brand.gold))),
+      if (o.note != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Note: ${o.note}', style: TextStyle(color: Brand.gold))),
       const Divider(height: 28),
       for (final l in o.items)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(children: [
+            SizedBox(width: 30, child: Text(itemKind(l.name).emoji, style: const TextStyle(fontSize: 18))),
             SizedBox(width: 36, child: Text('${l.qty}×', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
             Expanded(child: Text('${l.name}${l.size == 'half' ? ' (half)' : ''}', style: const TextStyle(fontSize: 16))),
             Text(rupees(l.unitPrice * l.qty)),
@@ -355,9 +400,9 @@ class _OrderDetailState extends State<OrderDetail> {
         ),
       const Divider(height: 28),
       if (o.isDelivery) ...[
-        Row(children: [const Expanded(child: Text('Items', style: TextStyle(color: Brand.muted))), Text(rupees(o.subtotal))]),
+        Row(children: [Expanded(child: Text('Items', style: TextStyle(color: Brand.muted))), Text(rupees(o.subtotal))]),
         Row(children: [
-          const Expanded(child: Text('Delivery', style: TextStyle(color: Brand.muted))),
+          Expanded(child: Text('Delivery', style: TextStyle(color: Brand.muted))),
           Text(o.deliveryFee == 0 ? 'Free' : rupees(o.deliveryFee), style: TextStyle(color: o.deliveryFee == 0 ? Brand.gold : Brand.cream)),
         ]),
         const SizedBox(height: 8),
@@ -365,16 +410,40 @@ class _OrderDetailState extends State<OrderDetail> {
       Row(children: [
         Text('Total ${rupees(o.total)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
         const Spacer(),
-        Text('${o.paymentMethod == 'cash' ? 'Cash' : 'Online'} · ${o.paymentStatus == 'paid' ? 'Paid' : 'Not paid yet'}',
+        Text('${o.paymentMethod == 'cash' ? 'Cash' : 'UPI'} · ${o.paymentStatus == 'paid' ? 'Paid' : 'Not paid yet'}',
             style: TextStyle(color: o.paymentStatus == 'paid' ? Brand.ok : Brand.gold, fontWeight: FontWeight.w700)),
       ]),
+      if (o.paymentRef != null)
+        Container(
+          margin: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: Brand.neon.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Brand.neonGlow)),
+          child: Row(children: [
+            const Text('📲', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SelectableText('UPI ref ${o.paymentRef}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                Text(o.isPaid ? 'Confirmed.' : 'Match this number with the payment in your bank or UPI app, then tap Mark paid.',
+                    style: TextStyle(color: Brand.muted, fontSize: 13)),
+              ]),
+            ),
+            IconButton(
+              tooltip: 'Copy',
+              onPressed: () => Clipboard.setData(ClipboardData(text: o.paymentRef!)),
+              icon: const Icon(Icons.copy_rounded),
+            ),
+          ]),
+        ),
+      const SizedBox(height: 16),
+      ReceiptActions(order: o),
       if (o.isActive) ...[
         const SizedBox(height: 24),
         Text(o.status == 'placed' ? 'Accept: how long will it take?' : 'Change the ready time',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         if (cooking && o.readyAt != null)
           Text('Now showing the customer: ${minutesLeft(o, widget.clockOffset)} (set to ${o.prepMinutes} min)',
-              style: const TextStyle(color: Brand.neonGlow)),
+              style: TextStyle(color: Brand.neonGlow)),
         const SizedBox(height: 10),
         Wrap(spacing: 10, runSpacing: 10, children: [
           for (final m in [5, 10, 15, 20, 30, 45])
@@ -394,7 +463,7 @@ class _OrderDetailState extends State<OrderDetail> {
           if (o.paymentStatus != 'paid') const SizedBox(width: 10),
           Expanded(
             child: OutlinedButton(
-              style: OutlinedButton.styleFrom(foregroundColor: Brand.danger, side: const BorderSide(color: Brand.danger)),
+              style: OutlinedButton.styleFrom(foregroundColor: Brand.danger, side: BorderSide(color: Brand.danger)),
               onPressed: busy ? null : _confirmCancel,
               child: const Text('Cancel order'),
             ),
@@ -429,7 +498,7 @@ class CustomerTag extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        Text(n <= 1 ? 'First order' : '${_ordinal(n)} order', style: const TextStyle(color: Brand.muted, fontWeight: FontWeight.w700, fontSize: 13)),
+        Text(n <= 1 ? 'First order' : '${_ordinal(n)} order', style: TextStyle(color: Brand.muted, fontWeight: FontWeight.w700, fontSize: 13)),
         if (o.customerBadge != null) BadgeChip(o.customerBadge!),
       ]),
     );
@@ -452,10 +521,72 @@ class BadgeChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: ShapeDecoration(color: legend ? Brand.gold : c.withValues(alpha: 0.12), shape: StadiumBorder(side: BorderSide(color: c))),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.star_rounded, size: 14, color: legend ? Brand.night : c),
+        Icon(Icons.star_rounded, size: 14, color: legend ? Brand.onGold : c),
         const SizedBox(width: 4),
-        Text(name, style: TextStyle(color: legend ? Brand.night : c, fontWeight: FontWeight.w800, fontSize: 12)),
+        Text(name, style: TextStyle(color: legend ? Brand.onGold : c, fontWeight: FontWeight.w800, fontSize: 12)),
       ]),
+    );
+  }
+}
+
+/// Flashing banner while a new order is ringing.
+class _RingBanner extends StatefulWidget {
+  const _RingBanner({required this.orders, required this.onOpen, required this.onDismiss});
+  final List<Order> orders;
+  final VoidCallback onOpen;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_RingBanner> createState() => _RingBannerState();
+}
+
+class _RingBannerState extends State<_RingBanner> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final o = widget.orders.first;
+    final n = widget.orders.length;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) => Container(
+        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        decoration: BoxDecoration(
+          color: Color.lerp(Brand.gold, const Color(0xFFFF8A3D), _c.value),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Brand.gold.withValues(alpha: 0.6), blurRadius: 8 + 14 * _c.value)],
+        ),
+        child: child,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: widget.onOpen,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+            child: Row(children: [
+              const Icon(Icons.notifications_active_rounded, color: Brand.onGold, size: 30),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(n == 1 ? 'NEW ORDER #${o.number}' : '$n NEW ORDERS',
+                      style: const TextStyle(fontFamily: Brand.display, color: Brand.onGold, fontSize: 20, letterSpacing: 1)),
+                  Text('${o.customerName} · ${rupees(o.total)} · ${o.isDelivery ? 'Delivery' : 'Pickup'} · tap to open',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Brand.onGold, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+              TextButton(onPressed: widget.onDismiss, style: TextButton.styleFrom(foregroundColor: Brand.onGold), child: const Text('Got it')),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }

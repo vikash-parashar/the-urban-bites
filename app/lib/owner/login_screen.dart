@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../demo.dart';
+import '../brand_widgets.dart';
 import '../theme.dart';
 import 'owner_home.dart';
 
@@ -46,24 +47,26 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
-      body: Center(
+      appBar: AppBar(actions: const [ThemeToggle()]),
+      body: GlowBackdrop(child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(24), children: [
-            const Wordmark(size: 34),
-            const SizedBox(height: 8),
+            const Center(child: Entrance(child: LogoMark(size: 96))),
+            const SizedBox(height: 14),
+            const Center(child: Wordmark(size: 30, showMark: false)),
+            const SizedBox(height: 20),
             const Text('Staff sign in', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const Text('For the owner and the admin. Orders, menu and earnings.', style: TextStyle(color: Brand.muted)),
+            Text('For the owner and the admin. Orders, menu and earnings.', style: TextStyle(color: Brand.muted)),
             const SizedBox(height: 24),
             if (demoMode) ...[
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Demo app', style: TextStyle(fontWeight: FontWeight.w800, color: Brand.gold)),
+                    Text('Demo app', style: TextStyle(fontWeight: FontWeight.w800, color: Brand.gold)),
                     const SizedBox(height: 4),
-                    const Text('Test logins. Everything stays on this phone.', style: TextStyle(color: Brand.muted)),
+                    Text('Test logins. Everything stays on this phone.', style: TextStyle(color: Brand.muted)),
                     const SizedBox(height: 8),
                     const SelectableText('Owner: $demoOwnerEmail\nAdmin: $demoAdminEmail\nPassword: $demoPassword'),
                     const SizedBox(height: 8),
@@ -109,12 +112,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Brand.danger))),
+            if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: TextStyle(color: Brand.danger))),
             const SizedBox(height: 20),
             FilledButton(onPressed: busy ? null : _signIn, child: Text(busy ? 'Signing in…' : 'Sign in')),
           ]),
         ),
-      ),
+      )),
     );
   }
 }

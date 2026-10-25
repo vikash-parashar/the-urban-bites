@@ -25,6 +25,7 @@ class Api {
   static const _tokenKey = 'staff_token';
   static const _staffKey = 'staff_user';
   static const _ordersKey = 'my_orders';
+  static const _customerKey = 'my_details';
   String? _token;
   Staff? staff;
 
@@ -106,6 +107,24 @@ class Api {
     j['customer_name'] ??= '';
     j['payment_method'] ??= 'cash';
     return (Order.fromJson(j), DateTime.parse(j['server_time'] as String));
+  }
+
+  /// Sends the UPI reference (UTR) the customer got after paying, so the owner can match it.
+  Future<void> sendPaymentRef(PlacedOrder o, String ref) async {
+    await _send('POST', '/v1/orders/${o.id}/payment', body: {'t': o.token, 'ref': ref});
+  }
+
+  /// Name, phone and address from the last order on this phone, to fill the next checkout.
+  Future<Map<String, String>> savedCustomer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customerKey);
+    if (raw == null) return {};
+    return (jsonDecode(raw) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String));
+  }
+
+  Future<void> saveCustomer(Map<String, String> c) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_customerKey, jsonEncode(c));
   }
 
   Future<Shop> shop() async => Shop.fromJson(await _send('GET', '/v1/shop') as Map<String, dynamic>);

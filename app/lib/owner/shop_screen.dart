@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../models.dart';
 import '../theme.dart';
+import '../validators.dart';
 
 /// Order rules: pause online orders, minimums, free delivery, notice on the website.
 class ShopScreen extends StatefulWidget {
@@ -24,7 +25,10 @@ class _ShopScreenState extends State<ShopScreen> {
     'max_delivery_km': TextEditingController(),
     'delivery_fee': TextEditingController(),
     'notice': TextEditingController(),
+    'upi_id': TextEditingController(),
+    'upi_name': TextEditingController(),
   };
+  final _upiForm = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -54,6 +58,8 @@ class _ShopScreenState extends State<ShopScreen> {
       _c['max_delivery_km']!.text = n(s.maxDeliveryKm);
       _c['delivery_fee']!.text = '${s.deliveryFee}';
       _c['notice']!.text = s.notice;
+      _c['upi_id']!.text = s.upiId;
+      _c['upi_name']!.text = s.upiName;
     });
   }
 
@@ -97,7 +103,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget build(BuildContext context) {
     final s = shop;
     if (s == null) {
-      return Center(child: error != null ? Text(error!, style: const TextStyle(color: Brand.danger)) : const CircularProgressIndicator());
+      return Center(child: error != null ? Text(error!, style: TextStyle(color: Brand.danger)) : const CircularProgressIndicator());
     }
     return ListView(padding: pagePad(context, maxWidth: 820), children: [
       const Text('Shop settings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
@@ -129,6 +135,61 @@ class _ShopScreenState extends State<ShopScreen> {
             TextField(controller: _c['notice'], maxLength: 200, decoration: const InputDecoration(labelText: 'Notice on the website (optional)', hintText: 'Closed on Tuesday')),
             FilledButton(onPressed: busy ? null : _saveRules, child: const Text('Save rules')),
           ]),
+        ),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _upiForm,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Row(children: [
+                Text('📲', style: TextStyle(fontSize: 22)),
+                SizedBox(width: 8),
+                Text('UPI payments', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              ]),
+              const SizedBox(height: 4),
+              Text(
+                s.hasUpi
+                    ? 'Customers can pay with GPay, PhonePe or Paytm. Money goes straight to this UPI ID. No fees.'
+                    : 'Add your UPI ID to let customers pay online. Leave empty to take cash only.',
+                style: TextStyle(color: Brand.muted),
+              ),
+              const SizedBox(height: 12),
+              Wrap(spacing: 12, runSpacing: 12, children: [
+                SizedBox(
+                  width: 300,
+                  child: TextFormField(
+                    controller: _c['upi_id'],
+                    autocorrect: false,
+                    decoration: const InputDecoration(labelText: 'UPI ID', hintText: '8398907216@ybl'),
+                    validator: Validate.upiId,
+                  ),
+                ),
+                SizedBox(
+                  width: 300,
+                  child: TextFormField(
+                    controller: _c['upi_name'],
+                    maxLength: 50,
+                    decoration: const InputDecoration(labelText: 'Name shown in UPI apps'),
+                    validator: (v) => (v ?? '').trim().isEmpty ? 'Enter a name' : null,
+                  ),
+                ),
+              ]),
+              Wrap(spacing: 10, runSpacing: 10, children: [
+                FilledButton(
+                  onPressed: busy
+                      ? null
+                      : () {
+                          if (!_upiForm.currentState!.validate()) return;
+                          _patch({'upi_id': _c['upi_id']!.text.trim(), 'upi_name': _c['upi_name']!.text.trim()}, 'UPI details saved.');
+                        },
+                  child: const Text('Save UPI'),
+                ),
+              ]),
+            ]),
+          ),
         ),
       ),
       const SizedBox(height: 12),

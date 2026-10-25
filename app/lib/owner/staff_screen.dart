@@ -102,7 +102,7 @@ class _StaffScreenState extends State<StaffScreen> {
             FilledButton.icon(onPressed: _add, icon: const Icon(Icons.person_add), label: const Text('Add staff')),
           ]),
           const SizedBox(height: 4),
-          const Text('Owners run orders, menu and earnings. Admins can also manage staff.', style: TextStyle(color: Brand.muted)),
+          Text('Owners run orders, menu and earnings. Admins can also manage staff.', style: TextStyle(color: Brand.muted)),
           const SizedBox(height: 12),
           for (final s in snap.data!)
             Card(
