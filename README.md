@@ -59,5 +59,7 @@ Statuses: `placed → preparing → ready | out_for_delivery → completed`, or 
 
 - Domain `theurbanbites.in`; nameservers on Cloudflare (free).
 - Website: Cloudflare Pages, build command `npm run build`, output `web/dist`, env `VITE_API_URL=https://api.theurbanbites.in`.
-- API: `GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap ./cmd/api`, zip, Lambda runtime `provided.al2023`, API Gateway HTTP API with custom domain `api.theurbanbites.in` (ACM cert). Env: `DATABASE_URL`, `JWT_SECRET` (long random), `ALLOWED_ORIGINS=https://theurbanbites.in`.
+- API: `./deploy/aws-api.sh` does all of this (needs `DATABASE_URL`, `JWT_SECRET`). By hand: `GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap ./cmd/api`, zip, Lambda runtime `provided.al2023`, API Gateway HTTP API with custom domain `api.theurbanbites.in` (ACM cert). Env: `DATABASE_URL`, `JWT_SECRET` (long random), `ALLOWED_ORIGINS=https://theurbanbites.in`.
 - Database: Neon free Postgres (`DATABASE_URL` with `sslmode=require`). Migrations run on startup.
+
+Colours follow Indian time: Cream Day 6:00–18:30 IST, Charcoal Gold at night (`web/src/theme.ts`). Add `?pick=1` to compare all six themes.

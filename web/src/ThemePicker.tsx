@@ -1,30 +1,48 @@
-import { useState } from 'react'
-import { isPreview } from './api'
-import { applyTheme, initialTheme, themes, type ThemeId } from './theme'
+import { useEffect, useState } from 'react'
+import { currentPeriod, currentTheme, pickTheme, pickedTheme, setPeriod, themes, type ThemeId } from './theme'
 
-// Floating colour picker, shown in the preview or with ?pick=1, so the owner can compare looks.
+function useTheme() {
+  const [id, setId] = useState<ThemeId>(currentTheme)
+  useEffect(() => {
+    const on = (e: Event) => setId((e as CustomEvent<ThemeId>).detail)
+    window.addEventListener('ub-theme', on)
+    return () => window.removeEventListener('ub-theme', on)
+  }, [])
+  return id
+}
+
+// ☀️/🌙 button in the header. The site already follows Indian time; this lets a visitor flip it.
+export function DayNightToggle() {
+  useTheme()
+  if (pickedTheme()) return null
+  const day = currentPeriod() === 'day'
+  return (
+    <button type="button" className="daynight" onClick={() => setPeriod(day ? 'night' : 'day')}
+      aria-label={day ? 'Switch to night colours' : 'Switch to day colours'} title={day ? 'Night colours' : 'Day colours'}>
+      <span aria-hidden="true">{day ? '🌙' : '☀️'}</span>
+    </button>
+  )
+}
+
+// Colour comparison panel, only with ?pick=1.
 export function ThemePicker() {
-  const show = isPreview || new URLSearchParams(location.search).has('pick')
-  const [cur, setCur] = useState<ThemeId>(initialTheme)
+  const cur = useTheme()
   const [open, setOpen] = useState(false)
-  if (!show) return null
+  if (!new URLSearchParams(location.search).has('pick')) return null
   return (
     <div className="theme-pick">
       {open && (
         <div className="theme-panel" role="dialog" aria-label="Choose website colours">
           <p>🎨 Choose colours</p>
           {themes.map((t) => (
-            <button key={t.id} type="button" className="theme-opt" aria-pressed={cur === t.id}
-              onClick={() => { setCur(t.id); applyTheme(t.id, true) }}>
+            <button key={t.id} type="button" className="theme-opt" aria-pressed={cur === t.id} onClick={() => pickTheme(t.id)}>
               <span className="theme-sw" aria-hidden="true">{t.sw.map((c) => <i key={c} style={{ background: c }} />)}</span>
               <span>{t.name}<small>{t.note}</small></span>
             </button>
           ))}
         </div>
       )}
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        🎨 {open ? 'Close' : 'Colours'}
-      </button>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>🎨 {open ? 'Close' : 'Colours'}</button>
     </div>
   )
 }

@@ -9,7 +9,7 @@ import type { Shop } from './shop'
 // UPI: pay link (opens GPay/PhonePe/Paytm on a phone), QR for paying from another phone, and a box
 // for the reference. UPI links don't report back, so the owner matches the reference with the bank SMS.
 export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; order: PlacedOrder; amount: number; sentRef?: string | null; onSent: () => void }) {
-  const link = upiLink(shop.upi_id, shop.upi_name, amount, `Urban Bites order #${order.number}`)
+  const link = upiLink(shop.upi_id, shop.upi_name, amount, `The Urban Bites order #${order.number}`)
   const [qr, setQr] = useState('')
   const [ref, setRef] = useState('')
   const [err, setErr] = useState('')

@@ -27,7 +27,7 @@ export default function StaffApp() {
     <div className="staff">
       <header className="staff-bar">
         <a className="brand" href="#top" aria-label="Back to the website">
-          <span className="brand-urban">Urban</span>
+          <span className="brand-urban">The Urban</span>
           <span className="brand-bites">Bites</span>
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
@@ -93,7 +93,7 @@ function Login({ onIn }: { onIn: (s: Staff) => void }) {
   return (
     <div className="staff-login">
       <form className="checkout" onSubmit={submit}>
-        <a className="brand" href="#top"><span className="brand-urban">Urban</span><span className="brand-bites">Bites</span></a>
+        <a className="brand" href="#top"><span className="brand-urban">The Urban</span><span className="brand-bites">Bites</span></a>
         <h1 className="staff-h">Staff sign in</h1>
         <p className="menu-sub">For the owner and the admin: orders, menu and earnings.</p>
         <label className="field" htmlFor="st-email">Email<input id="st-email" name="email" type="email" required autoComplete="username" /></label>

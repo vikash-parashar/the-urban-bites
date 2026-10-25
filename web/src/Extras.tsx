@@ -269,7 +269,7 @@ export function Promise() {
           <span>Quality, taste, cleanliness.</span>
           <span className="promise-gold">No match anywhere.</span>
         </h2>
-        <p className="promise-hi" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में कोई मुकाबला नहीं</p>
+        <p className="promise-hi" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में द अर्बन बाइट्स का कोई मुकाबला नहीं</p>
       </div>
       <ul className="promise-grid">
         {promises.map((p) => (

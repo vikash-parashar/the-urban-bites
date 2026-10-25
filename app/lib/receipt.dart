@@ -105,7 +105,7 @@ Future<Uint8List> receiptPdf(Order o, PdfPageFormat format) async {
 /// Opens the phone's print screen (thermal printer apps, Wi-Fi printers, or "Save as PDF").
 Future<void> printReceipt(Order o) async {
   await Printing.layoutPdf(
-    name: 'UrbanBites-bill-${o.number}',
+    name: 'TheUrbanBites-bill-${o.number}',
     format: PdfPageFormat.roll80,
     onLayout: (f) => receiptPdf(o, f.width > PdfPageFormat.roll80.width + 1 ? PdfPageFormat.roll80 : f),
   );
@@ -114,7 +114,7 @@ Future<void> printReceipt(Order o) async {
 /// Shares the bill PDF through any app (WhatsApp, email, Drive).
 Future<void> shareReceiptPdf(Order o) async {
   final bytes = await receiptPdf(o, PdfPageFormat.roll80);
-  await Printing.sharePdf(bytes: bytes, filename: 'UrbanBites-bill-${o.number}.pdf');
+  await Printing.sharePdf(bytes: bytes, filename: 'TheUrbanBites-bill-${o.number}.pdf');
 }
 
 /// The 10 digits of an Indian mobile from "+919876543210", or null.

@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import StaffApp from './Staff'
 import './styles.css'
-import { applyTheme, initialTheme } from './theme'
+import { startThemeClock } from './theme'
 
-applyTheme(initialTheme())
+startThemeClock()
 
 // #staff opens the owner/admin area; everything else is the public site.
 function Root() {

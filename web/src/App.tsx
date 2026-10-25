@@ -1,4 +1,4 @@
-import { ThemePicker } from './ThemePicker'
+import { DayNightToggle, ThemePicker } from './ThemePicker'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -130,7 +130,7 @@ export default function App() {
       <header className="topbar">
         <a className="brand" href="#top" aria-label="The Urban Bites, back to top">
           <img className="brand-mark" src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={36} height={36} />
-          <span className="brand-urban">Urban</span>
+          <span className="brand-urban">The Urban</span>
           <span className="brand-bites">Bites</span>
         </a>
         <nav className="topnav" aria-label="Sections">
@@ -139,9 +139,12 @@ export default function App() {
           <a href="#regulars"><span aria-hidden="true">👑</span>Regulars</a>
           <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
         </nav>
-        <button className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
+        <div className="top-actions">
+          <DayNightToggle />
+          <button className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
           <span aria-hidden="true">🛒</span><span className="cart-label">Order</span><span className="cart-count">{cart.count}</span>
-        </button>
+          </button>
+        </div>
       </header>
       <ShopNotice shop={shop} />
 
@@ -172,7 +175,7 @@ export default function App() {
             <li>Hygienic</li>
             <li>Quality</li>
           </ul>
-          <p className="hero-motto" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में कोई मुकाबला नहीं</p>
+          <p className="hero-motto" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में द अर्बन बाइट्स का कोई मुकाबला नहीं</p>
           <div className="hero-cta">
             <a className="btn btn-gold" href="#menu">See the menu</a>
             <a className="btn btn-ghost" href={`tel:${business.phone}`}>Call 83989 07216</a>

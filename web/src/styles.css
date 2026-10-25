@@ -818,6 +818,7 @@ section[id] { scroll-margin-top: 72px; }
 .visit-media .visit-photo { aspect-ratio: 16 / 10; }
 .visit-map { aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; border: 1.5px solid var(--line); background: var(--ink); }
 .visit-map iframe { width: 100%; height: 100%; border: 0; display: block; filter: invert(0.9) hue-rotate(180deg) saturate(0.7) brightness(0.95); }
+:root[data-theme="cream"] .visit-map iframe, :root[data-theme="masala"] .visit-map iframe { filter: none; }
 .visit-pin { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 .visit-pin:hover { color: var(--gold); }
 
@@ -1106,9 +1107,14 @@ html, body { overflow-x: clip; }
 .topnav a span { font-size: 1rem; line-height: 1; }
 .topnav a:hover, .topnav a:focus-visible { background: var(--gold); color: var(--on-gold); transform: translateY(-1px); }
 .topnav a:active { transform: translateY(0); }
+.top-actions { grid-area: cart; justify-self: end; display: flex; align-items: center; gap: 8px; }
+.daynight {
+  display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--line); background: var(--ink); font-size: 1.2rem; line-height: 1;
+  transition: transform 200ms ease, border-color 160ms ease;
+}
+.daynight:hover { border-color: var(--gold); transform: rotate(-12deg); }
 .cart-pill {
-  grid-area: cart;
-  justify-self: end;
   min-height: 46px;
   padding: 0 6px 0 16px;
   gap: 8px;
@@ -1144,6 +1150,8 @@ section[id], [id="menu"], [id="offers"], [id="regulars"], [id="visit"] { scroll-
   .topbar .brand-mark { width: 32px; height: 32px; }
   .topbar .brand-urban, .topbar .brand-bites { font-size: 1.05rem; }
   .cart-pill { min-height: 42px; padding-left: 12px; }
+  .daynight { width: 42px; height: 42px; font-size: 1.05rem; }
+  .top-actions { gap: 6px; }
   .cart-pill .cart-count { min-width: 28px; height: 28px; }
   .topnav { gap: 3px; padding: 3px; }
   .topnav a { padding: 0 8px; font-size: 0.86rem; gap: 4px; }

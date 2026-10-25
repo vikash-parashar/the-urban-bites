@@ -50,7 +50,7 @@ class _UpiPayCardState extends State<UpiPayCard> {
     super.dispose();
   }
 
-  Uri get _uri => upiUri(upiId: widget.upiId, name: widget.upiName, amount: widget.amount, note: 'Urban Bites order #${widget.orderNumber}');
+  Uri get _uri => upiUri(upiId: widget.upiId, name: widget.upiName, amount: widget.amount, note: 'The Urban Bites order #${widget.orderNumber}');
 
   Future<void> _pay() async {
     bool ok = false;
