@@ -1,5 +1,5 @@
-# Render blueprint: the Go API on Render's free plan in Singapore (next to Neon).
-# Render → New → Blueprint → pick this repo. It asks for DATABASE_URL; JWT_SECRET is generated.
+# Render blueprint: the website (free static site) and the Go API (free web service), both in Singapore.
+# Render → Blueprints → the-urban-bites → Manual sync picks up changes here.
 services:
   - type: web
     name: the-urban-bites-api
@@ -16,4 +16,25 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://theurbanbites.in,https://www.theurbanbites.in,https://the-urban-bites.pages.dev
+        value: https://theurbanbites.in,https://www.theurbanbites.in,https://the-urban-bites.onrender.com,https://the-urban-bites.pages.dev
+
+  # The customer website and staff area (/#staff). Static sites on Render are free and never sleep.
+  - type: web
+    name: the-urban-bites
+    runtime: static
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        value: https://the-urban-bites-api.onrender.com
+      - key: NODE_VERSION
+        value: "22"
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
