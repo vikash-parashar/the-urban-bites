@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploys the Go API to Google Cloud Run (Mumbai) from api/Dockerfile. No AWS needed.
+# Deploys the Go API to Google Cloud Run (Singapore, next to the Neon database) from api/Dockerfile. No AWS needed.
 # Free tier covers this cart's traffic (2M requests/month); it scales to zero when idle.
 #
 # Needs: gcloud CLI signed in (gcloud auth login), a project with billing enabled.
@@ -8,13 +8,13 @@
 #   DATABASE_URL     Neon connection string (with sslmode=require)
 #   JWT_SECRET       long random string, e.g. `openssl rand -base64 48` (keep it)
 #   ALLOWED_ORIGINS  default https://theurbanbites.in,https://www.theurbanbites.in
-#   GCP_REGION       default asia-south1 (Mumbai)
+#   GCP_REGION       default asia-southeast1 (Singapore, same as Neon)
 set -euo pipefail
 
 : "${GCP_PROJECT:?set GCP_PROJECT}"
 : "${DATABASE_URL:?set DATABASE_URL}"
 : "${JWT_SECRET:?set JWT_SECRET}"
-REGION="${GCP_REGION:-asia-south1}"
+REGION="${GCP_REGION:-asia-southeast1}"
 ORIGINS="${ALLOWED_ORIGINS:-https://theurbanbites.in,https://www.theurbanbites.in}"
 SVC=urban-bites-api
 here="$(cd "$(dirname "$0")/.." && pwd)"
