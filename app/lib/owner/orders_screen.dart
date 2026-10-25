@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
@@ -35,6 +35,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Timer? _tick;
   Timer? _ring;
   List<Order> _ringing = [];
+  final _player = AudioPlayer();
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     _poll?.cancel();
     _tick?.cancel();
     _ring?.cancel();
+    _player.dispose();
     super.dispose();
   }
 
@@ -98,7 +100,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     HapticFeedback.heavyImpact();
     HapticFeedback.vibrate();
     try {
-      await FlutterRingtonePlayer().playNotification(volume: 1, asAlarm: false);
+      await _player.stop();
+      await _player.play(AssetSource('new-order.wav'), volume: 1);
     } catch (_) {
       SystemSound.play(SystemSoundType.alert);
     }
@@ -107,9 +110,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void _stopRing() {
     _ring?.cancel();
     _ring = null;
-    try {
-      FlutterRingtonePlayer().stop();
-    } catch (_) {}
+    _player.stop().catchError((_) {});
     if (mounted) setState(() => _ringing = []);
   }
 

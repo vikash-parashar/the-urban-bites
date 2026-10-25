@@ -16,7 +16,7 @@ dependencies:
   printing: ^5.15.1
   pdf: ^3.13.1
   qr_flutter: ^4.1.0
-  flutter_ringtone_player: ^4.0.0+4
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -30,6 +30,7 @@ flutter:
     - assets/dishes/
     - assets/hero/
     - assets/mark-512.png
+    - assets/new-order.wav
     - assets/wordmark-dark.png
     - assets/wordmark-light.png
     - assets/fonts/Hind-Regular.ttf
