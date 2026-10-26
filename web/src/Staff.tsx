@@ -8,6 +8,7 @@ import Expenses from './Expenses'
 import { ChangePassword, Login, ResetPassword } from './Account'
 import { billText, itemKind, whatsappBill, type Bill } from './kit'
 import { MA, MButton } from './motion'
+import { brand } from './brand'
 
 const statusLabel: Record<string, string> = {
   placed: 'New', accepted: 'Accepted', preparing: 'Cooking', ready: 'Ready',
@@ -95,7 +96,7 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
     const newOnes = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
     if (newOnes.length) { setFresh(`New order #${newOnes[0].number} from ${newOnes[0].customer_name}`); chime() }
     const waiting = r.orders.filter((o) => o.status === 'placed').length
-    document.title = waiting ? `(${waiting}) New order · The Urban Bites` : 'Orders · The Urban Bites'
+    document.title = waiting ? `(${waiting}) New order · ${brand.name}` : `Orders · ${brand.name}`
     seen.current = new Set([...(seen.current ?? []), ...r.orders.map((o) => o.id)])
   }, [all, guard])
 
@@ -105,7 +106,7 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
     return () => clearInterval(id)
   }, [load])
 
-  useEffect(() => () => { document.title = 'The Urban Bites' }, [])
+  useEffect(() => () => { document.title = brand.name }, [])
   const current = orders.find((o) => o.id === selected) ?? null
   const groups: [string, string, (o: StaffOrder) => boolean][] = [
     ['open', 'All open', (o) => o.status !== 'completed' && o.status !== 'cancelled'],

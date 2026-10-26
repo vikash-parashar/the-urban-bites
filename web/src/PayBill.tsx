@@ -6,11 +6,12 @@ import { rupees } from './menu'
 import { billText, checkUpiRef, itemKind, upiLink, whatsappBill, type Bill } from './kit'
 import type { Shop } from './shop'
 import { MA, MButton } from './motion'
+import { brand } from './brand'
 
 // UPI: pay link (opens GPay/PhonePe/Paytm on a phone), QR for paying from another phone, and a box
 // for the reference. UPI links don't report back, so the owner matches the reference with the bank SMS.
 export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; order: PlacedOrder; amount: number; sentRef?: string | null; onSent: () => void }) {
-  const link = upiLink(shop.upi_id, shop.upi_name, amount, `The Urban Bites order #${order.number}`)
+  const link = upiLink(shop.upi_id, shop.upi_name, amount, `${brand.name} order #${order.number}`)
   const [qr, setQr] = useState('')
   const [ref, setRef] = useState('')
   const [err, setErr] = useState('')
@@ -109,9 +110,9 @@ export function BillCard({ bill, phone }: { bill: Bill; phone?: string }) {
   return (
     <div className="bill" id="bill">
       <div className="bill-print">
-        <img src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={44} height={44} />
-        <p className="bill-shop">THE URBAN BITES</p>
-        <p className="bill-small">Julana Bypass, near Brahmanwas, Haryana · 83989 07216</p>
+        <img src={brand.logoUrl} alt="" width={44} height={44} />
+        <p className="bill-shop">{brand.upper}</p>
+        <p className="bill-small">{brand.place}, {brand.region} · {brand.phone_display}</p>
         <p className="bill-small">Bill #{bill.number} · {bill.when.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
         {bill.customer && <p className="bill-small">Customer: {bill.customer}</p>}
       </div>

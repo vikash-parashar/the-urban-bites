@@ -1,4 +1,5 @@
 // Small shared helpers: item icons, form checks (same rules as the Go API), UPI links and bills.
+import { brand } from './brand'
 
 export interface Kind {
   emoji: string
@@ -130,7 +131,7 @@ export interface Bill {
 export function billText(b: Bill) {
   const rows = b.lines.map((l) => `${l.qty} x ${l.name}${l.size === 'half' ? ' (half)' : ''}  ₹${l.qty * l.unit_price}`)
   return [
-    '*The Urban Bites* 🧾',
+    `*${brand.name}* 🧾`,
     `Bill for order #${b.number}`,
     b.when.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
     b.customer ? `Customer: ${b.customer}` : '',
@@ -141,7 +142,7 @@ export function billText(b: Bill) {
     `*Total: ₹${b.total}*`,
     `Payment: ${b.payment}`,
     '',
-    'Thank you! Order again at theurbanbites.in or call 83989 07216.',
+    `Thank you! Order again at ${brand.domain} or call ${brand.phone_display}.`,
   ]
     .filter((s, i, a) => s !== '' || a[i - 1] !== '')
     .join('\n')

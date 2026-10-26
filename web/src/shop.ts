@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { isPreview } from './api'
+import { brand } from './brand'
 
 // Shop rules, offers and badges from the Go API. The preview (no API) uses the same defaults the
 // API ships with, plus sample offers, so the design can be seen.
@@ -69,7 +70,7 @@ export const defaultShop: Shop = {
   cart_lng: 76.416352,
   notice: '',
   upi_id: '',
-  upi_name: 'The Urban Bites',
+  upi_name: brand.name,
 }
 
 export const defaultTiers: Tier[] = [

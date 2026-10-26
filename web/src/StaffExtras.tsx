@@ -5,6 +5,7 @@ import { rupees } from './menu'
 import type { Offer, Shop } from './shop'
 import { BadgeMedal } from './Extras'
 import { MButton } from './motion'
+import { brand } from './brand'
 
 type MenuCats = Awaited<ReturnType<typeof staffApi.menu>>['categories']
 
@@ -285,7 +286,7 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
     patch({
       min_order_delivery: n('min_d'), min_order_pickup: n('min_p'), free_delivery_min: n('free_min'),
       free_delivery_km: n('free_km'), max_delivery_km: n('max_km'), delivery_fee: n('fee'), notice: String(f.get('notice') || ''),
-      upi_id: String(f.get('upi_id') || '').trim(), upi_name: String(f.get('upi_name') || '').trim() || 'The Urban Bites',
+      upi_id: String(f.get('upi_id') || '').trim(), upi_name: String(f.get('upi_name') || '').trim() || brand.name,
     })
   }
 

@@ -16,7 +16,9 @@ function Root() {
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
-  return hash === '#staff' || hash.startsWith('#staff/') ? <StaffApp hash={hash} /> : <App />
+  const staff = hash === '#staff' || hash.startsWith('#staff/')
+  useEffect(() => { document.documentElement.dataset.area = staff ? 'staff' : 'site' }, [staff])
+  return staff ? <StaffApp hash={hash} /> : <App />
 }
 
 createRoot(document.getElementById('root')!).render(

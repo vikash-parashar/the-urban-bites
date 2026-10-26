@@ -1,4 +1,4 @@
-import { DayNightToggle, ThemePicker } from './ThemePicker'
+import { LookSwitch, useTheme } from './ThemePicker'
 import { useMemo, useRef, useState } from 'react'
 import { motion, useScroll, useTransform, type Variants } from 'motion/react'
 import { alive, ease, MA, MButton, Reveal, spring, stagger } from './motion'
@@ -13,6 +13,8 @@ import Gallery from './Gallery'
 import HeroSound from './HeroSound'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
 import Intro from './Intro'
+import PopHero from './PopHero'
+import { brand } from './brand'
 
 // The opening waits for the intro card on the first visit of the session.
 function introDelay() {
@@ -58,6 +60,7 @@ export default function App() {
     setCartOpen(true)
   }
   const heroVideo = useRef<HTMLVideoElement>(null)
+  const look = useTheme()
 
   const hero = useRef<HTMLElement>(null)
   const reel = useRef<HTMLElement>(null)
@@ -76,12 +79,11 @@ export default function App() {
   return (
     <div>
       <Intro />
-      <ThemePicker />
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="The Urban Bites, back to top">
-          <img className="brand-mark" src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={36} height={36} />
-          <span className="brand-urban">The Urban</span>
-          <span className="brand-bites">Bites</span>
+        <a className="brand" href="#top" aria-label={`${brand.name}, back to top`}>
+          <img className="brand-mark" src={brand.logoUrl} alt="" width={36} height={36} />
+          <span className="brand-urban">{brand.lead} {brand.main}</span>
+          <span className="brand-bites">{brand.accent}</span>
         </a>
         <nav className="topnav" aria-label="Sections">
           <a href="#menu"><span aria-hidden="true">🍽️</span>Menu</a>
@@ -90,7 +92,7 @@ export default function App() {
           <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
         </nav>
         <div className="top-actions">
-          <DayNightToggle />
+          <LookSwitch />
           <MButton className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
             <span aria-hidden="true">🛒</span><span className="cart-label">Order</span>
             {/* The count pops each time something is added. */}
@@ -103,7 +105,8 @@ export default function App() {
       <section className="hero" id="top" ref={hero}>
         <motion.video ref={heroVideo} className="hero-video" style={{ y: videoY, scale: videoScale }} src={media('flame.mp4')} poster={media('flame-poster.jpg')} autoPlay muted loop playsInline />
         <div className="hero-shade" />
-        <Embers />
+        {look !== 'pop' && <Embers />}
+        {look === 'pop' && <PopHero box={hero} freeMin={shop.free_delivery_min} delay={start} />}
         <motion.div className="hero-copy" style={{ y: copyY, opacity: copyFade }}>
           {/* The LED roofline draws itself, sputters on and keeps flickering like a real neon strip. */}
           <motion.svg className="roof" viewBox="0 0 600 120" aria-hidden="true"
@@ -114,15 +117,15 @@ export default function App() {
                 transition={{ delay: start + i * 0.15, duration: 1.4, ease: [0.65, 0, 0.35, 1] }} />
             ))}
           </motion.svg>
-          <motion.p className="hero-the" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: start + 1, duration: 0.5 }}>The</motion.p>
+          <motion.p className="hero-the" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: start + 1, duration: 0.5 }}>{brand.lead}</motion.p>
           <h1 className="hero-title">
-            <motion.span className="hero-urban" aria-label="Urban" initial="hidden" animate="show" variants={stagger(0.06, start + 1.2)}>
-              {'URBAN'.split('').map((ch, i) => (
+            <motion.span className="hero-urban" aria-label={brand.main} initial="hidden" animate="show" variants={stagger(0.06, start + 1.2)}>
+              {brand.main.toUpperCase().split('').map((ch, i) => (
                 <motion.span key={i} aria-hidden="true" variants={letter}>{ch}</motion.span>
               ))}
             </motion.span>
             <motion.span className="hero-bites" initial={{ scale: 0.6, rotate: -20, y: '-0.12em', opacity: 0 }} animate={{ scale: 1, rotate: -6, y: '-0.12em', opacity: 1 }}
-              transition={{ delay: start + 1.6, type: 'spring', stiffness: 260, damping: 12 }} whileHover={{ rotate: -12, scale: 1.08 }}>Bites</motion.span>
+              transition={{ delay: start + 1.6, type: 'spring', stiffness: 260, damping: 12 }} whileHover={{ rotate: -12, scale: 1.08 }}>{brand.accent}</motion.span>
           </h1>
           <p className="hero-deal">
             <span>Free delivery</span> within {shop.free_delivery_km} km over ₹{shop.free_delivery_min}
@@ -130,10 +133,10 @@ export default function App() {
           <motion.ul className="hero-promise" initial="hidden" animate="show" variants={stagger(0.08, start + 2)}>
             {['Tasty', 'Fresh', 'Hygienic', 'Quality'].map((w) => <motion.li key={w} variants={rise} whileHover={{ y: -3, scale: 1.08 }}>{w}</motion.li>)}
           </motion.ul>
-          <p className="hero-motto" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में द अर्बन बाइट्स का कोई मुकाबला नहीं</p>
+          <p className="hero-motto" lang="hi">{brand.motto}</p>
           <motion.div className="hero-cta" initial="hidden" animate="show" variants={stagger(0.1, start + 2.3)}>
             <motion.a className="btn btn-gold" href="#menu" variants={rise} {...alive}>See the menu</motion.a>
-            <motion.a className="btn btn-ghost" href={`tel:${business.phone}`} variants={rise} {...alive}>Call 83989 07216</motion.a>
+            <motion.a className="btn btn-ghost" href={`tel:${business.phone}`} variants={rise} {...alive}>Call {brand.phone_display}</motion.a>
           </motion.div>
         </motion.div>
         <p className="hero-where">Julana Bypass · near Brahmanwas</p>
@@ -184,11 +187,11 @@ export default function App() {
       <section className="visit" id="visit" aria-labelledby="visit-title">
         <motion.div className="visit-media" initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease }}>
           <div className="visit-photo">
-            <img src={media('hut.jpg')} alt="The Urban Bites hut lit with blue LED strips at night" loading="lazy" />
+            <img src={media('hut.jpg')} alt={`${brand.name} hut lit with blue LED strips at night`} loading="lazy" />
           </div>
           <div className="visit-map">
             <iframe
-              title="Map: The Urban Bites, Julana Bypass"
+              title={`Map: ${brand.name}, ${brand.place}`}
               src={`https://maps.google.com/maps?q=${business.lat},${business.lng}&z=16&output=embed`}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -230,12 +233,12 @@ export default function App() {
 
       <footer className="footer">
         <span className="brand">
-          <img className="brand-mark" src={`${import.meta.env.BASE_URL}brand/mark-256.png`} alt="" width={44} height={44} />
-          <span className="brand-urban">The Urban</span>
-          <span className="brand-bites">Bites</span>
+          <img className="brand-mark" src={brand.logoUrl} alt="" width={44} height={44} />
+          <span className="brand-urban">{brand.lead} {brand.main}</span>
+          <span className="brand-bites">{brand.accent}</span>
         </span>
         <span>Momos · Chaap · Paneer · Paratha · Chai</span>
-        <span>© {new Date().getFullYear()} The Urban Bites · <a href="#staff">Staff sign in</a></span>
+        <span>© {new Date().getFullYear()} {brand.name} · <a href="#staff">Staff sign in</a></span>
       </footer>
 
       {cart.count === 0 && !cartOpen && myOrders.latest && (

@@ -8,6 +8,7 @@ import { checkMobile, cleanMobile, tenDigits } from './kit'
 import { fetchBadge, fetchRegulars, loadMe, tierLevel, type Badge, type Offer, type Regular, type Shop, type Tier, defaultTiers } from './shop'
 import { motion, type Variants } from 'motion/react'
 import { alive, lift, MA, MButton, Reveal, slideIn, stagger } from './motion'
+import { brand } from './brand'
 
 // Podium spots rise up from their plinths, the winner last.
 const podiumPop: Variants = { hidden: { opacity: 0, y: 60, scale: 0.9 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 220, damping: 18 } } }
@@ -274,7 +275,7 @@ export function Promise() {
           <span>Quality, taste, cleanliness.</span>
           <span className="promise-gold">No match anywhere.</span>
         </h2>
-        <p className="promise-hi" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में द अर्बन बाइट्स का कोई मुकाबला नहीं</p>
+        <p className="promise-hi" lang="hi">{brand.motto}</p>
       </Reveal>
       <motion.ul className="promise-grid" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger(0.1)}>
         {promises.map((p) => (

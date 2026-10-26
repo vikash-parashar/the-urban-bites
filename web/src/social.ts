@@ -1,3 +1,5 @@
+import { brand } from './brand'
+
 // The cart's pages elsewhere. Leave a link empty to hide its button; fill them in when Vikash
 // sends the handles. Build-time overrides: VITE_INSTAGRAM_URL, VITE_FACEBOOK_URL, VITE_GOOGLE_REVIEW_URL.
 const env = import.meta.env
@@ -7,7 +9,7 @@ export const social = {
   facebook: (env.VITE_FACEBOOK_URL as string | undefined) ?? '',
   // The "write a review" link from the Google Business Profile (g.page/r/…/review).
   googleReview: (env.VITE_GOOGLE_REVIEW_URL as string | undefined) ?? '',
-  whatsapp: 'https://wa.me/918398907216?text=' + encodeURIComponent('Hi The Urban Bites! I want to order: '),
+  whatsapp: `https://wa.me/91${brand.phone}?text=` + encodeURIComponent(`Hi ${brand.name}! I want to order: `),
 }
 
 // Until the Google listing is live, this opens a Maps search for the cart.
