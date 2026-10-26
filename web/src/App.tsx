@@ -86,7 +86,7 @@ export default function App() {
       <Intro />
       <header className="topbar">
         <a className="brand" href="#top" aria-label={`${brand.name}, back to top`}>
-          <img className="brand-mark" src={brand.logoUrl} alt="" width={36} height={36} />
+          <img className="brand-mark" src={brand.logoUrl} alt="" width={72} height={33} />
           <span className="brand-urban">{brand.lead} {brand.main}</span>
           <span className="brand-bites">{brand.accent}</span>
         </a>
@@ -241,7 +241,7 @@ export default function App() {
 
       <footer className="footer">
         <span className="brand">
-          <img className="brand-mark" src={brand.logoUrl} alt="" width={44} height={44} />
+          <img className="brand-mark" src={brand.logoUrl} alt="" width={96} height={43} />
           <span className="brand-urban">{brand.lead} {brand.main}</span>
           <span className="brand-bites">{brand.accent}</span>
         </span>

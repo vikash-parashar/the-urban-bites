@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'theme.dart';
 
 /// The boot animation. The Android launch screen shows the logo on navy; this picks up from
-/// there: the logo drops in, the LED roof line draws itself, steam rises, and the name slides up.
+/// there: the logo drops in, steam rises, and the name slides up.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.next});
   final Widget next;
@@ -49,7 +49,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final logoIn = _seg(0.0, 0.38, Curves.elasticOut);
-    final roof = _seg(0.22, 0.55);
     final steam = _seg(0.40, 1.0, Curves.linear);
     final name = _seg(0.45, 0.72);
     final tag = _seg(0.62, 0.88);
@@ -57,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final size = math.min(MediaQuery.sizeOf(context).shortestSide * 0.42, 220.0);
 
     return Scaffold(
-      backgroundColor: Brand.navy,
+      backgroundColor: const Color(0xFF161616),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _go,
@@ -71,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   gradient: RadialGradient(
                     center: const Alignment(0, -0.25),
                     radius: 0.55 + 0.35 * glow.value,
-                    colors: [Brand.neon.withValues(alpha: 0.42 * glow.value), const Color(0x00070A1C)],
+                    colors: [const Color(0xFFFF6A13).withValues(alpha: 0.32 * glow.value), const Color(0x00161616)],
                   ),
                 ),
               ),
@@ -90,10 +89,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           child: SizedBox(
                             width: size,
                             height: size,
-                            child: Stack(children: [
-                              Image.asset('assets/mark-512.png', width: size, height: size),
-                              CustomPaint(size: Size(size, size), painter: _RoofPainter(roof.value)),
-                            ]),
+                            child: Image.asset('assets/mark-512.png', width: size, height: size),
                           ),
                         ),
                       ),
@@ -109,13 +105,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         Text.rich(TextSpan(children: [
                           const TextSpan(text: 'URBAN ', style: TextStyle(fontFamily: Brand.display, color: Color(0xFFF7F0E1), fontSize: 40, letterSpacing: 2)),
                           TextSpan(
-                            text: 'Bites',
+                            text: 'BITES',
                             style: TextStyle(
-                              fontFamily: Brand.hand,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFFF4B43A),
-                              fontSize: 44,
-                              shadows: [Shadow(color: const Color(0xFFF4B43A).withValues(alpha: 0.6), blurRadius: 18)],
+                              fontFamily: Brand.display,
+                              color: const Color(0xFFFF7A1A),
+                              fontSize: 40,
+                              letterSpacing: 2,
+                              shadows: [Shadow(color: const Color(0xFFFF6A13).withValues(alpha: 0.6), blurRadius: 18)],
                             ),
                           ),
                         ])),
@@ -129,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: const Color(0xFF3D5CFF), width: 1.2),
+                        border: Border.all(color: const Color(0xFFFF6A13), width: 1.2),
                       ),
                       child: const Text(
                         'Momos · Chaap · Chai — Julana Bypass',
@@ -145,41 +141,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       ),
     );
   }
-}
-
-/// Draws a bright pulse travelling along the logo's LED roof line.
-class _RoofPainter extends CustomPainter {
-  _RoofPainter(this.t);
-  final double t;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (t <= 0) return;
-    final s = size.width / 512;
-    final path = Path()
-      ..moveTo(96 * s, 214 * s)
-      ..lineTo(256 * s, 104 * s)
-      ..lineTo(416 * s, 214 * s);
-    final metric = path.computeMetrics().first;
-    final drawn = metric.extractPath(0, metric.length * t);
-    final fade = t < 1 ? 1.0 : 0.0;
-    canvas.drawPath(
-      drawn,
-      Paint()
-        ..color = const Color(0xFFB8C6FF).withValues(alpha: 0.9 * fade + 0.1)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6 * s
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-    final tip = metric.getTangentForOffset(metric.length * t)?.position;
-    if (tip != null && t < 1) {
-      canvas.drawCircle(tip, 10 * s, Paint()..color = Colors.white..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RoofPainter old) => old.t != t;
 }
 
 /// Three wisps of steam rising above the logo.

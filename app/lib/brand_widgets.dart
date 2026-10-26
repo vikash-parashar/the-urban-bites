@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'models.dart';
 import 'theme.dart';
 
-/// The app logo: navy tile with a bite out of the corner, LED roof line and gold "UB".
+/// The app logo: the tikka skewer icon (charcoal tile, flames over a skewer).
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 40});
   final double size;
@@ -33,7 +33,7 @@ class Wordmark extends StatelessWidget {
           Text.rich(
             TextSpan(children: [
               TextSpan(text: 'URBAN ', style: TextStyle(fontFamily: Brand.display, fontSize: size, letterSpacing: 1, color: p.cream, height: 1.05)),
-              TextSpan(text: 'Bites', style: TextStyle(fontFamily: Brand.hand, fontWeight: FontWeight.w700, fontSize: size * 1.05, color: p.gold, height: 1.05)),
+              TextSpan(text: 'BITES', style: TextStyle(fontFamily: Brand.display, fontSize: size, letterSpacing: 1, color: p == Palette.dark ? const Color(0xFFFF7A1A) : const Color(0xFFB8430F), height: 1.05)),
             ]),
             maxLines: 1,
             overflow: TextOverflow.fade,

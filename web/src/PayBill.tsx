@@ -110,7 +110,7 @@ export function BillCard({ bill, phone, actions = false }: { bill: Bill; phone?:
   return (
     <div className="bill" id="bill">
       <div className="bill-print">
-        <img src={brand.logoUrl} alt="" width={44} height={44} />
+        <img src={brand.logoUrl} alt="" width={88} height={40} />
         <p className="bill-shop">{brand.upper}</p>
         <p className="bill-small">{brand.place}, {brand.region} · {brand.phone_display}</p>
         <p className="bill-small">Bill #{bill.number} · {bill.when.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
