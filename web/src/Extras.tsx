@@ -6,6 +6,11 @@ import type { ReactNode } from 'react'
 import { googleMaps, social } from './social'
 import { checkMobile, cleanMobile, tenDigits } from './kit'
 import { fetchBadge, fetchRegulars, loadMe, tierLevel, type Badge, type Offer, type Regular, type Shop, type Tier, defaultTiers } from './shop'
+import { motion, type Variants } from 'motion/react'
+import { alive, lift, MA, MButton, Reveal, slideIn, stagger } from './motion'
+
+// Podium spots rise up from their plinths, the winner last.
+const podiumPop: Variants = { hidden: { opacity: 0, y: 60, scale: 0.9 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 220, damping: 18 } } }
 
 // ---- Free delivery banner ----
 
@@ -21,7 +26,7 @@ export function DeliveryBanner({ shop }: { shop: Shop }) {
           <rect x="62" y="12" width="24" height="18" rx="3" />
         </svg>
       </div>
-      <div className="promo-copy">
+      <Reveal className="promo-copy">
         <p className="eyebrow">Special</p>
         <h2 id="promo-title">
           <span className="promo-free">Free delivery</span>
@@ -31,8 +36,8 @@ export function DeliveryBanner({ shop }: { shop: Shop }) {
           Minimum order for delivery is {rupees(shop.min_order_delivery)}.
           {shop.min_order_pickup > 0 ? ` Pickup from ${rupees(shop.min_order_pickup)}.` : ' Pickup has no minimum.'}
         </p>
-      </div>
-      <a className="btn btn-gold" href="#menu">Start an order</a>
+      </Reveal>
+      <MA className="btn btn-gold" href="#menu">Start an order</MA>
     </section>
   )
 }
@@ -49,22 +54,22 @@ export function Offers({ offers, cart, onOpenCart }: { offers: Offer[]; cart: Ca
 
   return (
     <section className="offers" id="offers" aria-labelledby="offers-title">
-      <div className="menu-head">
+      <Reveal className="menu-head">
         <p className="eyebrow">Straight from the owner</p>
         <h2 id="offers-title">Offers</h2>
-      </div>
+      </Reveal>
       {hasDay && hasMonth && (
         <div className="sizes offers-tabs" role="tablist" aria-label="Offer period">
-          <button role="tab" aria-selected={tab === 'day'} className="size" onClick={() => setTab('day')}>Offer of the day</button>
-          <button role="tab" aria-selected={tab === 'month'} className="size" onClick={() => setTab('month')}>Offers of the month</button>
+          <MButton role="tab" aria-selected={tab === 'day'} className="size" onClick={() => setTab('day')}>Offer of the day</MButton>
+          <MButton role="tab" aria-selected={tab === 'month'} className="size" onClick={() => setTab('month')}>Offers of the month</MButton>
         </div>
       )}
-      <div className="offer-grid">
+      <motion.div className="offer-grid" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }} variants={stagger(0.1)}>
         {list.map((o) => {
           const item = o.item_id ? lookup(o.item_id) : undefined
           const qty = item ? cart.qtyOf(item.id, 'full') : 0
           return (
-            <article key={o.id} className={`offer-card offer-${o.period}`}>
+            <motion.article key={o.id} className={`offer-card offer-${o.period}`} variants={slideIn} {...lift}>
               <span className="offer-when">{o.period === 'day' ? 'Today only' : endsLabel(o.ends_on)}</span>
               <h3>{o.title}</h3>
               {o.description && <p>{o.description}</p>}
@@ -75,16 +80,16 @@ export function Offers({ offers, cart, onOpenCart }: { offers: Offer[]; cart: Ca
                     {rupees(o.offer_price)}
                   </span>
                   {qty === 0 ? (
-                    <button className="add" onClick={() => cart.dispatch({ type: 'add', itemId: item.id, size: 'full' })}>Add</button>
+                    <MButton className="add" onClick={() => cart.dispatch({ type: 'add', itemId: item.id, size: 'full' })}>Add</MButton>
                   ) : (
-                    <button className="add added" onClick={onOpenCart}>{qty} in order · view</button>
+                    <MButton className="add added" onClick={onOpenCart}>{qty} in order · view</MButton>
                   )}
                 </div>
               )}
-            </article>
+            </motion.article>
           )
         })}
-      </div>
+      </motion.div>
       {isPreview && <p className="tracker-note preview-note">Preview: sample offers. On the live site these come from the owner's app.</p>}
     </section>
   )
@@ -151,26 +156,26 @@ export function Regulars({ localOrders }: { localOrders: number }) {
       <div className="wall-sign" aria-hidden="true">
         <span className="wall-bulbs" />
       </div>
-      <div className="menu-head wall-head">
+      <Reveal className="menu-head wall-head">
         <p className="eyebrow">Urban Regulars · {new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</p>
         <h2 id="regulars-title"><span className="wall-hall">Wall of</span> <span className="wall-fame">Fame</span></h2>
         <p className="menu-sub">The biggest foodies of the month, in lights. Every finished order counts: website, app or at the counter. {monthlyMin} orders this month puts your name up here.</p>
-      </div>
+      </Reveal>
 
       {regulars.length === 0 ? (
         <div className="wall-empty">
           <span className="wall-crown" aria-hidden="true">👑</span>
           <p><strong>This spot is waiting for you.</strong> Be the first foodie on the wall this month.</p>
-          <a className="btn btn-gold" href="#menu">Order now</a>
+          <MA className="btn btn-gold" href="#menu">Order now</MA>
         </div>
       ) : (
         <>
-          <ol className="podium" aria-label="Top three this month">
+          <motion.ol className="podium" aria-label="Top three this month" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={stagger(0.18)}>
             {podium.map((r, i) => {
-              if (!r) return <li key={i} className="podium-spot empty" aria-hidden="true" />
+              if (!r) return <motion.li key={i} className="podium-spot empty" aria-hidden="true" variants={slideIn} />
               const place = i === 1 ? 1 : i === 0 ? 2 : 3
               return (
-                <li key={`${r.name}-${r.phone_hint}`} className={`podium-spot place-${place}`}>
+                <motion.li key={`${r.name}-${r.phone_hint}`} className={`podium-spot place-${place}`} variants={podiumPop} {...lift}>
                   {place === 1 && <span className="wall-crown" aria-hidden="true">👑</span>}
                   <span className="avatar" aria-hidden="true">{initials(r.name)}</span>
                   <strong className="podium-name">{r.name}</strong>
@@ -178,10 +183,10 @@ export function Regulars({ localOrders }: { localOrders: number }) {
                   <span className="podium-count">{r.month_orders} orders</span>
                   <BadgeMedal name={r.badge} />
                   <span className="plinth"><b>{place}</b>{place === 1 && <em>Foodie of the month</em>}</span>
-                </li>
+                </motion.li>
               )
             })}
-          </ol>
+          </motion.ol>
           {rest.length > 0 && (
             <div className="wall-ticker" aria-label="More regulars this month">
               <div className="wall-run">
@@ -198,16 +203,16 @@ export function Regulars({ localOrders }: { localOrders: number }) {
       {isPreview && <p className="tracker-note preview-note">Preview: sample names. On the live site these are real customers who ordered this month (first name and last two digits only).</p>}
 
       <div className="reg-grid">
-        <ol className="tiers">
+        <motion.ol className="tiers" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={stagger(0.08)}>
           {tiers.map((t) => (
-            <li key={t.name}>
+            <motion.li key={t.name} variants={slideIn} whileHover={{ y: -4, scale: 1.04 }}>
               <BadgeMedal name={t.name} size="lg" />
               <span>{t.min === 1 ? 'Your first order' : `${t.min} orders`}</span>
-            </li>
+            </motion.li>
           ))}
-        </ol>
+        </motion.ol>
 
-        <form className="board-card check-badge" onSubmit={check}>
+        <motion.form className="board-card check-badge" onSubmit={check} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
           <h3>Am I on the wall?</h3>
           <label className="field" htmlFor="badge-phone">
             Your mobile number
@@ -217,10 +222,10 @@ export function Regulars({ localOrders }: { localOrders: number }) {
                 onChange={(e) => setPhone(cleanMobile(e.target.value))} />
             </span>
           </label>
-          <button className="btn btn-gold" disabled={busy || checkMobile(phone) !== ''}>{busy ? 'Checking…' : 'Check my badge'}</button>
+          <MButton className="btn btn-gold" disabled={busy || checkMobile(phone) !== ''}>{busy ? 'Checking…' : 'Check my badge'}</MButton>
           {error && <p className="error" role="alert">{error}</p>}
           {mine && <BadgeResult b={mine} />}
-        </form>
+        </motion.form>
       </div>
     </section>
   )
@@ -263,24 +268,24 @@ const promises = [
 export function Promise() {
   return (
     <section className="promise" aria-labelledby="promise-title">
-      <div className="menu-head">
+      <Reveal className="menu-head">
         <p className="eyebrow">Our promise</p>
         <h2 id="promise-title">
           <span>Quality, taste, cleanliness.</span>
           <span className="promise-gold">No match anywhere.</span>
         </h2>
         <p className="promise-hi" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में द अर्बन बाइट्स का कोई मुकाबला नहीं</p>
-      </div>
-      <ul className="promise-grid">
+      </Reveal>
+      <motion.ul className="promise-grid" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger(0.1)}>
         {promises.map((p) => (
-          <li key={p.title} className="promise-card">
+          <motion.li key={p.title} className="promise-card" variants={slideIn} {...lift}>
             <span className="promise-icon" aria-hidden="true">{p.icon}</span>
             <h3>{p.title}</h3>
             <p className="promise-card-hi" lang="hi">{p.hi}</p>
             <p>{p.text}</p>
-          </li>
+          </motion.li>
         ))}
-      </ul>
+      </motion.ul>
     </section>
   )
 }
@@ -298,14 +303,14 @@ export function Social({ lat, lng }: { lat: number; lng: number }) {
     <section className="social" aria-labelledby="social-title">
       <h2 id="social-title">Loved it? Tell everyone.</h2>
       <p className="menu-sub">Follow the cart, share a photo of your plate, or leave a review. It helps a small family business more than you'd think.</p>
-      <div className="social-links">
+      <motion.div className="social-links" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={stagger(0.08)}>
         {links.map((l) => (
-          <a key={l.cls} className={`social-btn ${l.cls}`} href={l.href} target="_blank" rel="noopener">
+          <motion.a key={l.cls} className={`social-btn ${l.cls}`} href={l.href} target="_blank" rel="noopener" variants={slideIn} {...alive}>
             <span className="social-ico" aria-hidden="true">{socialIcon[l.cls]}</span>
             <span><strong>{l.label}</strong><small>{l.sub}</small></span>
-          </a>
+          </motion.a>
         ))}
-      </div>
+      </motion.div>
     </section>
   )
 }

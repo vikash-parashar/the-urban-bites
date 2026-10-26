@@ -1,4 +1,5 @@
 import { StrictMode, useEffect, useState } from 'react'
+import { MotionConfig } from 'motion/react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import StaffApp from './Staff'
@@ -20,6 +21,8 @@ function Root() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Root />
+    <MotionConfig reducedMotion="user">
+      <Root />
+    </MotionConfig>
   </StrictMode>,
 )

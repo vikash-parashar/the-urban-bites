@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { currentPeriod, currentTheme, pickTheme, pickedTheme, setPeriod, themes, type ThemeId } from './theme'
+import { MButton } from './motion'
 
 function useTheme() {
   const [id, setId] = useState<ThemeId>(currentTheme)
@@ -17,10 +18,10 @@ export function DayNightToggle() {
   if (pickedTheme()) return null
   const day = currentPeriod() === 'day'
   return (
-    <button type="button" className="daynight" onClick={() => setPeriod(day ? 'night' : 'day')}
+    <MButton type="button" className="daynight" onClick={() => setPeriod(day ? 'night' : 'day')}
       aria-label={day ? 'Switch to night colours' : 'Switch to day colours'} title={day ? 'Night colours' : 'Day colours'}>
       <span aria-hidden="true">{day ? '🌙' : '☀️'}</span>
-    </button>
+    </MButton>
   )
 }
 

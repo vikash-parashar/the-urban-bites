@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { staffApi, type Expense, type Period } from './staffApi'
 import { useGuard } from './StaffExtras'
 import { rupees } from './menu'
+import { MButton } from './motion'
 
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 const ICON: Record<string, string> = {
@@ -44,15 +45,15 @@ export default function Expenses({ onSignedOut }: { onSignedOut: () => void }) {
       <form className="exp-form" onSubmit={add}>
         <div className="exp-cats" role="radiogroup" aria-label="What was it for">
           {cats.map((c) => (
-            <button type="button" key={c} role="radio" aria-checked={cat === c} className="size" onClick={() => setCat(c)}>
+            <MButton type="button" key={c} role="radio" aria-checked={cat === c} className="size" onClick={() => setCat(c)}>
               <span aria-hidden="true">{ICON[c] ?? '🧾'}</span> {c}
-            </button>
+            </MButton>
           ))}
         </div>
         <label className="field" htmlFor="ex-amt">Amount ₹<input id="ex-amt" name="amount" inputMode="numeric" pattern="\d+" required placeholder="900" /></label>
         <label className="field" htmlFor="ex-day">Date<input id="ex-day" name="spent_on" type="date" max={today()} defaultValue={today()} required /></label>
         <label className="field" htmlFor="ex-note">Note (optional)<input id="ex-note" name="note" maxLength={140} placeholder="2 cylinders" /></label>
-        <button className="btn btn-gold">Save expense</button>
+        <MButton className="btn btn-gold">Save expense</MButton>
       </form>
       {error && <p className="error" role="alert">{error}</p>}
       {msg && <p className="oc-eta" role="status">{msg}</p>}
@@ -61,7 +62,7 @@ export default function Expenses({ onSignedOut }: { onSignedOut: () => void }) {
         <h3 className="panel-h">Spent: {rupees(total)}</h3>
         <div className="sizes" role="radiogroup" aria-label="Period">
           {([['week', 'This week'], ['month', 'This month'], ['year', 'This year']] as [Period, string][]).map(([p, l]) => (
-            <button key={p} className="size" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}>{l}</button>
+            <MButton key={p} className="size" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}>{l}</MButton>
           ))}
         </div>
       </div>
@@ -72,8 +73,8 @@ export default function Expenses({ onSignedOut }: { onSignedOut: () => void }) {
               <span className="line-emoji" aria-hidden="true">{ICON[x.category] ?? '🧾'}</span>
               <div><strong>{x.category}</strong><small>{new Date(`${x.spent_on}T12:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{x.note ? ` · ${x.note}` : ''}</small></div>
               {confirm === x.id ? (
-                <span className="confirm"><button className="btn btn-danger btn-sm" onClick={() => remove(x.id)}>Delete</button><button className="btn btn-ghost btn-sm" onClick={() => setConfirm(null)}>Keep</button></span>
-              ) : <button className="btn btn-ghost btn-sm" onClick={() => setConfirm(x.id)} aria-label={`Delete ${x.category} ${rupees(x.amount)}`}>✕</button>}
+                <span className="confirm"><MButton className="btn btn-danger btn-sm" onClick={() => remove(x.id)}>Delete</MButton><MButton className="btn btn-ghost btn-sm" onClick={() => setConfirm(null)}>Keep</MButton></span>
+              ) : <MButton className="btn btn-ghost btn-sm" onClick={() => setConfirm(x.id)} aria-label={`Delete ${x.category} ${rupees(x.amount)}`}>✕</MButton>}
               <span className="line-total">{rupees(x.amount)}</span>
             </li>
           ))}

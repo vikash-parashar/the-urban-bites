@@ -3,6 +3,12 @@ import { rupees } from './menu'
 import { staffApi, type Bucket, type Dashboard as Dash, type Period, type Split, type Totals } from './staffApi'
 import { itemKind } from './kit'
 import { useGuard } from './StaffExtras'
+import { motion } from 'motion/react'
+import { lift, slideIn, stagger } from './motion'
+import { MButton } from './motion'
+
+// Bars grow from the left when their row scrolls into view (driven by the parent, since a 0-width bar never "intersects").
+const growX = { hidden: { scaleX: 0 }, show: { scaleX: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const } } }
 
 const PERIODS: [Period, string][] = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['year', 'This year']]
 const PREV_NAME: Record<Period, string> = { day: 'yesterday', week: 'last week', month: 'the month before', year: 'last year' }
@@ -129,14 +135,15 @@ function SalesChart({ series, bucket }: { series: Bucket[]; bucket: Dash['bucket
           return (
             <g key={b.key}>
               {hgt > 0 && (
-                <path className={`bar s1 ${hover === i ? 'on' : ''}`} style={{ animationDelay: `${i * 18}ms` }}
+                <motion.path className={`bar s1 ${hover === i ? 'on' : ''}`} style={{ transformBox: 'fill-box', originY: 1 }}
+                  initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: i * 0.018, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                   d={`M${x(i) - bw / 2},${base} V${top + Math.min(4, hgt)} Q${x(i) - bw / 2},${top} ${x(i) - bw / 2 + Math.min(4, hgt)},${top} H${x(i) + bw / 2 - Math.min(4, hgt)} Q${x(i) + bw / 2},${top} ${x(i) + bw / 2},${top + Math.min(4, hgt)} V${base} Z`} />
               )}
               {i % every === 0 && <text x={x(i)} y={h - 8} className="tick" textAnchor="middle">{b.label}</text>}
             </g>
           )
         })}
-        {!empty && <path d={line} className="line s2" fill="none" />}
+        {!empty && <motion.path key={line} d={line} className="line s2" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, delay: 0.2, ease: 'easeInOut' }} />}
         {!empty && series.map((b, i) => (b.orders > 0 || hover === i) && <circle key={b.key} cx={x(i)} cy={y(b.profit)} r={hover === i ? 5 : 4} className="dot s2" />)}
         {hover != null && <line x1={x(hover)} x2={x(hover)} y1={padT} y2={h - padB} className="crosshair" />}
         {series.map((b, i) => (
@@ -177,7 +184,8 @@ function Columns({ values, labels, every = 1, unit }: { values: number[]; labels
           return (
             <g key={i} onMouseEnter={() => setHover(i)} onTouchStart={() => setHover(i)}>
               <rect x={band * i} y={0} width={band} height={h} fill="transparent" />
-              {hgt > 0 && <path className={`bar s1 ${i === peak ? 'peak' : 'soft'} ${hover === i ? 'on' : ''}`} style={{ animationDelay: `${i * 20}ms` }}
+              {hgt > 0 && <motion.path className={`bar s1 ${i === peak ? 'peak' : 'soft'} ${hover === i ? 'on' : ''}`} style={{ transformBox: 'fill-box', originY: 1 }}
+                initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.02, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 d={`M${cx - bw / 2},${h - padB} V${h - padB - hgt + r} Q${cx - bw / 2},${h - padB - hgt} ${cx - bw / 2 + r},${h - padB - hgt} H${cx + bw / 2 - r} Q${cx + bw / 2},${h - padB - hgt} ${cx + bw / 2},${h - padB - hgt + r} V${h - padB} Z`} />}
               {(i === peak && v > 0) && <text x={cx} y={h - padB - hgt - 5} className="tick strong" textAnchor="middle">{v}</text>}
               {i % every === 0 && <text x={cx} y={h - 6} className="tick" textAnchor="middle">{labels[i]}</text>}
@@ -207,9 +215,9 @@ function SplitBar({ title, parts, names }: { title: string; parts: Split[]; name
       <h4>{title}</h4>
       {total === 0 ? <p className="menu-sub">No orders yet.</p> : (
         <>
-          <div className="split-bar" role="img" aria-label={sorted.map((p) => `${names[p.key] ?? p.key} ${Math.round((p.orders / total) * 100)}%`).join(', ')}>
-            {sorted.map((p) => <i key={p.key} className={`s${order.indexOf(p.key) + 1}`} style={{ flexGrow: p.orders }} title={`${names[p.key] ?? p.key}: ${p.orders} orders, ${rupees(p.revenue)}`} />)}
-          </div>
+          <motion.div className="split-bar" initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger(0.12)} role="img" aria-label={sorted.map((p) => `${names[p.key] ?? p.key} ${Math.round((p.orders / total) * 100)}%`).join(', ')}>
+            {sorted.map((p) => <motion.i key={p.key} className={`s${order.indexOf(p.key) + 1}`} style={{ flexGrow: p.orders, originX: 0 }} variants={growX} title={`${names[p.key] ?? p.key}: ${p.orders} orders, ${rupees(p.revenue)}`} />)}
+          </motion.div>
           <ul className="split-legend">
             {sorted.map((p) => (
               <li key={p.key}><i className={`key key-bar s${order.indexOf(p.key) + 1}`} />{names[p.key] ?? p.key} <strong>{Math.round((p.orders / total) * 100)}%</strong> <span className="muted">{p.orders} · {rupees(p.revenue)}</span></li>
@@ -232,9 +240,9 @@ function MoneyFlow({ t }: { t: Totals }) {
   return (
     <div className="moneyflow">
       <p className="menu-sub">Where each ₹100 of sales went</p>
-      <div className="split-bar tall">
-        {parts.map((p) => <i key={p.k} className={p.c} style={{ flexGrow: p.v }} />)}
-      </div>
+      <motion.div className="split-bar tall" initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger(0.15)}>
+        {parts.map((p) => <motion.i key={p.k} className={p.c} style={{ flexGrow: p.v, originX: 0 }} variants={growX} />)}
+      </motion.div>
       <ul className="split-legend">
         {parts.map((p) => (
           <li key={p.k}><i className={`key key-bar ${p.c}`} />{p.k} <strong>₹{Math.round((p.v / Math.max(t.revenue, t.cost + t.expenses)) * 100)}</strong> <span className="muted">{rupees(p.v)}</span></li>
@@ -283,12 +291,12 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
         <div className="dash-controls">
           <div className="sizes" role="radiogroup" aria-label="Period">
             {PERIODS.map(([id, label]) => (
-              <button key={id} className="size" role="radio" aria-checked={period === id} onClick={() => { setPeriod(id); setDate(istToday()) }}>{label}</button>
+              <MButton key={id} className="size" role="radio" aria-checked={period === id} onClick={() => { setPeriod(id); setDate(istToday()) }}>{label}</MButton>
             ))}
           </div>
           <div className="dash-step">
-            <button className="btn btn-ghost btn-sm" onClick={() => setDate(shift(date, period, -1))} aria-label="Earlier">‹ Earlier</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setDate(next > istToday() ? istToday() : next)} disabled={!canNext} aria-label="Later">Later ›</button>
+            <MButton className="btn btn-ghost btn-sm" onClick={() => setDate(shift(date, period, -1))} aria-label="Earlier">‹ Earlier</MButton>
+            <MButton className="btn btn-ghost btn-sm" onClick={() => setDate(next > istToday() ? istToday() : next)} disabled={!canNext} aria-label="Later">Later ›</MButton>
           </div>
         </div>
       </div>
@@ -296,72 +304,72 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
 
       {d && t && p && (
         <>
-          <section className="dash-hero">
-            <div className="hero-fig">
+          <motion.section className="dash-hero" initial="hidden" animate="show" variants={stagger(0.08)}>
+            <motion.div className="hero-fig" variants={slideIn} {...lift}>
               <span className="kpi-label">Sales</span>
               <strong className="hero-num"><CountUp value={t.revenue} format={rupees} /></strong>
               <Delta now={t.revenue} before={p.revenue} period={period} />
-            </div>
-            <div className="kpis">
-              <div className={`kpi ${t.net_profit < 0 ? 'neg' : ''}`}>
+            </motion.div>
+            <motion.div className="kpis" variants={stagger(0.07)}>
+              <motion.div className={`kpi ${t.net_profit < 0 ? 'neg' : ''}`} variants={slideIn} {...lift}>
                 <span className="kpi-label">Profit</span>
                 <strong><CountUp value={t.net_profit} format={rupees} /></strong>
                 <Delta now={t.net_profit} before={p.net_profit} period={period} />
-              </div>
-              <div className="kpi">
+              </motion.div>
+              <motion.div className="kpi" variants={slideIn} {...lift}>
                 <span className="kpi-label">Orders</span>
                 <strong><CountUp value={t.orders} format={String} /></strong>
                 <Delta now={t.orders} before={p.orders} period={period} money={false} />
-              </div>
-              <div className="kpi">
+              </motion.div>
+              <motion.div className="kpi" variants={slideIn} {...lift}>
                 <span className="kpi-label">Average order</span>
                 <strong><CountUp value={t.avg_order} format={rupees} /></strong>
                 <Delta now={t.avg_order} before={p.avg_order} period={period} />
-              </div>
-              <div className="kpi">
+              </motion.div>
+              <motion.div className="kpi" variants={slideIn} {...lift}>
                 <span className="kpi-label">Customers</span>
                 <strong><CountUp value={t.customers} format={String} /></strong>
                 <span className="kpi-delta flat">{t.new_customers} new · {t.items_sold} plates sold</span>
-              </div>
-            </div>
-          </section>
+              </motion.div>
+            </motion.div>
+          </motion.section>
 
           {(d.missing_cost > 0 || t.uncosted_sales > 0) && (
             <div className="dash-note">
               <span aria-hidden="true">💡</span>
               <p><strong>Profit is only as good as your cost prices.</strong> {d.missing_cost} dish{d.missing_cost === 1 ? ' has' : 'es have'} no cost price yet
                 {t.uncosted_sales > 0 && <>, so {rupees(t.uncosted_sales)} of these sales count as if the food cost nothing</>}.</p>
-              <button className="btn btn-ghost btn-sm" onClick={() => goTo('menu')}>Add cost prices</button>
+              <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('menu')}>Add cost prices</MButton>
             </div>
           )}
 
-          <div className="dash-grid">
-            <section className="card wide">
+          <motion.div className="dash-grid" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.05 }} variants={stagger(0.08)}>
+            <motion.section className="card wide" variants={slideIn}>
               <div className="card-head"><h3>Sales and profit</h3>{t.cancelled > 0 && <span className="muted">{t.cancelled} cancelled, not counted</span>}</div>
               <SalesChart series={d.series} bucket={d.bucket} />
               <MoneyFlow t={t} />
-            </section>
+            </motion.section>
 
-            <section className="card">
+            <motion.section className="card" variants={slideIn}>
               <div className="card-head"><h3>Most sold</h3><span className="muted">by plates</span></div>
               {best ? (
                 <div className="champ">
-                  <span className="champ-emoji" aria-hidden="true">{itemKind(best.name).emoji}</span>
+                  <motion.span className="champ-emoji" aria-hidden="true" animate={{ y: [0, -4, 0], rotate: [0, -6, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>{itemKind(best.name).emoji}</motion.span>
                   <div><span className="kpi-label">🏆 Number one</span><strong>{best.name}</strong><span className="muted">{best.qty} plates · {rupees(best.sales)}{best.costed ? ` · ${best.margin}% margin` : ''}</span></div>
                 </div>
               ) : <p className="menu-sub">Nothing sold yet in this period.</p>}
-              <ol className="dash-leaders">
+              <motion.ol className="dash-leaders" initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger(0.06)}>
                 {d.top_items.slice(best ? 1 : 0, 8).map((it, i) => (
-                  <li key={it.item_id}>
+                  <motion.li key={it.item_id} variants={slideIn}>
                     <span className="dash-rank">{i + 2}</span>
-                    <span className="lead-name">{it.name}<span className="lead-bar"><i style={{ width: `${(it.qty / maxQty) * 100}%` }} /></span></span>
+                    <span className="lead-name">{it.name}<span className="lead-bar"><motion.i style={{ width: `${(it.qty / maxQty) * 100}%`, originX: 0 }} variants={growX} /></span></span>
                     <span className="lead-num"><strong>{it.qty}</strong><small>{rupees(it.sales)}</small></span>
-                  </li>
+                  </motion.li>
                 ))}
-              </ol>
-            </section>
+              </motion.ol>
+            </motion.section>
 
-            <section className="card">
+            <motion.section className="card" variants={slideIn}>
               <div className="card-head"><h3>Busy hours</h3><span className="muted">orders by time of day</span></div>
               <Columns values={d.hours} labels={d.hours.map((_, h) => `${h % 12 || 12}${h < 12 ? 'a' : 'p'}`)} every={3} unit="orders" />
               {d.period !== 'day' && (
@@ -370,16 +378,16 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
                   <Columns values={d.weekdays} labels={WEEKDAYS} unit="orders" />
                 </>
               )}
-            </section>
+            </motion.section>
 
-            <section className="card">
+            <motion.section className="card" variants={slideIn}>
               <div className="card-head"><h3>How people order</h3></div>
               <SplitBar title="Came from" parts={d.sources} names={SOURCE} />
               <SplitBar title="Paid by" parts={d.payments} names={PAY} />
               <SplitBar title="Took it" parts={d.fulfilment} names={FUL} />
-            </section>
+            </motion.section>
 
-            <section className="card">
+            <motion.section className="card" variants={slideIn}>
               <div className="card-head"><h3>Best customers</h3></div>
               {d.top_customers.length === 0 ? <p className="menu-sub">Customers with a phone number show up here.</p> : (
                 <ol className="dash-leaders">
@@ -392,26 +400,26 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
                   ))}
                 </ol>
               )}
-            </section>
+            </motion.section>
 
-            <section className="card">
+            <motion.section className="card" variants={slideIn}>
               <div className="card-head"><h3>Selling slowly</h3><span className="muted">on the menu, sold least</span></div>
               <ul className="slow">
                 {d.slow_items.map((it) => <li key={it.item_id}><span aria-hidden="true">{itemKind(it.name).emoji}</span> {it.name} <span className="muted">{it.qty} sold</span></li>)}
               </ul>
-              <button className="btn btn-ghost btn-sm" onClick={() => goTo('offers')}>Put one on offer</button>
-            </section>
+              <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('offers')}>Put one on offer</MButton>
+            </motion.section>
 
-            <section className="card">
+            <motion.section className="card" variants={slideIn}>
               <div className="card-head"><h3>Money spent</h3><strong>{rupees(t.expenses)}</strong></div>
               {d.expense_categories.length === 0 ? <p className="menu-sub">Add gas, vegetables, rent and other costs so profit is real.</p> : (
                 <ul className="slow">
                   {d.expense_categories.map((e) => <li key={e.key}>{e.key} <strong>{rupees(e.revenue)}</strong></li>)}
                 </ul>
               )}
-              <button className="btn btn-ghost btn-sm" onClick={() => goTo('expenses')}>Add an expense</button>
-            </section>
-          </div>
+              <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('expenses')}>Add an expense</MButton>
+            </motion.section>
+          </motion.div>
         </>
       )}
     </div>

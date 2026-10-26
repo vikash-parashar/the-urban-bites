@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { staffApi, type ItemInput, type MenuCategoryAdmin, type MenuItemAdmin } from './staffApi'
 import { useGuard } from './StaffExtras'
+import { motion } from 'motion/react'
 import { itemKind } from './kit'
 import { rupees } from './menu'
+import { MButton } from './motion'
 
 export const TAGS: [string, string][] = [['', 'No tag'], ['bestseller', '🔥 Bestseller'], ['new', '✨ New'], ['spicy', '🌶️ Spicy'], ['chef', '👨‍🍳 Chef’s special']]
 
@@ -65,7 +67,7 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
           <section key={c.id} className="ma-cat">
             <div className="ma-cat-head">
               <h3 className="panel-h">{c.name} <small lang="hi">{c.name_hi}</small> <span className="muted">{c.items.length}</span></h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setAdding(adding === c.id ? null : c.id)}>{adding === c.id ? 'Close' : '+ Add dish'}</button>
+              <MButton className="btn btn-ghost btn-sm" onClick={() => setAdding(adding === c.id ? null : c.id)}>{adding === c.id ? 'Close' : '+ Add dish'}</MButton>
             </div>
             {adding === c.id && (
               <ItemForm cats={cats} images={images} initial={{ category_id: c.id }} submitLabel="Add to menu"
@@ -79,7 +81,7 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
             {items.map((i) => {
               const m = margin(i.full, i.cost_full)
               return (
-                <div key={i.id} className={`ma-row ${i.available ? '' : 'off'} ${open === i.id ? 'is-open' : ''}`}>
+                <motion.div layout key={i.id} className={`ma-row ${i.available ? '' : 'off'} ${open === i.id ? 'is-open' : ''}`} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
                   <div className="ma-name">
                     <span aria-hidden="true" className="ma-emoji">{itemKind(i.name, c.name).emoji}</span>
                     <span><strong>{i.name}</strong>{i.tag && <span className={`tag-chip tag-${i.tag}`}>{TAGS.find(([k]) => k === i.tag)?.[1]}</span>}<br /><small className="muted" lang="hi">{i.name_hi}</small></span>
@@ -95,7 +97,7 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
                   <span className={`ma-margin ${m == null ? 'none' : m < 30 ? 'low' : 'ok'}`}>{m == null ? '—' : `${m}%`}<small>{m != null && i.full != null && i.cost_full != null ? ` ${rupees(i.full - i.cost_full)}/plate` : ''}</small></span>
                   <div className="ma-actions">
                     <label className="switch"><input id={`a-${i.id}`} type="checkbox" checked={i.available} onChange={(e) => save(i.id, { available: e.target.checked })} /><span>{i.available ? 'On menu' : 'Sold out'}</span></label>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>{open === i.id ? 'Close' : 'Edit'}</button>
+                    <MButton className="btn btn-ghost btn-sm" onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>{open === i.id ? 'Close' : 'Edit'}</MButton>
                   </div>
                   {open === i.id && (
                     <div className="ma-edit">
@@ -107,7 +109,7 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
                         }} />
                     </div>
                   )}
-                </div>
+                </motion.div>
               )
             })}
           </section>
@@ -119,7 +121,7 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
         <form className="add-staff" onSubmit={addSection}>
           <label className="field" htmlFor="ns-cat">Section name<input id="ns-cat" name="name" required maxLength={40} placeholder="Combos" /></label>
           <label className="field" htmlFor="ns-cat-hi">In Hindi (optional)<input id="ns-cat-hi" name="name_hi" maxLength={40} lang="hi" placeholder="कॉम्बो" /></label>
-          <button className="btn btn-gold">Add section</button>
+          <MButton className="btn btn-gold">Add section</MButton>
         </form>
       </section>
     </div>
@@ -179,14 +181,14 @@ function ItemForm({ cats, images, initial, submitLabel, onSubmit, onCancel, onDe
       <label className="field" htmlFor={`if-cat-${p}`}>Section<select id={`if-cat-${p}`} name="category_id" defaultValue={initial.category_id}>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <label className="field" htmlFor={`if-img-${p}`}>Photo<select id={`if-img-${p}`} name="image" defaultValue={initial.image ?? ''}><option value="">No photo (shows an emoji)</option>{images.map((k) => <option key={k} value={k}>{k}</option>)}</select></label>
       <div className="item-form-actions">
-        <button className="btn btn-gold">{submitLabel}</button>
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <MButton className="btn btn-gold">{submitLabel}</MButton>
+        <MButton type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</MButton>
         {onDelete && (!confirm ? (
-          <button type="button" className="btn btn-danger" onClick={() => setConfirm(true)}>Delete dish</button>
+          <MButton type="button" className="btn btn-danger" onClick={() => setConfirm(true)}>Delete dish</MButton>
         ) : (
           <span className="confirm">Remove {initial.name} from the menu for good?
-            <button type="button" className="btn btn-danger" onClick={() => onDelete()}>Yes, delete</button>
-            <button type="button" className="btn btn-ghost" onClick={() => setConfirm(false)}>Keep it</button>
+            <MButton type="button" className="btn btn-danger" onClick={() => onDelete()}>Yes, delete</MButton>
+            <MButton type="button" className="btn btn-ghost" onClick={() => setConfirm(false)}>Keep it</MButton>
           </span>
         ))}
       </div>

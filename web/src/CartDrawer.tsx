@@ -5,6 +5,7 @@ import { placeOrder, type OrderRequest, type PlacedOrder } from './api'
 import { deliveryFee, distanceKm, loadMe, saveMe, type Shop } from './shop'
 import Tracker from './Tracker'
 import { checkAddress, checkFirstName, checkLastName, checkMobile, cleanMobile, cleanName, itemKind, tenDigits } from './kit'
+import { MButton } from './motion'
 
 interface Props {
   cart: Cart
@@ -120,26 +121,26 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
       <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
         <div className="drawer-head">
           <h2 id="drawer-title">{tracking ? 'Your order' : 'Your cart'}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
+          <MButton className="icon-btn" onClick={onClose} aria-label="Close">✕</MButton>
         </div>
 
         {tracking ? (
           <>
             <Tracker order={tracking} phone={me?.phone} shop={shop} />
             {tracking.lines?.length ? (
-              <button className="btn btn-ghost" onClick={() => cart.dispatch({ type: 'fill', lines: tracking.lines! })}>Order the same again</button>
+              <MButton className="btn btn-ghost" onClick={() => cart.dispatch({ type: 'fill', lines: tracking.lines! })}>Order the same again</MButton>
             ) : null}
-            <button className="btn btn-ghost" onClick={onClose}>Back to the menu</button>
+            <MButton className="btn btn-ghost" onClick={onClose}>Back to the menu</MButton>
           </>
         ) : cart.count === 0 ? (
           <div className="empty">
             <p>Nothing here yet. Pick something hot from the menu.</p>
             {lastWithLines && (
-              <button className="btn btn-ghost" onClick={() => cart.dispatch({ type: 'fill', lines: lastWithLines.lines! })}>
+              <MButton className="btn btn-ghost" onClick={() => cart.dispatch({ type: 'fill', lines: lastWithLines.lines! })}>
                 Order again: same as #{lastWithLines.number}
-              </button>
+              </MButton>
             )}
-            <button className="btn btn-gold" onClick={onClose}>Browse the menu</button>
+            <MButton className="btn btn-gold" onClick={onClose}>Browse the menu</MButton>
           </div>
         ) : (
           <form className="checkout" onSubmit={submit}>
@@ -241,9 +242,9 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
                   {show('address') && <span className="field-err">{show('address')}</span>}
                 </label>
                 <div className="locate">
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={locate} disabled={loc.state === 'busy'}>
+                  <MButton type="button" className="btn btn-ghost btn-sm" onClick={locate} disabled={loc.state === 'busy'}>
                     {loc.state === 'busy' ? 'Finding you…' : loc.state === 'ok' ? 'Location added ✓' : 'Share my location'}
-                  </button>
+                  </MButton>
                   <span className="opt">
                     {loc.state === 'error' ? loc.msg
                       : loc.state === 'ok' && km == null ? 'Saved. The cart will see it on your order.'
@@ -274,12 +275,12 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
             </fieldset>
 
             {error && <p className="error" role="alert">{error}</p>}
-            <button className="btn btn-gold btn-block" disabled={busy || !canOrder}>
+            <MButton className="btn btn-gold btn-block" disabled={busy || !canOrder}>
               {busy ? 'Sending to the kitchen…'
                 : !shop.accepting_orders ? 'Online orders paused'
                 : short > 0 ? `Add ${rupees(short)} more to order`
                 : `Place order · ${rupees(total)}`}
-            </button>
+            </MButton>
             <p className="fine">Questions? Call {business.phone.replace('+91', '')}.</p>
           </form>
         )}

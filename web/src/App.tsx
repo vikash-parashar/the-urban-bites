@@ -1,7 +1,7 @@
 import { DayNightToggle, ThemePicker } from './ThemePicker'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useMemo, useRef, useState } from 'react'
+import { motion, useScroll, useTransform, type Variants } from 'motion/react'
+import { alive, ease, MA, MButton, Reveal, spring, stagger } from './motion'
 import { business, media } from './menu'
 import { registerOffers, useCart } from './cart'
 import { useMyOrders } from './orders'
@@ -14,7 +14,17 @@ import HeroSound from './HeroSound'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
 import Intro from './Intro'
 
-gsap.registerPlugin(ScrollTrigger)
+// The opening waits for the intro card on the first visit of the session.
+function introDelay() {
+  try {
+    return sessionStorage.getItem('ub-intro') ? 0 : 2.2
+  } catch {
+    return 0
+  }
+}
+
+const letter: Variants = { hidden: { y: '110%' }, show: { y: 0, transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] } } }
+const rise: Variants = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } } }
 
 const marqueeItems = [
   ['Momos', 'मोमोज'],
@@ -47,84 +57,24 @@ export default function App() {
     setView('track')
     setCartOpen(true)
   }
-  const root = useRef<HTMLDivElement>(null)
   const heroVideo = useRef<HTMLVideoElement>(null)
 
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const mm = gsap.matchMedia()
-
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        // Opening: the LED roofline draws itself, sputters on, then the name lands.
-        const roof = root.current!.querySelectorAll<SVGPathElement>('.roof path')
-        roof.forEach((p) => {
-          const len = p.getTotalLength()
-          gsap.set(p, { strokeDasharray: len, strokeDashoffset: len })
-        })
-        // Wait for the opening card (Intro) on the first visit of the session.
-        let introShowing = false
-        try {
-          introShowing = !sessionStorage.getItem('ub-intro')
-        } catch {
-          /* storage blocked */
-        }
-        const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: introShowing ? 2.2 : 0 })
-        tl.to(roof, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut', stagger: 0.15 })
-          .fromTo('.roof', { opacity: 0.3 }, { opacity: 1, duration: 0.5, ease: 'steps(6)' }, '-=0.3')
-          .from('.hero-the', { y: 20, opacity: 0, duration: 0.5 }, '-=0.6')
-          .from('.hero-urban span', { yPercent: 110, duration: 0.9, stagger: 0.06, ease: 'expo.out' }, '-=0.4')
-          .from('.hero-bites', { scale: 0.6, rotate: -14, opacity: 0, duration: 0.9, ease: 'back.out(2)' }, '-=0.5')
-          .from('.hero-promise li', { y: 14, opacity: 0, duration: 0.5, stagger: 0.08 }, '-=0.4')
-          .from('.hero-cta > *', { y: 18, opacity: 0, duration: 0.5, stagger: 0.1 }, '-=0.3')
-
-        // Neon strips never hold perfectly steady.
-        gsap.to('.roof', {
-          opacity: 0.82,
-          duration: 0.08,
-          repeat: -1,
-          yoyo: true,
-          repeatDelay: 3.2,
-          ease: 'none',
-        })
-
-        gsap.to('.hero-video', {
-          yPercent: 18,
-          scale: 1.12,
-          ease: 'none',
-          scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-        })
-        gsap.to('.hero-copy', {
-          yPercent: -30,
-          opacity: 0.2,
-          ease: 'none',
-          scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-        })
-
-        gsap.fromTo(
-          '.reel-frame',
-          { scale: 0.72, borderRadius: 40 },
-          {
-            scale: 1,
-            borderRadius: 12,
-            ease: 'none',
-            scrollTrigger: { trigger: '.reel', start: 'top 85%', end: 'center center', scrub: true },
-          },
-        )
-        gsap.from('.reel-line', {
-          yPercent: 100,
-          stagger: 0.12,
-          duration: 0.8,
-          ease: 'expo.out',
-          scrollTrigger: { trigger: '.reel', start: 'top 70%' },
-        })
-      })
-
-    }, root)
-    return () => ctx.revert()
-  }, [])
+  const hero = useRef<HTMLElement>(null)
+  const reel = useRef<HTMLElement>(null)
+  const start = useMemo(introDelay, [])
+  // Parallax: the flame video sinks and zooms, the title floats up and fades as you scroll past.
+  const { scrollYProgress: heroP } = useScroll({ target: hero, offset: ['start start', 'end start'] })
+  const videoY = useTransform(heroP, [0, 1], ['0%', '18%'])
+  const videoScale = useTransform(heroP, [0, 1], [1, 1.12])
+  const copyY = useTransform(heroP, [0, 1], ['0%', '-30%'])
+  const copyFade = useTransform(heroP, [0, 1], [1, 0.2])
+  // The walk-in video grows from a rounded card to full size as it scrolls in.
+  const { scrollYProgress: reelP } = useScroll({ target: reel, offset: ['start 85%', 'center center'] })
+  const reelScale = useTransform(reelP, [0, 1], [0.72, 1])
+  const reelRadius = useTransform(reelP, [0, 1], [40, 12])
 
   return (
-    <div ref={root}>
+    <div>
       <Intro />
       <ThemePicker />
       <header className="topbar">
@@ -141,46 +91,51 @@ export default function App() {
         </nav>
         <div className="top-actions">
           <DayNightToggle />
-          <button className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
-          <span aria-hidden="true">🛒</span><span className="cart-label">Order</span><span className="cart-count">{cart.count}</span>
-          </button>
+          <MButton className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
+            <span aria-hidden="true">🛒</span><span className="cart-label">Order</span>
+            {/* The count pops each time something is added. */}
+            <motion.span key={cart.count} className="cart-count" initial={{ scale: 1.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }}>{cart.count}</motion.span>
+          </MButton>
         </div>
       </header>
       <ShopNotice shop={shop} />
 
-      <section className="hero" id="top">
-        <video ref={heroVideo} className="hero-video" src={media('flame.mp4')} poster={media('flame-poster.jpg')} autoPlay muted loop playsInline />
+      <section className="hero" id="top" ref={hero}>
+        <motion.video ref={heroVideo} className="hero-video" style={{ y: videoY, scale: videoScale }} src={media('flame.mp4')} poster={media('flame-poster.jpg')} autoPlay muted loop playsInline />
         <div className="hero-shade" />
         <Embers />
-        <div className="hero-copy">
-          <svg className="roof" viewBox="0 0 600 120" aria-hidden="true">
-            <path d="M10 110 L150 18 L290 110" />
-            <path d="M290 110 L430 30 L590 110" />
-          </svg>
-          <p className="hero-the">The</p>
+        <motion.div className="hero-copy" style={{ y: copyY, opacity: copyFade }}>
+          {/* The LED roofline draws itself, sputters on and keeps flickering like a real neon strip. */}
+          <motion.svg className="roof" viewBox="0 0 600 120" aria-hidden="true"
+            initial={{ opacity: 0.3 }} animate={{ opacity: [0.3, 1, 0.5, 1, 0.82, 1] }}
+            transition={{ delay: start + 1.1, duration: 0.6, times: [0, 0.2, 0.35, 0.5, 0.7, 1] }}>
+            {['M10 110 L150 18 L290 110', 'M290 110 L430 30 L590 110'].map((d, i) => (
+              <motion.path key={d} d={d} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                transition={{ delay: start + i * 0.15, duration: 1.4, ease: [0.65, 0, 0.35, 1] }} />
+            ))}
+          </motion.svg>
+          <motion.p className="hero-the" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: start + 1, duration: 0.5 }}>The</motion.p>
           <h1 className="hero-title">
-            <span className="hero-urban" aria-label="Urban">
+            <motion.span className="hero-urban" aria-label="Urban" initial="hidden" animate="show" variants={stagger(0.06, start + 1.2)}>
               {'URBAN'.split('').map((ch, i) => (
-                <span key={i} aria-hidden="true">{ch}</span>
+                <motion.span key={i} aria-hidden="true" variants={letter}>{ch}</motion.span>
               ))}
-            </span>
-            <span className="hero-bites">Bites</span>
+            </motion.span>
+            <motion.span className="hero-bites" initial={{ scale: 0.6, rotate: -20, y: '-0.12em', opacity: 0 }} animate={{ scale: 1, rotate: -6, y: '-0.12em', opacity: 1 }}
+              transition={{ delay: start + 1.6, type: 'spring', stiffness: 260, damping: 12 }} whileHover={{ rotate: -12, scale: 1.08 }}>Bites</motion.span>
           </h1>
           <p className="hero-deal">
             <span>Free delivery</span> within {shop.free_delivery_km} km over ₹{shop.free_delivery_min}
           </p>
-          <ul className="hero-promise">
-            <li>Tasty</li>
-            <li>Fresh</li>
-            <li>Hygienic</li>
-            <li>Quality</li>
-          </ul>
+          <motion.ul className="hero-promise" initial="hidden" animate="show" variants={stagger(0.08, start + 2)}>
+            {['Tasty', 'Fresh', 'Hygienic', 'Quality'].map((w) => <motion.li key={w} variants={rise} whileHover={{ y: -3, scale: 1.08 }}>{w}</motion.li>)}
+          </motion.ul>
           <p className="hero-motto" lang="hi">स्वाद, सफ़ाई और गुणवत्ता में द अर्बन बाइट्स का कोई मुकाबला नहीं</p>
-          <div className="hero-cta">
-            <a className="btn btn-gold" href="#menu">See the menu</a>
-            <a className="btn btn-ghost" href={`tel:${business.phone}`}>Call 83989 07216</a>
-          </div>
-        </div>
+          <motion.div className="hero-cta" initial="hidden" animate="show" variants={stagger(0.1, start + 2.3)}>
+            <motion.a className="btn btn-gold" href="#menu" variants={rise} {...alive}>See the menu</motion.a>
+            <motion.a className="btn btn-ghost" href={`tel:${business.phone}`} variants={rise} {...alive}>Call 83989 07216</motion.a>
+          </motion.div>
+        </motion.div>
         <p className="hero-where">Julana Bypass · near Brahmanwas</p>
         <HeroSound video={heroVideo} />
       </section>
@@ -213,21 +168,21 @@ export default function App() {
 
       <Regulars localOrders={myOrders.orders.length} />
 
-      <section className="reel" aria-labelledby="reel-title">
-        <div className="reel-copy">
+      <section className="reel" aria-labelledby="reel-title" ref={reel}>
+        <motion.div className="reel-copy" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.6 }} variants={stagger(0.12)}>
           <h2 id="reel-title">
-            <span className="reel-mask"><span className="reel-line">Park the bike.</span></span>
-            <span className="reel-mask"><span className="reel-line gold">Pull up a chair.</span></span>
+            <span className="reel-mask"><motion.span className="reel-line" variants={letter}>Park the bike.</motion.span></span>
+            <span className="reel-mask"><motion.span className="reel-line gold" variants={letter}>Pull up a chair.</motion.span></span>
           </h2>
-          <p>Space for cars, bikes and trucks right outside. Eat at the tables, or pack it for the road.</p>
-        </div>
-        <div className="reel-frame">
+          <motion.p variants={rise}>Space for cars, bikes and trucks right outside. Eat at the tables, or pack it for the road.</motion.p>
+        </motion.div>
+        <motion.div className="reel-frame" style={{ scale: reelScale, borderRadius: reelRadius }}>
           <video src={media('walkthrough.mp4')} poster={media('walkthrough-poster.jpg')} autoPlay muted loop playsInline />
-        </div>
+        </motion.div>
       </section>
 
       <section className="visit" id="visit" aria-labelledby="visit-title">
-        <div className="visit-media">
+        <motion.div className="visit-media" initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease }}>
           <div className="visit-photo">
             <img src={media('hut.jpg')} alt="The Urban Bites hut lit with blue LED strips at night" loading="lazy" />
           </div>
@@ -240,8 +195,8 @@ export default function App() {
               allowFullScreen
             />
           </div>
-        </div>
-        <div className="visit-copy">
+        </motion.div>
+        <Reveal className="visit-copy">
           <p className="eyebrow">Find us</p>
           <h2 id="visit-title">Julana Bypass, near Brahmanwas</h2>
           <p>Look for the bamboo huts outlined in blue light. Order ahead and your food is hot when you pull in.</p>
@@ -255,18 +210,18 @@ export default function App() {
               <dd>Shakkar wali chai</dd>
             </div>
           </dl>
-          <a
+          <MA
             className="btn btn-gold"
             href={`https://www.google.com/maps/dir/?api=1&destination=${business.lat},${business.lng}`}
             target="_blank"
             rel="noreferrer"
           >
             Get directions
-          </a>
+          </MA>
           <a className="visit-pin" href={`https://www.google.com/maps/search/?api=1&query=${business.lat},${business.lng}`} target="_blank" rel="noreferrer">
             Open the pin in Google Maps · {business.lat}, {business.lng}
           </a>
-        </div>
+        </Reveal>
       </section>
 
       <Gallery />
@@ -284,18 +239,18 @@ export default function App() {
       </footer>
 
       {cart.count === 0 && !cartOpen && myOrders.latest && (
-        <button className="cart-bar track-bar" onClick={openTracker}>
+        <motion.button className="cart-bar track-bar" onClick={openTracker} style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
           <span className="live-dot" aria-hidden="true" />
           <span>Order #{myOrders.latest.number}</span>
           <span className="cart-bar-go">Track it →</span>
-        </button>
+        </motion.button>
       )}
       {cart.count > 0 && !cartOpen && (
-        <button className="cart-bar" onClick={openCart}>
+        <motion.button className="cart-bar" onClick={openCart} style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
           <span>{cart.count} {cart.count === 1 ? 'item' : 'items'}</span>
           <strong>₹{cart.total.toLocaleString('en-IN')}</strong>
           <span className="cart-bar-go">View order →</span>
-        </button>
+        </motion.button>
       )}
       <CartDrawer
         cart={cart}

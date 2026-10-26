@@ -7,6 +7,7 @@ import MenuAdmin from './MenuAdmin'
 import Expenses from './Expenses'
 import { ChangePassword, Login, ResetPassword } from './Account'
 import { billText, itemKind, whatsappBill, type Bill } from './kit'
+import { MA, MButton } from './motion'
 
 const statusLabel: Record<string, string> = {
   placed: 'New', accepted: 'Accepted', preparing: 'Cooking', ready: 'Ready',
@@ -45,15 +46,15 @@ export default function StaffApp({ hash }: { hash: string }) {
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
           {tabs.map(([id, label, emoji]) => (
-            <button key={id} role="tab" aria-selected={tab === id} className="tab" onClick={() => setTab(id)}>
+            <MButton key={id} role="tab" aria-selected={tab === id} className="tab" onClick={() => setTab(id)}>
               <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}</span>
-            </button>
+            </MButton>
           ))}
         </nav>
         <div className="staff-who">
           <span>{user.name} · {user.role === 'admin' ? 'Admin' : 'Owner'}</span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setChanging(true)}>Password</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => { signOut(); setUser(null) }}>Sign out</button>
+          <MButton className="btn btn-ghost btn-sm" onClick={() => setChanging(true)}>Password</MButton>
+          <MButton className="btn btn-ghost btn-sm" onClick={() => { signOut(); setUser(null) }}>Sign out</MButton>
         </div>
       </header>
       <main className="staff-main">
@@ -131,19 +132,20 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
           <label className="check"><input id="show-all" type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show done</label>
         </div>
         {fresh && (
-          <button className="fresh" onClick={() => setFresh(null)}>{fresh} · dismiss</button>
+          <MButton className="fresh" onClick={() => setFresh(null)}>{fresh} · dismiss</MButton>
         )}
         <div className="order-filters" role="radiogroup" aria-label="Show orders">
           {groups.map(([id, label, f]) => {
             const n = orders.filter(f).length
-            return <button key={id} role="radio" aria-checked={filter === id} className={`size ${id === 'placed' && n ? 'hot' : ''}`} onClick={() => setFilter(id)}>{label} <b>{n}</b></button>
+            return <MButton key={id} role="radio" aria-checked={filter === id} className={`size ${id === 'placed' && n ? 'hot' : ''}`} onClick={() => setFilter(id)}
+              animate={id === 'placed' && n ? { scale: [1, 1.08, 1] } : { scale: 1 }} transition={id === 'placed' && n ? { duration: 1.6, repeat: Infinity } : undefined}>{label} <b>{n}</b></MButton>
           })}
         </div>
         {error && <p className="error" role="alert">{error}</p>}
         {orders.length === 0 && !error && <p className="menu-sub">No open orders. New ones from the website and the app appear here within 10 seconds.</p>}
         {shown.length === 0 && orders.length > 0 && <p className="menu-sub">No orders here right now.</p>}
         {shown.map((o) => (
-          <button key={o.id} className={`order-card ${o.status === 'placed' ? 'is-new' : ''} ${o.id === selected ? 'is-on' : ''}`} onClick={() => setSelected(o.id)}>
+          <MButton layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }} key={o.id} className={`order-card ${o.status === 'placed' ? 'is-new' : ''} ${o.id === selected ? 'is-on' : ''}`} onClick={() => setSelected(o.id)}>
             <span className="oc-top">
               <strong>#{o.number}</strong>
               <span className={`pill pill-${o.status}`}>{statusLabel[o.status]}</span>
@@ -153,13 +155,13 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
             <CustomerTag o={o} />
             <span className="oc-items">{o.items.map((l) => `${l.qty}× ${l.name}${l.size === 'half' ? ' (H)' : ''}`).join(', ')}</span>
             {(o.status === 'accepted' || o.status === 'preparing') && <span className="oc-eta">{minsLeft(o, offset)}</span>}
-          </button>
+          </MButton>
         ))}
       </div>
 
       {current && <div className="sheet-scrim" onClick={() => setSelected(null)} aria-hidden="true" />}
       <div className="board-detail" role={current ? 'dialog' : undefined} aria-label={current ? `Order #${current.number}` : undefined}>
-        {current && <button className="sheet-close" onClick={() => setSelected(null)} aria-label="Close order">Back to orders</button>}
+        {current && <MButton className="sheet-close" onClick={() => setSelected(null)} aria-label="Close order">Back to orders</MButton>}
         {!current ? (
           <p className="menu-sub">Pick an order to set its time and move it along.</p>
         ) : (
@@ -239,7 +241,7 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
       </div>
       <Progress o={o} />
       <p><strong className="selectable">{o.customer_name}{o.customer_phone ? ` · ${o.customer_phone}` : ''}</strong>
-        {o.customer_phone && <a className="btn btn-ghost btn-sm call-btn" href={`tel:${o.customer_phone}`}>Call</a>}<br />
+        {o.customer_phone && <MA className="btn btn-ghost btn-sm call-btn" href={`tel:${o.customer_phone}`}>Call</MA>}<br />
         <span className="menu-sub">{o.fulfilment === 'delivery' ? `Delivery to: ${o.address ?? ''}${o.delivery_km != null ? ` · about ${o.delivery_km.toFixed(1)} km` : ''}` : 'Pickup at the cart'} · from the {sourceLabel[o.source].toLowerCase()}</span></p>
       <CustomerTag o={o} />
       {o.note && <p className="note">Note: {o.note}</p>}
@@ -256,8 +258,8 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
         <p className="upi-ref-staff">📲 UPI ref <strong className="selectable">{o.payment_ref}</strong>{o.payment_status !== 'paid' && ' · match it with your bank or UPI app, then Mark paid'}</p>
       )}
       <div className="bill-actions">
-        <a className="btn btn-wa btn-sm" target="_blank" rel="noopener" href={whatsappBill(staffBill(o), o.customer_phone)}>Send bill on WhatsApp</a>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(staffBill(o)))}>Copy bill</button>
+        <MA className="btn btn-wa btn-sm" target="_blank" rel="noopener" href={whatsappBill(staffBill(o), o.customer_phone)}>Send bill on WhatsApp</MA>
+        <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(staffBill(o)))}>Copy bill</MButton>
       </div>
 
       {active && (
@@ -265,21 +267,21 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
           <h3 className="panel-h">{o.status === 'placed' ? 'Accept: how long will it take?' : 'Change the ready time'}</h3>
           {cooking && o.ready_at && <p className="oc-eta">Customer sees: {minsLeft(o, offset)} (set to {o.prep_minutes} min)</p>}
           <div className="prep">
-            {PREP.map((m) => <button key={m} className="size" onClick={() => onUpdate({ status: startStatus, prep_minutes: m })}>{m} min</button>)}
+            {PREP.map((m) => <MButton key={m} className="size" onClick={() => onUpdate({ status: startStatus, prep_minutes: m })}>{m} min</MButton>)}
             <form className="prep-custom" onSubmit={(e) => { e.preventDefault(); const m = parseInt(custom, 10); if (m >= 1 && m <= 240) onUpdate({ status: startStatus, prep_minutes: m }) }}>
               <input id="prep-custom" inputMode="numeric" placeholder="Other" value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="Custom minutes" />
-              <button className="size">Set</button>
+              <MButton className="size">Set</MButton>
             </form>
           </div>
           <div className="panel-actions">
-            {next && <button className="btn btn-gold" onClick={() => onUpdate({ status: next[0] })}>{next[1]}</button>}
-            {o.payment_status !== 'paid' && <button className="btn btn-ghost" onClick={() => onUpdate({ payment_status: 'paid' })}>Mark paid</button>}
+            {next && <MButton className="btn btn-gold" onClick={() => onUpdate({ status: next[0] })}>{next[1]}</MButton>}
+            {o.payment_status !== 'paid' && <MButton className="btn btn-ghost" onClick={() => onUpdate({ payment_status: 'paid' })}>Mark paid</MButton>}
             {!confirmCancel ? (
-              <button className="btn btn-danger" onClick={() => setConfirmCancel(true)}>Cancel order</button>
+              <MButton className="btn btn-danger" onClick={() => setConfirmCancel(true)}>Cancel order</MButton>
             ) : (
               <span className="confirm">The customer will see it's cancelled.
-                <button className="btn btn-danger" onClick={() => onUpdate({ status: 'cancelled' })}>Yes, cancel</button>
-                <button className="btn btn-ghost" onClick={() => setConfirmCancel(false)}>Keep it</button>
+                <MButton className="btn btn-danger" onClick={() => onUpdate({ status: 'cancelled' })}>Yes, cancel</MButton>
+                <MButton className="btn btn-ghost" onClick={() => setConfirmCancel(false)}>Keep it</MButton>
               </span>
             )}
           </div>
@@ -325,7 +327,7 @@ function StaffAccounts({ me, onSignedOut }: { me: Staff; onSignedOut: () => void
           <span className="me-name"><strong>{u.name}</strong> · {u.role === 'admin' ? 'Admin' : 'Owner'}{u.must_change_password && <span className="tag-chip">Temporary password</span>}<br /><small className="menu-sub">{u.email} · {u.last_login_at ? `last in ${new Date(u.last_login_at).toLocaleString('en-IN')}` : 'never signed in'}</small></span>
           <form className="prep-custom" onSubmit={(e) => reset(u, e)}>
             <input id={`pw-${u.id}`} name="pw" type="password" minLength={10} required placeholder={u.id === me.id ? 'New password' : 'Temporary password'} aria-label={`New password for ${u.name}`} />
-            <button className="size">Reset</button>
+            <MButton className="size">Reset</MButton>
           </form>
           <label className="check"><input id={`act-${u.id}`} type="checkbox" checked={u.active} disabled={u.id === me.id}
             onChange={async (e) => { if (await guard(staffApi.updateUser(u.id, { active: e.target.checked }))) load() }} /> Active</label>
@@ -337,7 +339,7 @@ function StaffAccounts({ me, onSignedOut }: { me: Staff; onSignedOut: () => void
         <label className="field" htmlFor="ns-email">Email<input id="ns-email" name="email" type="email" required /></label>
         <label className="field" htmlFor="ns-pass">Password<input id="ns-pass" name="password" type="password" minLength={10} required placeholder="Temporary, 10+ characters" /></label>
         <label className="field" htmlFor="ns-role">Role<select id="ns-role" name="role" defaultValue="owner"><option value="owner">Owner</option><option value="admin">Admin</option></select></label>
-        <button className="btn btn-gold">Add staff</button>
+        <MButton className="btn btn-gold">Add staff</MButton>
       </form>
     </div>
   )

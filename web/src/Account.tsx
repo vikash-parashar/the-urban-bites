@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { changePassword, forgotPassword, resetPassword, signIn, signOut, type Staff } from './staffApi'
+import { MA, MButton } from './motion'
 
 const Brand = () => <a className="brand" href="#top"><span className="brand-urban">The Urban</span><span className="brand-bites">Bites</span></a>
 
@@ -9,7 +10,7 @@ function PasswordField({ id, name, label, auto }: { id: string; name: string; la
     <label className="field" htmlFor={id}>{label}
       <span className="pw-wrap">
         <input id={id} name={name} type={show ? 'text' : 'password'} required minLength={name === 'current' || name === 'password-login' ? 1 : 10} maxLength={72} autoComplete={auto} />
-        <button type="button" className="pw-eye" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>{show ? '🙈' : '👁️'}</button>
+        <MButton type="button" className="pw-eye" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>{show ? '🙈' : '👁️'}</MButton>
       </span>
     </label>
   )
@@ -46,7 +47,7 @@ export function Login({ onIn }: { onIn: (s: Staff) => void }) {
           <>
             <h1 className="staff-h">Check your email</h1>
             <p className="menu-sub">If <strong>{email}</strong> has a staff account, a link to set a new password is on its way. It works once, for 30 minutes. Look in Spam too.</p>
-            <button type="button" className="btn btn-gold btn-block" onClick={() => setMode('in')}>Back to sign in</button>
+            <MButton type="button" className="btn btn-gold btn-block" onClick={() => setMode('in')}>Back to sign in</MButton>
           </>
         ) : (
           <>
@@ -55,10 +56,10 @@ export function Login({ onIn }: { onIn: (s: Staff) => void }) {
             <label className="field" htmlFor="st-email">Email<input id="st-email" name="email" type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
             {mode === 'in' && <PasswordField id="st-pass" name="password-login" label="Password" auto="current-password" />}
             {error && <p className="error" role="alert">{error}</p>}
-            <button className="btn btn-gold btn-block" disabled={busy}>{busy ? 'One moment…' : mode === 'in' ? 'Sign in' : 'Email me a link'}</button>
-            <button type="button" className="linkish" onClick={() => { setError(''); setMode(mode === 'in' ? 'forgot' : 'in') }}>
+            <MButton className="btn btn-gold btn-block" disabled={busy}>{busy ? 'One moment…' : mode === 'in' ? 'Sign in' : 'Email me a link'}</MButton>
+            <MButton type="button" className="linkish" onClick={() => { setError(''); setMode(mode === 'in' ? 'forgot' : 'in') }}>
               {mode === 'in' ? 'Forgot password?' : 'Back to sign in'}
-            </button>
+            </MButton>
           </>
         )}
       </form>
@@ -96,10 +97,10 @@ export function ChangePassword({ user, forced, onDone, onCancel }: { user: Staff
         <PasswordField id="cp-again" name="again" label="New password again" auto="new-password" />
         <p className="pw-rules">{RULES}</p>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="btn btn-gold btn-block" disabled={busy}>{busy ? 'Saving…' : 'Save my password'}</button>
+        <MButton className="btn btn-gold btn-block" disabled={busy}>{busy ? 'Saving…' : 'Save my password'}</MButton>
         {forced ? (
-          <button type="button" className="linkish" onClick={() => { signOut(); location.reload() }}>Sign out</button>
-        ) : onCancel && <button type="button" className="linkish" onClick={onCancel}>Cancel</button>}
+          <MButton type="button" className="linkish" onClick={() => { signOut(); location.reload() }}>Sign out</MButton>
+        ) : onCancel && <MButton type="button" className="linkish" onClick={onCancel}>Cancel</MButton>}
       </form>
     </div>
   )
@@ -133,8 +134,8 @@ export function ResetPassword({ token, onDone }: { token: string; onDone: (s: St
         <PasswordField id="rp-again" name="again" label="New password again" auto="new-password" />
         <p className="pw-rules">{RULES}</p>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="btn btn-gold btn-block" disabled={busy || !token}>{busy ? 'Saving…' : 'Save and sign in'}</button>
-        <a className="linkish" href="#staff">Back to sign in</a>
+        <MButton className="btn btn-gold btn-block" disabled={busy || !token}>{busy ? 'Saving…' : 'Save and sign in'}</MButton>
+        <MA className="linkish" href="#staff">Back to sign in</MA>
       </form>
     </div>
   )

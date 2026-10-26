@@ -4,6 +4,7 @@ import { MustChangePassword, SignedOut, staffApi, type OfferInput, type StaffOrd
 import { rupees } from './menu'
 import type { Offer, Shop } from './shop'
 import { BadgeMedal } from './Extras'
+import { MButton } from './motion'
 
 type MenuCats = Awaited<ReturnType<typeof staffApi.menu>>['categories']
 
@@ -147,9 +148,9 @@ export function WalkIn({ onSignedOut }: { onSignedOut: () => void }) {
           )}
         </div>
 
-        <button className="btn btn-gold" disabled={picked.length === 0 && !(parseInt(amount, 10) > 0)}>
+        <MButton className="btn btn-gold" disabled={picked.length === 0 && !(parseInt(amount, 10) > 0)}>
           Save sale · {rupees(picked.length ? itemsTotal : parseInt(amount, 10) || 0)}
-        </button>
+        </MButton>
       </form>
     </div>
   )
@@ -215,9 +216,9 @@ export function OffersEditor({ onSignedOut }: { onSignedOut: () => void }) {
         <h3 className="panel-h">{editing ? 'Edit offer' : 'New offer'}</h3>
         <div className="sizes" role="radiogroup" aria-label="Offer period">
           {(['day', 'month'] as const).map((p) => (
-            <button type="button" key={p} role="radio" aria-checked={form.period === p} className="size" onClick={() => setForm({ ...form, period: p, starts_on: undefined, ends_on: undefined })}>
+            <MButton type="button" key={p} role="radio" aria-checked={form.period === p} className="size" onClick={() => setForm({ ...form, period: p, starts_on: undefined, ends_on: undefined })}>
               {p === 'day' ? 'Offer of the day' : 'Offer of the month'}
-            </button>
+            </MButton>
           ))}
         </div>
         <label className="field" htmlFor="of-title">Headline<input id="of-title" required maxLength={80} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Malai Chaap at ₹199" /></label>
@@ -240,8 +241,8 @@ export function OffersEditor({ onSignedOut }: { onSignedOut: () => void }) {
           <label className="field" htmlFor="of-end">Ends <span className="opt">{form.period === 'day' ? 'same day if empty' : 'end of month if empty'}</span><input id="of-end" type="date" value={form.ends_on ?? ''} onChange={(e) => setForm({ ...form, ends_on: e.target.value })} /></label>
         </div>
         <div className="panel-actions">
-          <button className="btn btn-gold">{editing ? 'Save changes' : 'Post offer'}</button>
-          {editing && <button type="button" className="btn btn-ghost" onClick={() => { setEditing(null); setForm(emptyOffer) }}>Cancel</button>}
+          <MButton className="btn btn-gold">{editing ? 'Save changes' : 'Post offer'}</MButton>
+          {editing && <MButton type="button" className="btn btn-ghost" onClick={() => { setEditing(null); setForm(emptyOffer) }}>Cancel</MButton>}
         </div>
       </form>
 
@@ -254,8 +255,8 @@ export function OffersEditor({ onSignedOut }: { onSignedOut: () => void }) {
             {o.item_name && o.offer_price != null && <> · {o.item_name} {rupees(o.offer_price)}</>}
             <br /><small className="menu-sub">{o.starts_on === o.ends_on ? o.starts_on : `${o.starts_on} to ${o.ends_on}`} · {live(o) ? 'Live now' : !o.active ? 'Ended' : o.starts_on > today ? 'Upcoming' : 'Finished'}</small>
           </span>
-          <button className="btn btn-ghost btn-sm" onClick={() => edit(o)}>Edit</button>
-          {o.active && o.ends_on >= today && <button className="btn btn-danger btn-sm" onClick={() => end(o)}>End now</button>}
+          <MButton className="btn btn-ghost btn-sm" onClick={() => edit(o)}>Edit</MButton>
+          {o.active && o.ends_on >= today && <MButton className="btn btn-danger btn-sm" onClick={() => end(o)}>End now</MButton>}
         </div>
       ))}
     </div>
@@ -306,9 +307,9 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
 
       <div className={`me-row ${shop.accepting_orders ? '' : 'off'}`}>
         <span className="me-name"><strong>{shop.accepting_orders ? 'Taking online orders' : 'Online orders paused'}</strong><br /><small className="menu-sub">Pause when you're closed or too busy. Walk-in sales still work.</small></span>
-        <button className={`btn ${shop.accepting_orders ? 'btn-danger' : 'btn-gold'}`} onClick={() => patch({ accepting_orders: !shop.accepting_orders })}>
+        <MButton className={`btn ${shop.accepting_orders ? 'btn-danger' : 'btn-gold'}`} onClick={() => patch({ accepting_orders: !shop.accepting_orders })}>
           {shop.accepting_orders ? 'Pause orders' : 'Start taking orders'}
-        </button>
+        </MButton>
       </div>
 
       <form className="panel shop-form" onSubmit={save} key={shop.updated_at}>
@@ -328,14 +329,14 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
           <label className="field" htmlFor="sh-upi">UPI ID<input id="sh-upi" name="upi_id" autoComplete="off" placeholder="8398907216@ybl" pattern="[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}" title="Looks like name@bank, for example 8398907216@ybl" defaultValue={shop.upi_id} /></label>
           <label className="field" htmlFor="sh-upi-name">Name shown in UPI apps<input id="sh-upi-name" name="upi_name" maxLength={50} defaultValue={shop.upi_name} /></label>
         </div>
-        <button className="btn btn-gold">Save rules</button>
+        <MButton className="btn btn-gold">Save rules</MButton>
       </form>
 
       <div className="me-row">
         <span className="me-name"><strong>Cart location</strong><br /><small className="menu-sub">
           {shop.cart_lat != null ? `Set (${shop.cart_lat}, ${shop.cart_lng}). Distances for delivery are measured from here.` : 'Not set yet. Stand at the cart with this tablet and tap the button, so the website can check the 5 km delivery area.'}
         </small></span>
-        <button className="btn btn-ghost" onClick={setHere}>Use this device's location</button>
+        <MButton className="btn btn-ghost" onClick={setHere}>Use this device's location</MButton>
       </div>
     </div>
   )

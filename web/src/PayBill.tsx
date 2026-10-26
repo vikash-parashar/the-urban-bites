@@ -5,6 +5,7 @@ import { lookup, unitPrice } from './cart'
 import { rupees } from './menu'
 import { billText, checkUpiRef, itemKind, upiLink, whatsappBill, type Bill } from './kit'
 import type { Shop } from './shop'
+import { MA, MButton } from './motion'
 
 // UPI: pay link (opens GPay/PhonePe/Paytm on a phone), QR for paying from another phone, and a box
 // for the reference. UPI links don't report back, so the owner matches the reference with the bank SMS.
@@ -57,9 +58,9 @@ export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; o
           <div className="upi-body">
             {qr && <img className="upi-qr" src={qr} width={180} height={180} alt={`UPI QR code to pay ${rupees(amount)}`} />}
             <div className="upi-side">
-              <a className="btn btn-gold" href={link}>{mobile ? `Pay ${rupees(amount)} in UPI app` : 'Open UPI app'}</a>
+              <MA className="btn btn-gold" href={link}>{mobile ? `Pay ${rupees(amount)} in UPI app` : 'Open UPI app'}</MA>
               <p className="opt">{mobile ? 'Opens GPay, PhonePe or Paytm with the amount filled in.' : 'On a computer? Scan the QR with any UPI app on your phone.'}</p>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(shop.upi_id)}>Copy UPI ID</button>
+              <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(shop.upi_id)}>Copy UPI ID</MButton>
             </div>
           </div>
           <form className="upi-ref" onSubmit={submit} noValidate>
@@ -68,7 +69,7 @@ export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; o
               <input id="upi-ref" value={ref} inputMode="text" autoComplete="off" maxLength={35} placeholder="12-digit number from your UPI app"
                 onChange={(e) => { setRef(e.target.value.replace(/[^A-Za-z0-9 ]/g, '')); setErr('') }} aria-invalid={!!err} />
             </label>
-            <button className="btn btn-ghost" disabled={busy}>{busy ? 'Sending…' : 'Send'}</button>
+            <MButton className="btn btn-ghost" disabled={busy}>{busy ? 'Sending…' : 'Send'}</MButton>
           </form>
           {err && <p className="error" role="alert">{err}</p>}
         </>
@@ -137,9 +138,9 @@ export function BillCard({ bill, phone }: { bill: Bill; phone?: string }) {
       <p className="bill-pay">Payment: {bill.payment}</p>
       <p className="bill-print bill-small">Thank you! Order again at theurbanbites.in</p>
       <div className="bill-actions">
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => printBill()}>🖨️ Print bill</button>
-        <a className="btn btn-wa btn-sm" href={whatsappBill(bill, phone)} target="_blank" rel="noopener">Send bill on WhatsApp</a>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(bill))}>Copy</button>
+        <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => printBill()}>🖨️ Print bill</MButton>
+        <MA className="btn btn-wa btn-sm" href={whatsappBill(bill, phone)} target="_blank" rel="noopener">Send bill on WhatsApp</MA>
+        <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(bill))}>Copy</MButton>
       </div>
     </div>
   )

@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { lift, MButton, Reveal, slideIn, spring, stagger } from './motion'
 import { categories as bundled, dishImage, rupees, type Category, type MenuItem, type Size } from './menu'
 import { offerPrice, registerMenu, type Cart } from './cart'
 import { fetchMenu } from './api'
@@ -10,7 +11,6 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
   const [categories, setCategories] = useState<Category[]>(bundled)
   const [active, setActive] = useState(bundled[0].id)
   const [query, setQuery] = useState('')
-  const grid = useRef<HTMLDivElement>(null)
   const category = categories.find((c) => c.id === active) ?? categories[0]
   const q = query.trim().toLowerCase()
   const shown = q
@@ -29,26 +29,14 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
       })
   }, [])
 
-  useLayoutEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const cards = grid.current!.querySelectorAll('.dish')
-    const tween = gsap.fromTo(
-      cards,
-      { y: 24, rotate: -1.5 },
-      { y: 0, rotate: 0, duration: 0.6, stagger: 0.05, ease: 'power3.out' },
-    )
-    return () => {
-      tween.kill()
-    }
-  }, [active, q === ''])
 
   return (
     <section className="menu" id="menu" aria-labelledby="menu-title">
-      <div className="menu-head">
+      <Reveal className="menu-head">
         <p className="eyebrow">The board, now online</p>
         <h2 id="menu-title">Menu</h2>
         <p className="menu-sub">Full and half plates, same prices as the board at the cart.</p>
-      </div>
+      </Reveal>
 
       <div className="menu-search">
         <label htmlFor="menu-q" className="sr-only">Search the menu</label>
@@ -57,7 +45,7 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
 
       <div className="tabs" role="tablist" aria-label="Menu sections" hidden={!!q}>
         {categories.map((c) => (
-          <button
+          <MButton
             key={c.id}
             role="tab"
             id={`tab-${c.id}`}
@@ -68,18 +56,20 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
           >
             <span><i className="tab-emoji" aria-hidden="true">{categoryEmoji[c.id] ?? itemKind(c.items[0]?.name ?? '', c.name).emoji}</i>{c.name}</span>
             <small lang="hi">{c.name_hi}</small>
-          </button>
+          </MButton>
         ))}
       </div>
 
-      <div className="dishes" id="menu-panel" role={q ? 'region' : 'tabpanel'} aria-labelledby={q ? undefined : `tab-${active}`} aria-label={q ? 'Search results' : undefined} ref={grid} data-offers={offersVersion}>
+      {/* Cards slide in one after another when the menu scrolls into view and whenever the section changes. */}
+      <motion.div key={q ? 'search' : active} className="dishes" id="menu-panel" role={q ? 'region' : 'tabpanel'} aria-labelledby={q ? undefined : `tab-${active}`} aria-label={q ? 'Search results' : undefined} data-offers={offersVersion}
+        initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.05 }} variants={stagger(0.05)}>
         {shown.map((item) => (
           <Dish key={item.id} item={item} cart={cart} category={categories.find((c) => c.items.includes(item))?.name ?? ''} />
         ))}
         {q && shown.length === 0 && (
           <p className="menu-sub">Nothing called "{query.trim()}" on the board. Try another word, or call us and ask.</p>
         )}
-      </div>
+      </motion.div>
     </section>
   )
 }
@@ -95,9 +85,11 @@ function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: 
   const orderable = price != null
 
   return (
-    <article className={`dish ${offer != null ? 'has-offer' : ''}`}>
+    <motion.article className={`dish ${offer != null ? 'has-offer' : ''}`} variants={slideIn} {...lift}>
       {offer != null && <span className="offer-tag">Offer</span>}
-      {item.tag && <span className={`dish-tag tag-${item.tag}`}>{TAG_LABEL[item.tag]}</span>}
+      {item.tag && (
+        <motion.span className={`dish-tag tag-${item.tag}`} variants={{ hidden: { scale: 0, rotate: -20 }, show: { scale: 1, rotate: 0, transition: { type: 'spring', stiffness: 380, damping: 14, delay: 0.25 } } }}>{TAG_LABEL[item.tag]}</motion.span>
+      )}
       {item.image ? (
         <div className="dish-img">
           <img src={dishImage(item.image)} alt="" loading="lazy" />
@@ -119,7 +111,7 @@ function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: 
         {item.half != null && (
           <div className="sizes" role="radiogroup" aria-label={`${item.name} plate size`}>
             {(['full', 'half'] as const).map((s) => (
-              <button
+              <MButton
                 key={s}
                 role="radio"
                 aria-checked={size === s}
@@ -127,7 +119,7 @@ function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: 
                 onClick={() => setSize(s)}
               >
                 {s === 'full' ? 'Full' : 'Half'} {rupees((s === 'full' ? offer ?? item.full : item.half) ?? 0)}
-              </button>
+              </MButton>
             ))}
           </div>
         )}
@@ -137,18 +129,20 @@ function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: 
             {orderable ? rupees(price) : 'Price at the counter'}
           </span>
           {!orderable ? null : qty === 0 ? (
-            <button className="add" onClick={() => cart.dispatch({ type: 'add', itemId: item.id, size })}>
+            <MButton className="add" onClick={() => cart.dispatch({ type: 'add', itemId: item.id, size })}>
               Add
-            </button>
+            </MButton>
           ) : (
             <div className="stepper" aria-label={`${item.name}, ${qty} in your order`}>
-              <button onClick={() => cart.dispatch({ type: 'dec', itemId: item.id, size })} aria-label="Remove one">−</button>
-              <span>{qty}</span>
-              <button onClick={() => cart.dispatch({ type: 'add', itemId: item.id, size })} aria-label="Add one">+</button>
+              <MButton onClick={() => cart.dispatch({ type: 'dec', itemId: item.id, size })} aria-label="Remove one">−</MButton>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span key={qty} initial={{ y: -14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 14, opacity: 0 }} transition={spring}>{qty}</motion.span>
+              </AnimatePresence>
+              <MButton onClick={() => cart.dispatch({ type: 'add', itemId: item.id, size })} aria-label="Add one">+</MButton>
             </div>
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   )
 }
