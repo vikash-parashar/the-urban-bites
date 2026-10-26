@@ -13,6 +13,8 @@ import Gallery from './Gallery'
 import HeroSound from './HeroSound'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
 import Intro from './Intro'
+import MyOrders from './MyOrders'
+import type { PlacedOrder } from './api'
 import PopHero from './PopHero'
 import { brand } from './brand'
 
@@ -55,10 +57,13 @@ export default function App() {
     setView('cart')
     setCartOpen(true)
   }
-  const openTracker = () => {
+  const [trackId, setTrackId] = useState<string>()
+  const openTracker = (o?: PlacedOrder) => {
+    setTrackId(o?.id)
     setView('track')
     setCartOpen(true)
   }
+  const tracked = myOrders.orders.find((o) => o.id === trackId) ?? myOrders.latest
   const heroVideo = useRef<HTMLVideoElement>(null)
   const look = useTheme()
 
@@ -87,6 +92,7 @@ export default function App() {
         </a>
         <nav className="topnav" aria-label="Sections">
           <a href="#menu"><span aria-hidden="true">🍽️</span>Menu</a>
+          {myOrders.orders.length > 0 && <a href="#my-orders"><span aria-hidden="true">🧾</span>My orders</a>}
           {offers.length > 0 && <a href="#offers"><span aria-hidden="true">🔥</span>Offers</a>}
           <a href="#regulars"><span aria-hidden="true">👑</span>Regulars</a>
           <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
@@ -165,6 +171,8 @@ export default function App() {
       <OurPromise />
 
 
+      <MyOrders orders={myOrders.orders} onOpen={openTracker} />
+
       <Offers offers={offers} cart={cart} onOpenCart={openCart} />
 
       <Menu cart={cart} offersVersion={offersVersion} />
@@ -242,7 +250,7 @@ export default function App() {
       </footer>
 
       {cart.count === 0 && !cartOpen && myOrders.latest && (
-        <motion.button className="cart-bar track-bar" onClick={openTracker} style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
+        <motion.button className="cart-bar track-bar" onClick={() => openTracker()} style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
           <span className="live-dot" aria-hidden="true" />
           <span>Order #{myOrders.latest.number}</span>
           <span className="cart-bar-go">Track it →</span>
@@ -260,11 +268,13 @@ export default function App() {
         shop={shop}
         pastOrders={myOrders.orders}
         open={cartOpen}
-        tracking={view === 'track' ? myOrders.latest : undefined}
+        tracking={view === 'track' ? tracked : undefined}
         onPlaced={(o) => {
           myOrders.add(o)
+          setTrackId(o.id)
           setView('track')
         }}
+        onShowCart={() => setView('cart')}
         onClose={() => setCartOpen(false)}
       />
     </div>

@@ -105,8 +105,8 @@ export function billFrom(order: PlacedOrder, data: Tracking | null, customer?: s
   }
 }
 
-// The bill with Print and Send-on-WhatsApp. Printing uses a receipt-sized print stylesheet.
-export function BillCard({ bill, phone }: { bill: Bill; phone?: string }) {
+// The order summary. Print / WhatsApp / Copy are shop tools, so they show only with actions (staff use).
+export function BillCard({ bill, phone, actions = false }: { bill: Bill; phone?: string; actions?: boolean }) {
   return (
     <div className="bill" id="bill">
       <div className="bill-print">
@@ -117,7 +117,7 @@ export function BillCard({ bill, phone }: { bill: Bill; phone?: string }) {
         {bill.customer && <p className="bill-small">Customer: {bill.customer}</p>}
       </div>
       <div className="bill-head">
-        <strong>🧾 Your bill</strong>
+        <strong>🧾 {actions ? 'Bill' : 'What you ordered'}</strong>
         <strong>{rupees(bill.total)}</strong>
       </div>
       <ul className="bill-lines">
@@ -138,11 +138,11 @@ export function BillCard({ bill, phone }: { bill: Bill; phone?: string }) {
       </ul>
       <p className="bill-pay">Payment: {bill.payment}</p>
       <p className="bill-print bill-small">Thank you! Order again at theurbanbites.in</p>
-      <div className="bill-actions">
+      {actions && <div className="bill-actions">
         <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => printBill()}>🖨️ Print bill</MButton>
         <MA className="btn btn-wa btn-sm" href={whatsappBill(bill, phone)} target="_blank" rel="noopener">Send bill on WhatsApp</MA>
         <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(bill))}>Copy</MButton>
-      </div>
+      </div>}
     </div>
   )
 }

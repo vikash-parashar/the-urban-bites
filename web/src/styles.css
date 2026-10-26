@@ -1483,3 +1483,21 @@ section[id], [id="menu"], [id="offers"], [id="regulars"], [id="visit"] { scroll-
 .dash, .dash > *, .dash-grid > *, .dash-hero > *, .card, .viz { min-width: 0; }
 .viz { overflow: hidden; }
 .viz svg { max-width: 100%; }
+
+/* Payment choice: name + a small hint line */
+.pay-text { display: grid; gap: 2px; }
+.pay-text small { font-weight: 500; font-size: 0.78rem; color: var(--muted); }
+
+/* Your orders (placed from this phone) */
+.my-orders { max-width: var(--wrap); margin: 0 auto; padding: 56px var(--gutter-r) 0 var(--gutter-l); }
+.my-orders-list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); margin-top: 16px; }
+.my-order { display: grid; gap: 8px; padding: 18px; border-radius: 16px; background: var(--ink); border: 1.5px solid var(--line); min-width: 0; }
+.my-order-top, .my-order-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.my-order-when { margin: 0; color: var(--muted); font-size: 0.88rem; }
+.my-order-items { margin: 0; font-size: 0.95rem; overflow-wrap: anywhere; }
+.my-order .chip { font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1.5px solid var(--gold); color: var(--gold); white-space: nowrap; }
+.my-order .chip.status-completed { border-color: #3fbf7f; color: #3fbf7f; }
+.my-order .chip.status-cancelled { border-color: #e05a5a; color: #e05a5a; }
+[data-theme='pop'] .my-order { border: 3px solid #111; box-shadow: 6px 6px 0 #111; }
+[data-theme='pop'] .my-order .chip { color: var(--pop-ink); border-color: var(--pop-ink); }
+[data-theme='glass'] .my-order { background: var(--glass); border-color: var(--glass-line); backdrop-filter: blur(14px); }

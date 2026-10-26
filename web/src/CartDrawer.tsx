@@ -14,12 +14,13 @@ interface Props {
   tracking?: PlacedOrder
   pastOrders: PlacedOrder[]
   onPlaced: (o: PlacedOrder) => void
+  onShowCart: () => void
   onClose: () => void
 }
 
 type Loc = { state: 'idle' } | { state: 'busy' } | { state: 'ok'; lat: number; lng: number; km: number | null } | { state: 'error'; msg: string }
 
-export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onPlaced, onClose }: Props) {
+export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onPlaced, onShowCart, onClose }: Props) {
   const [fulfilment, setFulfilment] = useState<OrderRequest['fulfilment']>('pickup')
   const [payment, setPayment] = useState<OrderRequest['payment_method']>('cash')
   const [busy, setBusy] = useState(false)
@@ -128,7 +129,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
           <>
             <Tracker order={tracking} phone={me?.phone} shop={shop} />
             {tracking.lines?.length ? (
-              <MButton className="btn btn-ghost" onClick={() => cart.dispatch({ type: 'fill', lines: tracking.lines! })}>Order the same again</MButton>
+              <MButton className="btn btn-ghost" onClick={() => { cart.dispatch({ type: 'fill', lines: tracking.lines! }); onShowCart() }}>Order the same again</MButton>
             ) : null}
             <MButton className="btn btn-ghost" onClick={onClose}>Back to the menu</MButton>
           </>
@@ -269,7 +270,10 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
                 <label key={v} className={payment === v ? 'on' : ''}>
                   <input type="radio" name="payment" id={`pay-${v}`} checked={payment === v} onChange={() => setPayment(v)} />
                   <span className="pay-emoji" aria-hidden="true">{v === 'cash' ? '💵' : '📲'}</span>
-                  {v === 'cash' ? (delivery ? 'Cash on delivery' : 'Pay at the counter') : 'Pay now with UPI'}
+                  <span className="pay-text">
+                    {v === 'cash' ? (delivery ? 'Cash on delivery' : 'Cash at the counter') : 'UPI'}
+                    <small>{v === 'cash' ? (delivery ? 'Pay when your food arrives' : 'Pay when you pick it up') : 'Google Pay · PhonePe · Paytm'}</small>
+                  </span>
                 </label>
               ))}
             </fieldset>
