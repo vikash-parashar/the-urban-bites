@@ -56,6 +56,13 @@ type ShopUpdate struct {
 	AcceptUpi        *bool    `json:"accept_upi"`
 }
 
+// OnlyPause is true when the update just pauses or resumes online orders (all the owner may change).
+func (u ShopUpdate) OnlyPause() bool {
+	return u.AcceptingOrders != nil && u.MinOrderDelivery == nil && u.MinOrderPickup == nil && u.FreeDeliveryMin == nil &&
+		u.FreeDeliveryKm == nil && u.MaxDeliveryKm == nil && u.DeliveryFee == nil && u.CartLat == nil && u.CartLng == nil &&
+		u.Notice == nil && !u.TouchesPayments()
+}
+
 // TouchesPayments reports whether the update changes how the shop gets paid (admin-only fields).
 func (u ShopUpdate) TouchesPayments() bool {
 	return u.UpiID != nil || u.UpiName != nil || u.AcceptCash != nil || u.AcceptUpi != nil

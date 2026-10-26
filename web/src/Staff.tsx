@@ -35,8 +35,11 @@ export default function StaffApp({ hash }: { hash: string }) {
     return <ChangePassword user={user} forced={!!user.must_change_password} onDone={(s) => { setUser(s); setChanging(false) }} onCancel={() => setChanging(false)} />
   }
 
-  const tabs: [Tab, string, string][] = [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['offers', 'Offers', '🏷️'], ['menu', 'Menu', '🍽️'], ['expenses', 'Expenses', '💸'], ['shop', 'Shop', '🏪']]
-  if (user.role === 'admin') tabs.push(['staff', 'Staff', '👥'])
+  // The owner runs the day (orders, walk-ins, sales, sold-out dishes, pausing orders); the admin sets everything else.
+  const isAdmin = user.role === 'admin'
+  const tabs: [Tab, string, string][] = isAdmin
+    ? [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['offers', 'Offers', '🏷️'], ['menu', 'Menu', '🍽️'], ['expenses', 'Expenses', '💸'], ['shop', 'Shop', '🏪'], ['staff', 'Staff', '👥']]
+    : [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['menu', 'Sold out', '🍽️'], ['shop', 'Shop', '🏪']]
 
   return (
     <div className="staff">
@@ -59,14 +62,14 @@ export default function StaffApp({ hash }: { hash: string }) {
         </div>
       </header>
       <main className="staff-main">
-        {tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} />}
+        {tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
         {tab === 'orders' && <Orders onSignedOut={onSignedOut} />}
         {tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
-        {tab === 'offers' && <OffersEditor onSignedOut={onSignedOut} />}
-        {tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} />}
-        {tab === 'expenses' && <Expenses onSignedOut={onSignedOut} />}
-        {tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={user.role === 'admin'} />}
-        {tab === 'staff' && user.role === 'admin' && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
+        {tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
+        {tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} canEdit={isAdmin} />}
+        {tab === 'expenses' && isAdmin && <Expenses onSignedOut={onSignedOut} />}
+        {tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={isAdmin} />}
+        {tab === 'staff' && isAdmin && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
       </main>
     </div>
   )

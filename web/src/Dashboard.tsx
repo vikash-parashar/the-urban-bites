@@ -253,7 +253,7 @@ function MoneyFlow({ t }: { t: Totals }) {
   )
 }
 
-export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () => void; goTo: (tab: 'menu' | 'offers' | 'expenses') => void }) {
+export default function DashboardView({ onSignedOut, goTo, isAdmin = true }: { onSignedOut: () => void; goTo: (tab: 'menu' | 'offers' | 'expenses') => void; isAdmin?: boolean }) {
   const [period, setPeriod] = useState<Period>('day')
   const [date, setDate] = useState(istToday())
   const [d, setD] = useState<Dash | null>(null)
@@ -339,7 +339,7 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
               <span aria-hidden="true">💡</span>
               <p><strong>Profit is only as good as your cost prices.</strong> {d.missing_cost} dish{d.missing_cost === 1 ? ' has' : 'es have'} no cost price yet
                 {t.uncosted_sales > 0 && <>, so {rupees(t.uncosted_sales)} of these sales count as if the food cost nothing</>}.</p>
-              <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('menu')}>Add cost prices</MButton>
+              {isAdmin && <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('menu')}>Add cost prices</MButton>}
             </div>
           )}
 
@@ -407,7 +407,7 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
               <ul className="slow">
                 {d.slow_items.map((it) => <li key={it.item_id}><span aria-hidden="true">{itemKind(it.name).emoji}</span> {it.name} <span className="muted">{it.qty} sold</span></li>)}
               </ul>
-              <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('offers')}>Put one on offer</MButton>
+              {isAdmin && <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('offers')}>Put one on offer</MButton>}
             </motion.section>
 
             <motion.section className="card" variants={slideIn}>
@@ -417,7 +417,7 @@ export default function DashboardView({ onSignedOut, goTo }: { onSignedOut: () =
                   {d.expense_categories.map((e) => <li key={e.key}>{e.key} <strong>{rupees(e.revenue)}</strong></li>)}
                 </ul>
               )}
-              <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('expenses')}>Add an expense</MButton>
+              {isAdmin && <MButton className="btn btn-ghost btn-sm" onClick={() => goTo('expenses')}>Add an expense</MButton>}
             </motion.section>
           </motion.div>
         </>

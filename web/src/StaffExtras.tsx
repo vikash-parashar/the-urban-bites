@@ -324,7 +324,14 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
         </MButton>
       </div>
 
-      <form className="panel shop-form" onSubmit={save} key={shop.updated_at}>
+      {!isAdmin && (
+        <div className="me-row">
+          <span className="me-name"><strong>Order rules</strong><br /><small className="menu-sub">
+            Delivery minimum {rupees(shop.min_order_delivery)} · free delivery above {rupees(shop.free_delivery_min)} within {shop.free_delivery_km} km · delivery up to {shop.max_delivery_km} km. Set by the admin.
+          </small></span>
+        </div>
+      )}
+      {isAdmin && <form className="panel shop-form" onSubmit={save} key={shop.updated_at}>
         <h3 className="panel-h">Order rules</h3>
         <div className="add-staff">
           <label className="field" htmlFor="sh-min-d">Minimum for delivery ₹<input id="sh-min-d" name="min_d" inputMode="numeric" defaultValue={shop.min_order_delivery} /></label>
@@ -336,7 +343,7 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
         </div>
         <label className="field" htmlFor="sh-notice">Notice on the website <span className="opt">optional, e.g. "Closed on Tuesday"</span><input id="sh-notice" name="notice" maxLength={200} defaultValue={shop.notice} /></label>
         <MButton className="btn btn-gold">Save rules</MButton>
-      </form>
+      </form>}
 
       {isAdmin ? (
         <form className="panel shop-form" onSubmit={savePay} key={`pay-${shop.updated_at}`}>
@@ -359,12 +366,12 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
         </div>
       )}
 
-      <div className="me-row">
+      {isAdmin && <div className="me-row">
         <span className="me-name"><strong>Cart location</strong><br /><small className="menu-sub">
           {shop.cart_lat != null ? `Set (${shop.cart_lat}, ${shop.cart_lng}). Distances for delivery are measured from here.` : 'Not set yet. Stand at the cart with this tablet and tap the button, so the website can check the 5 km delivery area.'}
         </small></span>
         <MButton className="btn btn-ghost" onClick={setHere}>Use this device's location</MButton>
-      </div>
+      </div>}
     </div>
   )
 }

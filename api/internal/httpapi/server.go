@@ -68,7 +68,8 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/badge", s.badge)
 		r.Get("/regulars", s.regulars)
 
-		// Staff side: the owner and the admin. Both run the cart; only the admin manages staff accounts.
+		// Staff side. The owner (Manjeet) runs the day: orders, walk-ins, the sales dashboard, pausing orders and
+		// marking dishes sold out. Everything else (menu, prices, offers, expenses, shop rules, payments, staff) is the admin's.
 		r.Post("/owner/login", s.login)
 		r.Post("/owner/forgot", s.forgotPassword)
 		r.Post("/owner/reset", s.resetPassword)
@@ -80,24 +81,24 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/owner/orders/{id}", s.getOrder)
 			r.Patch("/owner/orders/{id}", s.updateOrder)
 			r.Get("/owner/menu", s.ownerMenu)
-			r.Post("/owner/menu/items", s.createItem)
-			r.Patch("/owner/menu/items/{id}", s.updateItem)
-			r.Delete("/owner/menu/items/{id}", s.deleteItem)
-			r.Post("/owner/menu/categories", s.createCategory)
+			r.Patch("/owner/menu/items/{id}", s.updateItem) // the owner may only change "available"
 			r.Get("/owner/earnings", s.earnings)
 			r.Get("/owner/dashboard", s.dashboard)
-			r.Get("/owner/expenses", s.listExpenses)
-			r.Post("/owner/expenses", s.addExpense)
-			r.Delete("/owner/expenses/{id}", s.deleteExpense)
-			r.Patch("/owner/shop", s.updateShop)
+			r.Patch("/owner/shop", s.updateShop) // the owner may only pause or resume orders
 			r.Get("/owner/offers", s.allOffers)
-			r.Post("/owner/offers", s.createOffer)
-			r.Put("/owner/offers/{id}", s.updateOffer)
-			r.Post("/owner/offers/{id}/end", s.endOffer)
 			r.Post("/owner/counter-sales", s.counterSale)
 
 			r.Group(func(r chi.Router) {
 				r.Use(requireRole("admin"))
+				r.Post("/owner/menu/items", s.createItem)
+				r.Delete("/owner/menu/items/{id}", s.deleteItem)
+				r.Post("/owner/menu/categories", s.createCategory)
+				r.Get("/owner/expenses", s.listExpenses)
+				r.Post("/owner/expenses", s.addExpense)
+				r.Delete("/owner/expenses/{id}", s.deleteExpense)
+				r.Post("/owner/offers", s.createOffer)
+				r.Put("/owner/offers/{id}", s.updateOffer)
+				r.Post("/owner/offers/{id}/end", s.endOffer)
 				r.Get("/admin/users", s.listUsers)
 				r.Post("/admin/users", s.createUser)
 				r.Patch("/admin/users/{id}", s.updateUser)
@@ -193,7 +194,7 @@ func requireRole(role string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if staffFrom(r).Role != role {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin can do this"})
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin (Vikash) can do this"})
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -452,6 +453,10 @@ func (s *Server) updateItem(w http.ResponseWriter, r *http.Request) {
 	var in store.ItemUpdate
 	if err := decode(r, &in); err != nil {
 		writeErr(w, r, err)
+		return
+	}
+	if staffFrom(r).Role != "admin" && !in.OnlyAvailability() {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin can change dishes and prices; you can mark a dish sold out"})
 		return
 	}
 	if err := s.Store.UpdateItem(r.Context(), chi.URLParam(r, "id"), in); err != nil {

@@ -14,7 +14,7 @@ function margin(price?: number | null, cost?: number | null) {
 }
 
 // The owner's menu: prices, cost prices, tags, on/off, add, edit and delete.
-export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) {
+export default function MenuAdmin({ onSignedOut, canEdit = true }: { onSignedOut: () => void; canEdit?: boolean }) {
   const [cats, setCats] = useState<MenuCategoryAdmin[]>([])
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<string | null>(null)
@@ -51,12 +51,12 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
     <div className="menu-admin">
       <div className="board-head">
         <div>
-          <h2 className="staff-h">Menu</h2>
-          <p className="menu-sub">Prices save when you leave the box or press Enter. The website updates within a minute.</p>
+          <h2 className="staff-h">{canEdit ? 'Menu' : 'Sold out today?'}</h2>
+          <p className="menu-sub">{canEdit ? 'Prices save when you leave the box or press Enter. The website updates within a minute.' : 'Switch a dish off when it runs out and back on when it is ready. Prices and dishes are set by the admin.'}</p>
         </div>
         <input className="ma-search" type="search" placeholder="Find a dish" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a dish" />
       </div>
-      {missing > 0 && <p className="dash-note small"><span aria-hidden="true">💡</span> {missing} dishes have no cost price. Add what one plate costs you to make, and the dashboard shows real profit.</p>}
+      {canEdit && missing > 0 && <p className="dash-note small"><span aria-hidden="true">💡</span> {missing} dishes have no cost price. Add what one plate costs you to make, and the dashboard shows real profit.</p>}
       {error && <p className="error" role="alert">{error}</p>}
       {msg && <p className="oc-eta" role="status">{msg}</p>}
 
@@ -67,7 +67,7 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
           <section key={c.id} className="ma-cat">
             <div className="ma-cat-head">
               <h3 className="panel-h">{c.name} <small lang="hi">{c.name_hi}</small> <span className="muted">{c.items.length}</span></h3>
-              <MButton className="btn btn-ghost btn-sm" onClick={() => setAdding(adding === c.id ? null : c.id)}>{adding === c.id ? 'Close' : '+ Add dish'}</MButton>
+              {canEdit && <MButton className="btn btn-ghost btn-sm" onClick={() => setAdding(adding === c.id ? null : c.id)}>{adding === c.id ? 'Close' : '+ Add dish'}</MButton>}
             </div>
             {adding === c.id && (
               <ItemForm cats={cats} images={images} initial={{ category_id: c.id }} submitLabel="Add to menu"
@@ -77,15 +77,18 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
                   if (it) { setAdding(null); setMsg(`${it.name} is on the menu.`); load() }
                 }} />
             )}
-            <div className="ma-head-row" aria-hidden="true"><span>Dish</span><span>Selling price</span><span>Cost to make</span><span>Margin</span><span /></div>
+            {canEdit && <div className="ma-head-row" aria-hidden="true"><span>Dish</span><span>Selling price</span><span>Cost to make</span><span>Margin</span><span /></div>}
             {items.map((i) => {
               const m = margin(i.full, i.cost_full)
               return (
-                <motion.div layout key={i.id} className={`ma-row ${i.available ? '' : 'off'} ${open === i.id ? 'is-open' : ''}`} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
+                <motion.div layout key={i.id} className={`ma-row ${canEdit ? '' : 'ma-simple'} ${i.available ? '' : 'off'} ${open === i.id ? 'is-open' : ''}`} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4 }}>
                   <div className="ma-name">
                     <span aria-hidden="true" className="ma-emoji">{itemKind(i.name, c.name).emoji}</span>
                     <span><strong>{i.name}</strong>{i.tag && <span className={`tag-chip tag-${i.tag}`}>{TAGS.find(([k]) => k === i.tag)?.[1]}</span>}<br /><small className="muted" lang="hi">{i.name_hi}</small></span>
                   </div>
+                  {!canEdit ? (
+                    <div className="ma-prices" data-label="Price">{i.full != null ? rupees(i.full) : '—'}{i.half != null ? ` · half ${rupees(i.half)}` : ''}</div>
+                  ) : <>
                   <div className="ma-prices" data-label="Selling price">
                     <Money id={`p-${i.id}-full`} label="Full" value={i.full} onSave={(v) => save(i.id, { full: v ?? undefined })} />
                     <Money id={`p-${i.id}-half`} label="Half" value={i.half ?? null} clearable onSave={(v) => save(i.id, v == null ? { clear_half: true } : { half: v })} />
@@ -94,12 +97,13 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
                     <Money id={`c-${i.id}-full`} label="Full" value={i.cost_full ?? null} onSave={(v) => v != null && save(i.id, { cost_full: v })} />
                     {i.half != null && <Money id={`c-${i.id}-half`} label="Half" value={i.cost_half ?? null} clearable onSave={(v) => save(i.id, v == null ? { clear_cost_half: true } : { cost_half: v })} />}
                   </div>
-                  <span className={`ma-margin ${m == null ? 'none' : m < 30 ? 'low' : 'ok'}`}>{m == null ? '—' : `${m}%`}<small>{m != null && i.full != null && i.cost_full != null ? ` ${rupees(i.full - i.cost_full)}/plate` : ''}</small></span>
+                  </>}
+                  {canEdit && <span className={`ma-margin ${m == null ? 'none' : m < 30 ? 'low' : 'ok'}`}>{m == null ? '—' : `${m}%`}<small>{m != null && i.full != null && i.cost_full != null ? ` ${rupees(i.full - i.cost_full)}/plate` : ''}</small></span>}
                   <div className="ma-actions">
                     <label className="switch"><input id={`a-${i.id}`} type="checkbox" checked={i.available} onChange={(e) => save(i.id, { available: e.target.checked })} /><span>{i.available ? 'On menu' : 'Sold out'}</span></label>
-                    <MButton className="btn btn-ghost btn-sm" onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>{open === i.id ? 'Close' : 'Edit'}</MButton>
+                    {canEdit && <MButton className="btn btn-ghost btn-sm" onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>{open === i.id ? 'Close' : 'Edit'}</MButton>}
                   </div>
-                  {open === i.id && (
+                  {canEdit && open === i.id && (
                     <div className="ma-edit">
                       <ItemForm cats={cats} images={images} initial={i} submitLabel="Save changes"
                         onCancel={() => setOpen(null)}
@@ -116,14 +120,14 @@ export default function MenuAdmin({ onSignedOut }: { onSignedOut: () => void }) 
         )
       })}
 
-      <section className="ma-cat">
+      {canEdit && <section className="ma-cat">
         <h3 className="panel-h">Add a menu section</h3>
         <form className="add-staff" onSubmit={addSection}>
           <label className="field" htmlFor="ns-cat">Section name<input id="ns-cat" name="name" required maxLength={40} placeholder="Combos" /></label>
           <label className="field" htmlFor="ns-cat-hi">In Hindi (optional)<input id="ns-cat-hi" name="name_hi" maxLength={40} lang="hi" placeholder="कॉम्बो" /></label>
           <MButton className="btn btn-gold">Add section</MButton>
         </form>
-      </section>
+      </section>}
     </div>
   )
 }

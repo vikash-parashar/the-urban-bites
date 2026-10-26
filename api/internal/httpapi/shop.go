@@ -61,8 +61,8 @@ func (s *Server) updateShop(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	if in.TouchesPayments() && staffFrom(r).Role != "admin" {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin can change payment settings"})
+	if staffFrom(r).Role != "admin" && !in.OnlyPause() {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin (Vikash) can change shop settings; you can pause or resume orders"})
 		return
 	}
 	sh, err := s.Store.UpdateShop(r.Context(), in)

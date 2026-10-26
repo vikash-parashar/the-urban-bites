@@ -179,6 +179,13 @@ type ItemUpdate struct {
 	ClearCostHalf bool    `json:"clear_cost_half"`
 }
 
+// OnlyAvailability is true when the update just marks a dish sold out or back on (all the owner may do).
+func (u ItemUpdate) OnlyAvailability() bool {
+	return u.Available != nil && u.Name == nil && u.NameHi == nil && u.Description == nil && u.Tag == nil &&
+		u.CategoryID == nil && u.Image == nil && u.Full == nil && u.Half == nil && u.CostFull == nil && u.CostHalf == nil &&
+		!u.ClearHalf && !u.ClearCostHalf
+}
+
 func (u *ItemUpdate) clean() error {
 	trim := func(p *string, max int, label string, required bool) error {
 		if p == nil {

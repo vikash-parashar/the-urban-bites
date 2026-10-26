@@ -1501,3 +1501,7 @@ section[id], [id="menu"], [id="offers"], [id="regulars"], [id="visit"] { scroll-
 [data-theme='pop'] .my-order { border: 3px solid #111; box-shadow: 6px 6px 0 #111; }
 [data-theme='pop'] .my-order .chip { color: var(--pop-ink); border-color: var(--pop-ink); }
 [data-theme='glass'] .my-order { background: var(--glass); border-color: var(--glass-line); backdrop-filter: blur(14px); }
+
+/* Owner's simple menu: dish, price, sold-out switch */
+.ma-row.ma-simple { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; }
+@media (max-width: 640px) { .ma-row.ma-simple { grid-template-columns: minmax(0, 1fr) auto; } .ma-row.ma-simple .ma-prices { grid-column: 1; } }
