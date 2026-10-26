@@ -84,6 +84,8 @@ export default function Menu({ cart, offersVersion }: { cart: Cart; offersVersio
   )
 }
 
+const TAG_LABEL: Record<string, string> = { bestseller: '🔥 Bestseller', new: '✨ New', spicy: '🌶️ Spicy', chef: '👨‍🍳 Chef’s special' }
+
 function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: string }) {
   const kind = itemKind(item.name, category)
   const [size, setSize] = useState<Size>('full')
@@ -95,6 +97,7 @@ function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: 
   return (
     <article className={`dish ${offer != null ? 'has-offer' : ''}`}>
       {offer != null && <span className="offer-tag">Offer</span>}
+      {item.tag && <span className={`dish-tag tag-${item.tag}`}>{TAG_LABEL[item.tag]}</span>}
       {item.image ? (
         <div className="dish-img">
           <img src={dishImage(item.image)} alt="" loading="lazy" />
@@ -112,6 +115,7 @@ function Dish({ item, cart, category }: { item: MenuItem; cart: Cart; category: 
           {item.name_hi}
         </p>
         <h3>{item.name}</h3>
+        {item.description && <p className="dish-desc">{item.description}</p>}
         {item.half != null && (
           <div className="sizes" role="radiogroup" aria-label={`${item.name} plate size`}>
             {(['full', 'half'] as const).map((s) => (

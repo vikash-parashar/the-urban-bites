@@ -10,6 +10,8 @@ export interface Staff {
   email: string
   name: string
   role: 'admin' | 'owner'
+  /** Signed in with a temporary password: must choose their own before anything else. */
+  must_change_password?: boolean
 }
 
 export interface StaffOrder {
@@ -50,6 +52,33 @@ export interface Earnings {
   top_items: { name: string; qty: number; sales: number }[]
 }
 
+export interface Totals {
+  orders: number; revenue: number; cost: number; gross_profit: number; expenses: number; net_profit: number
+  avg_order: number; cancelled: number; items_sold: number; uncosted_sales: number; customers: number; new_customers: number
+}
+export interface Bucket { key: string; label: string; orders: number; revenue: number; cost: number; expenses: number; profit: number }
+export interface ItemStat { item_id: string; name: string; qty: number; sales: number; cost: number; profit: number; costed: boolean; margin: number; orders: number; image: string }
+export interface Split { key: string; orders: number; revenue: number }
+export type Period = 'day' | 'week' | 'month' | 'year'
+export interface Dashboard {
+  period: Period; from: string; to: string; bucket: 'hour' | 'day' | 'month'
+  totals: Totals; previous: Totals; series: Bucket[]; top_items: ItemStat[]; slow_items: ItemStat[]
+  hours: number[]; weekdays: number[]; sources: Split[]; payments: Split[]; fulfilment: Split[]
+  top_customers: { name: string; phone: string; orders: number; spent: number }[]
+  expense_categories: Split[]; missing_cost: number
+}
+export interface Expense { id: string; spent_on: string; category: string; amount: number; note: string; created_at: string }
+
+export interface MenuItemAdmin {
+  id: string; category_id: string; name: string; name_hi?: string; description?: string; tag?: string; image?: string
+  full: number | null; half?: number | null; cost_full?: number | null; cost_half?: number | null; available: boolean
+}
+export interface MenuCategoryAdmin { id: string; name: string; name_hi?: string; items: MenuItemAdmin[] }
+export interface ItemInput {
+  name?: string; name_hi?: string; description?: string; tag?: string; category_id?: string; image?: string
+  full?: number; half?: number; cost_full?: number; cost_half?: number; available?: boolean; clear_half?: boolean; clear_cost_half?: boolean
+}
+
 export interface OfferInput {
   period: 'day' | 'month'
   title: string
@@ -83,10 +112,14 @@ function saveSession(s: Session | null) {
   }
 }
 
+const PUBLIC = ['/v1/owner/login', '/v1/owner/forgot', '/v1/owner/reset']
+
 export class SignedOut extends Error {}
+/** The server wants a new password before anything else (temporary password). */
+export class MustChangePassword extends Error {}
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
-  if (!API_URL) throw new Error('Staff screens need the live API. This preview has no server behind it.')
+  if (!API_URL) throw new Error('This copy of the website is not connected to the server (VITE_API_URL is not set). Open https://the-urban-bites.onrender.com/#staff instead.')
   const session = loadSession()
   const res = await fetch(`${API_URL}${path}`, {
     method,
@@ -96,12 +129,17 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
-  if (res.status === 401 && path !== '/v1/owner/login') {
+  if (res.status === 401 && !PUBLIC.includes(path)) {
     saveSession(null)
     throw new SignedOut('Signed out. Sign in again with your staff email.')
   }
   const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  let data = null
+  try { data = text ? JSON.parse(text) : null } catch { /* not JSON, e.g. a proxy error page */ }
+  if (res.status === 403 && data?.code === 'password_change_required') {
+    if (session) saveSession({ ...session, user: { ...session.user, must_change_password: true } })
+    throw new MustChangePassword('Choose your own password first.')
+  }
   if (!res.ok) throw new Error(data?.error ? sentence(`${data.error[0].toUpperCase()}${data.error.slice(1)}`) : `Error ${res.status}`)
   return data as T
 }
@@ -116,18 +154,37 @@ export function signOut() {
   saveSession(null)
 }
 
+/** Change your own password. The server signs out older sessions and returns a fresh one. */
+export async function changePassword(current: string, next: string): Promise<Staff> {
+  const r = await call<Session>('POST', '/v1/me/password', { current, new: next })
+  saveSession(r)
+  return r.user
+}
+
+/** Ask for a reset link by email. Always succeeds, so it never reveals which emails have accounts. */
+export const forgotPassword = (email: string) => call<null>('POST', '/v1/owner/forgot', { email })
+
+export async function resetPassword(token: string, password: string): Promise<Staff> {
+  const r = await call<Session>('POST', '/v1/owner/reset', { token, password })
+  saveSession(r)
+  return r.user
+}
+
 export const staffApi = {
   orders: (all: boolean) =>
     call<{ orders: StaffOrder[]; server_time: string }>('GET', `/v1/owner/orders?status=${all ? 'all' : 'active'}`),
   updateOrder: (id: string, u: { status?: string; prep_minutes?: number; payment_status?: string }) =>
     call<StaffOrder>('PATCH', `/v1/owner/orders/${id}`, u),
-  menu: () =>
-    call<{ categories: { id: string; name: string; items: { id: string; name: string; full: number | null; half?: number | null; available: boolean }[] }[] }>(
-      'GET',
-      '/v1/owner/menu',
-    ),
-  updateItem: (id: string, u: { full?: number; half?: number; available?: boolean }) =>
-    call<null>('PATCH', `/v1/owner/menu/items/${id}`, u),
+  menu: () => call<{ categories: MenuCategoryAdmin[] }>('GET', '/v1/owner/menu'),
+  updateItem: (id: string, u: ItemInput) => call<null>('PATCH', `/v1/owner/menu/items/${encodeURIComponent(id)}`, u),
+  createItem: (u: ItemInput) => call<MenuItemAdmin>('POST', '/v1/owner/menu/items', u),
+  deleteItem: (id: string) => call<null>('DELETE', `/v1/owner/menu/items/${encodeURIComponent(id)}`),
+  createCategory: (name: string, name_hi: string) => call<MenuCategoryAdmin>('POST', '/v1/owner/menu/categories', { name, name_hi }),
+  dashboard: (period: Period, date?: string) => call<Dashboard>('GET', `/v1/owner/dashboard?period=${period}${date ? `&date=${date}` : ''}`),
+  expenses: (period: Period, date?: string) =>
+    call<{ expenses: Expense[]; total: number; categories: string[]; from: string; to: string }>('GET', `/v1/owner/expenses?period=${period}${date ? `&date=${date}` : ''}`),
+  addExpense: (e: { spent_on?: string; category: string; amount: number; note: string }) => call<Expense>('POST', '/v1/owner/expenses', e),
+  deleteExpense: (id: string) => call<null>('DELETE', `/v1/owner/expenses/${id}`),
   earnings: (from: string, to: string) => call<Earnings>('GET', `/v1/owner/earnings?from=${from}&to=${to}`),
   shop: () => call<Shop>('GET', '/v1/shop'),
   updateShop: (u: Partial<Shop>) => call<Shop>('PATCH', '/v1/owner/shop', u),

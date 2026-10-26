@@ -7,7 +7,7 @@ import { startThemeClock } from './theme'
 
 startThemeClock()
 
-// #staff opens the owner/admin area; everything else is the public site.
+// #staff opens the owner/admin area (#staff/reset?token=… from a reset email); everything else is the public site.
 function Root() {
   const [hash, setHash] = useState(location.hash)
   useEffect(() => {
@@ -15,7 +15,7 @@ function Root() {
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
-  return hash === '#staff' ? <StaffApp /> : <App />
+  return hash === '#staff' || hash.startsWith('#staff/') ? <StaffApp hash={hash} /> : <App />
 }
 
 createRoot(document.getElementById('root')!).render(

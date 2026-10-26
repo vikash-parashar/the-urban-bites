@@ -10,6 +10,8 @@ export interface MenuItem {
   half?: number
   image: string
   offer_price?: number
+  description?: string
+  tag?: '' | 'bestseller' | 'new' | 'spicy' | 'chef'
 }
 
 export interface Category {

@@ -1,13 +1,15 @@
 import { cleanMobile } from './kit'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { SignedOut, staffApi, type OfferInput, type StaffOrder } from './staffApi'
+import { MustChangePassword, SignedOut, staffApi, type OfferInput, type StaffOrder } from './staffApi'
 import { rupees } from './menu'
 import type { Offer, Shop } from './shop'
 import { BadgeMedal } from './Extras'
 
 type MenuCats = Awaited<ReturnType<typeof staffApi.menu>>['categories']
 
-function useGuard(onSignedOut: () => void) {
+// useGuard runs an API call and keeps its error message. Signed out or a forced password change sends
+// the person back to the right screen through onSignedOut.
+export function useGuard(onSignedOut: () => void) {
   const [error, setError] = useState('')
   const guard = useCallback(
     async <T,>(p: Promise<T>): Promise<T | undefined> => {
@@ -16,7 +18,7 @@ function useGuard(onSignedOut: () => void) {
         setError('')
         return r
       } catch (e) {
-        if (e instanceof SignedOut) onSignedOut()
+        if (e instanceof SignedOut || e instanceof MustChangePassword) onSignedOut()
         setError(e instanceof Error ? e.message : 'Something went wrong.')
         return undefined
       }
