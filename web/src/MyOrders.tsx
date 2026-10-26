@@ -1,19 +1,10 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { trackOrder, type OrderStatus, type PlacedOrder, type Tracking } from './api'
+import { trackOrder, type PlacedOrder, type Tracking } from './api'
 import { lookup } from './cart'
 import { rupees } from './menu'
 import { MButton, Stagger, StaggerItem, lift } from './motion'
-
-const label: Record<OrderStatus, string> = {
-  placed: 'Waiting for the kitchen',
-  accepted: 'Accepted',
-  preparing: 'Cooking',
-  ready: 'Ready',
-  out_for_delivery: 'On the way',
-  completed: 'Done',
-  cancelled: 'Cancelled',
-}
+import { OrderTag, PaymentTag } from './Tags'
 
 // The customer's recent orders (kept in this browser), each with its live status and a Track button.
 export default function MyOrders({ orders, onOpen }: { orders: PlacedOrder[]; onOpen: (o: PlacedOrder) => void }) {
@@ -48,21 +39,21 @@ export default function MyOrders({ orders, onOpen }: { orders: PlacedOrder[]; on
               })
           const status = t?.status
           const paid = t?.payment_status === 'paid'
-          const how = (t?.payment_method ?? o.payment_method) === 'online' ? 'UPI' : o.fulfilment === 'delivery' ? 'Cash on delivery' : 'Cash'
           return (
             <StaggerItem key={o.id}>
               <motion.div className="my-order" {...lift}>
                 <div className="my-order-top">
                   <strong>Order #{o.number}</strong>
-                  {status && <span className={`chip status-${status}`}>{label[status]}</span>}
+                  {status && <OrderTag status={status} who="customer" delivery={o.fulfilment === 'delivery'} />}
                 </div>
                 <p className="my-order-when">
                   {new Date(o.placed_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} · {o.fulfilment === 'delivery' ? '🛵 Delivery' : '🏃 Pickup'}
                 </p>
                 {items.length > 0 && <p className="my-order-items">{items.join(', ')}</p>}
                 <div className="my-order-bottom">
-                  <span>
-                    <b>{rupees(t?.total ?? o.total)}</b> · {how}{paid ? ' · ✅ Paid' : ''}
+                  <span className="my-order-pay">
+                    <b>{rupees(t?.total ?? o.total)}</b>
+                    {t && <PaymentTag method={t.payment_method ?? o.payment_method} paid={paid} ref={t.payment_ref} cancelled={status === 'cancelled'} />}
                   </span>
                   <MButton className="btn btn-gold btn-sm" onClick={() => onOpen(o)}>
                     {status === 'completed' || status === 'cancelled' ? 'View' : 'Track'}

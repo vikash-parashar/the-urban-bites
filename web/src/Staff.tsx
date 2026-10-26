@@ -9,11 +9,8 @@ import { ChangePassword, Login, ResetPassword } from './Account'
 import { billText, itemKind, whatsappBill, type Bill } from './kit'
 import { MA, MButton } from './motion'
 import { brand } from './brand'
+import { OrderTag, PaymentTag } from './Tags'
 
-const statusLabel: Record<string, string> = {
-  placed: 'New', accepted: 'Accepted', preparing: 'Cooking', ready: 'Ready',
-  out_for_delivery: 'Out for delivery', completed: 'Done', cancelled: 'Cancelled',
-}
 const PREP = [5, 10, 15, 20, 30, 45]
 
 type Tab = 'dashboard' | 'orders' | 'walkin' | 'offers' | 'menu' | 'expenses' | 'shop' | 'staff'
@@ -25,6 +22,8 @@ export default function StaffApp({ hash }: { hash: string }) {
   const [changing, setChanging] = useState(false)
   // Signed out, or told to change a temporary password: re-read the saved session.
   const onSignedOut = useCallback(() => setUser(loadSession()?.user ?? null), [])
+  const [all, setAll] = useState(false)
+  const feed = useOrderFeed(onSignedOut, all, !!user && !user.must_change_password)
 
   if (hash.startsWith('#staff/reset')) {
     const token = new URLSearchParams(hash.split('?')[1] ?? '').get('token') ?? ''
@@ -51,7 +50,7 @@ export default function StaffApp({ hash }: { hash: string }) {
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
           {tabs.map(([id, label, emoji]) => (
             <MButton key={id} role="tab" aria-selected={tab === id} className="tab" onClick={() => setTab(id)}>
-              <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}</span>
+              <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}{id === 'orders' && feed.newCount > 0 && <b className="tab-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}</span>
             </MButton>
           ))}
         </nav>
@@ -63,7 +62,12 @@ export default function StaffApp({ hash }: { hash: string }) {
       </header>
       <main className="staff-main">
         {tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
-        {tab === 'orders' && <Orders onSignedOut={onSignedOut} />}
+        {tab !== 'orders' && feed.newCount > 0 && (
+          <MButton className="new-alert new-alert-top" onClick={() => setTab('orders')}>
+            🔔 {feed.newCount === 1 ? '1 new order' : `${feed.newCount} new orders`} waiting · open Orders
+          </MButton>
+        )}
+        {tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} />}
         {tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
         {tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
         {tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} canEdit={isAdmin} />}
@@ -81,14 +85,16 @@ function minsLeft(o: StaffOrder, offset: number) {
   return left <= 0 ? 'due now' : `${Math.ceil(left / 60000)} min left`
 }
 
-function Orders({ onSignedOut }: { onSignedOut: () => void }) {
+type Feed = ReturnType<typeof useOrderFeed>
+
+// useOrderFeed polls the order list every 10 seconds for the whole staff area, so the
+// new-order counter, the bell and the tab title work on every tab, not only on Orders.
+function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
   const [orders, setOrders] = useState<StaffOrder[]>([])
-  const [all, setAll] = useState(false)
   const [offset, setOffset] = useState(0)
-  const [selected, setSelected] = useState<string | null>(null)
-  const [fresh, setFresh] = useState<string | null>(null)
-  const [filter, setFilter] = useState<string>('open')
+  const [sound, setSoundState] = useState(() => { try { return localStorage.getItem('ub-sound') !== 'off' } catch { return true } })
   const seen = useRef<Set<string> | null>(null)
+  const soundRef = useRef(sound)
   const { error, guard } = useGuard(onSignedOut)
 
   const load = useCallback(async () => {
@@ -96,20 +102,51 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
     if (!r) return
     setOffset(Date.parse(r.server_time) - Date.now())
     setOrders(r.orders)
-    const newOnes = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
-    if (newOnes.length) { setFresh(`New order #${newOnes[0].number} from ${newOnes[0].customer_name}`); chime() }
+    const arrived = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
+    if (arrived.length && soundRef.current) chime()
     const waiting = r.orders.filter((o) => o.status === 'placed').length
-    document.title = waiting ? `(${waiting}) New order · ${brand.name}` : `Orders · ${brand.name}`
+    document.title = waiting ? `(${waiting}) New order${waiting > 1 ? 's' : ''} · ${brand.name}` : `Orders · ${brand.name}`
     seen.current = new Set([...(seen.current ?? []), ...r.orders.map((o) => o.id)])
   }, [all, guard])
 
   useEffect(() => {
+    if (!enabled) return
     load()
     const id = window.setInterval(load, 10_000)
     return () => clearInterval(id)
-  }, [load])
+  }, [load, enabled])
+
+  const newCount = orders.filter((o) => o.status === 'placed').length
+  // Keep ringing every 30 seconds while an order is still waiting to be accepted.
+  useEffect(() => {
+    if (!enabled || newCount === 0 || !sound) return
+    const id = window.setInterval(chime, 30_000)
+    return () => clearInterval(id)
+  }, [enabled, newCount, sound])
 
   useEffect(() => () => { document.title = brand.name }, [])
+  // Browsers only play sound after a tap; unlock the bell on the first tap anywhere.
+  useEffect(() => {
+    const unlock = () => audio()?.resume().catch(() => {})
+    window.addEventListener('pointerdown', unlock, { once: true })
+    return () => window.removeEventListener('pointerdown', unlock)
+  }, [])
+
+  const setSound = (on: boolean) => {
+    soundRef.current = on
+    setSoundState(on)
+    try { localStorage.setItem('ub-sound', on ? 'on' : 'off') } catch { /* private mode */ }
+    if (on) chime()
+  }
+  return { orders, offset, error, load, newCount, sound, setSound }
+}
+
+function Orders({ feed, all, setAll, onSignedOut }: { feed: Feed; all: boolean; setAll: (v: boolean) => void; onSignedOut: () => void }) {
+  const { orders, offset, error, load, newCount, sound, setSound } = feed
+  const [selected, setSelected] = useState<string | null>(null)
+  const [filter, setFilter] = useState<string>('open')
+  const { error: updErr, guard } = useGuard(onSignedOut)
+
   const current = orders.find((o) => o.id === selected) ?? null
   const groups: [string, string, (o: StaffOrder) => boolean][] = [
     ['open', 'All open', (o) => o.status !== 'completed' && o.status !== 'cancelled'],
@@ -135,9 +172,18 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
           <h2 className="staff-h">{all ? 'All orders' : 'Open orders'}</h2>
           <label className="check"><input id="show-all" type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show done</label>
         </div>
-        {fresh && (
-          <MButton className="fresh" onClick={() => setFresh(null)}>{fresh} · dismiss</MButton>
-        )}
+        <div className="alert-row">
+          {newCount > 0 ? (
+            <MButton className="new-alert" onClick={() => setFilter('placed')} animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.4, repeat: Infinity }}>
+              🔔 {newCount === 1 ? '1 new order' : `${newCount} new orders`} · tap a card and set the time to accept
+            </MButton>
+          ) : (
+            <span className="menu-sub">No new orders waiting.</span>
+          )}
+          <MButton className={`btn btn-ghost btn-sm sound-btn ${sound ? '' : 'is-off'}`} onClick={() => setSound(!sound)} aria-pressed={sound}>
+            {sound ? '🔔 Sound on' : '🔕 Sound off'}
+          </MButton>
+        </div>
         <div className="order-filters" role="radiogroup" aria-label="Show orders">
           {groups.map(([id, label, f]) => {
             const n = orders.filter(f).length
@@ -145,17 +191,18 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
               animate={id === 'placed' && n ? { scale: [1, 1.08, 1] } : { scale: 1 }} transition={id === 'placed' && n ? { duration: 1.6, repeat: Infinity } : undefined}>{label} <b>{n}</b></MButton>
           })}
         </div>
-        {error && <p className="error" role="alert">{error}</p>}
+        {(error || updErr) && <p className="error" role="alert">{updErr || error}</p>}
         {orders.length === 0 && !error && <p className="menu-sub">No open orders. New ones from the website and the app appear here within 10 seconds.</p>}
         {shown.length === 0 && orders.length > 0 && <p className="menu-sub">No orders here right now.</p>}
         {shown.map((o) => (
           <MButton layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }} key={o.id} className={`order-card ${o.status === 'placed' ? 'is-new' : ''} ${o.id === selected ? 'is-on' : ''}`} onClick={() => setSelected(o.id)}>
             <span className="oc-top">
               <strong>#{o.number}</strong>
-              <span className={`pill pill-${o.status}`}>{statusLabel[o.status]}</span>
+              <OrderTag status={o.status} who="staff" delivery={o.fulfilment === 'delivery'} />
               <span className="oc-total">{rupees(o.total)}</span>
             </span>
-            <span className="oc-meta">{o.customer_name} · {o.fulfilment === 'delivery' ? 'Delivery' : 'Pickup'} · {o.payment_method === 'cash' ? 'Cash' : 'Online'} · {sourceLabel[o.source]}</span>
+            <span className="oc-tags"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} cancelled={o.status === 'cancelled'} /></span>
+            <span className="oc-meta">{o.customer_name} · {o.fulfilment === 'delivery' ? 'Delivery' : 'Pickup'} · {sourceLabel[o.source]}</span>
             <CustomerTag o={o} />
             <span className="oc-items">{o.items.map((l) => `${l.qty}× ${l.name}${l.size === 'half' ? ' (H)' : ''}`).join(', ')}</span>
             {(o.status === 'accepted' || o.status === 'preparing') && <span className="oc-eta">{minsLeft(o, offset)}</span>}
@@ -176,24 +223,36 @@ function Orders({ onSignedOut }: { onSignedOut: () => void }) {
   )
 }
 
-// chime plays a short two-note bell for a new order (browsers allow it once the page has been tapped).
-function chime() {
+// One shared audio context, resumed by the first tap (browsers block sound before that).
+let ctxRef: AudioContext | null = null
+function audio(): AudioContext | null {
   try {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new Ctx()
-    ;[880, 1318].forEach((f, i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain()
-      o.frequency.value = f
-      o.type = 'sine'
-      g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18)
-      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.18 + 0.02)
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.5)
-      o.connect(g).connect(ctx.destination)
-      o.start(ctx.currentTime + i * 0.18)
-      o.stop(ctx.currentTime + i * 0.18 + 0.55)
-    })
-    setTimeout(() => ctx.close(), 1200)
-  } catch { /* no audio: the banner still shows */ }
+    if (!ctxRef) {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      ctxRef = new Ctx()
+    }
+    return ctxRef
+  } catch { return null }
+}
+
+// chime rings a short three-note bell for a new order.
+function chime() {
+  const ctx = audio()
+  if (!ctx) return
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+  const t0 = ctx.currentTime + 0.02
+  ;[880, 1175, 1568].forEach((f, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain()
+    o.frequency.value = f
+    o.type = 'triangle'
+    const t = t0 + i * 0.16
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6)
+    o.connect(g).connect(ctx.destination)
+    o.start(t)
+    o.stop(t + 0.65)
+  })
 }
 
 const STEPS: [string, string][] = [['placed', 'New'], ['preparing', 'Cooking'], ['ready', 'Ready'], ['completed', 'Done']]
@@ -240,7 +299,7 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
     <div className="panel">
       <div className="oc-top">
         <h2 className="staff-h">Order #{o.number}</h2>
-        <span className={`pill pill-${o.status}`}>{statusLabel[o.status]}</span>
+        <OrderTag status={o.status} who="staff" delivery={o.fulfilment === 'delivery'} />
         <span className="menu-sub">{new Date(o.created_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</span>
       </div>
       <Progress o={o} />
@@ -257,7 +316,7 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
       {o.fulfilment === 'delivery' && (
         <div className="sums"><div><span>Items</span><span>{rupees(o.subtotal)}</span></div><div><span>Delivery</span><span className={o.delivery_fee === 0 ? 'free' : ''}>{o.delivery_fee === 0 ? 'Free' : rupees(o.delivery_fee)}</span></div></div>
       )}
-      <div className="total-row"><span>{o.payment_method === 'cash' ? 'Cash' : 'UPI'} · {o.payment_status === 'paid' ? 'Paid' : 'Not paid yet'}</span><strong>{rupees(o.total)}</strong></div>
+      <div className="total-row"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} cancelled={o.status === 'cancelled'} /><strong>{rupees(o.total)}</strong></div>
       {o.payment_ref && (
         <p className="upi-ref-staff">📲 UPI ref <strong className="selectable">{o.payment_ref}</strong>{o.payment_status !== 'paid' && ' · match it with your bank or UPI app, then Mark paid'}</p>
       )}

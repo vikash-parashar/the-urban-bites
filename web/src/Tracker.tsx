@@ -9,6 +9,7 @@ import { BillCard, UpiPay, billFrom } from './PayBill'
 import type { Shop } from './shop'
 import { social } from './social'
 import { MA } from './motion'
+import { OrderTag, PaymentTag } from './Tags'
 
 const pickupSteps: { key: OrderStatus; label: string }[] = [
   { key: 'placed', label: 'Order received' },
@@ -78,6 +79,12 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         Order #{order.number} · {rupees(data?.total ?? order.total)}
         {order.fulfilment === 'delivery' && (data?.delivery_fee ?? order.delivery_fee) === 0 && <span className="free"> · Free delivery</span>}
       </p>
+      {data && (
+        <div className="tracker-tags">
+          <OrderTag status={status} who="customer" delivery={delivery} />
+          <PaymentTag method={data.payment_method ?? order.payment_method} paid={data.payment_status === 'paid'} ref={data.payment_ref} cancelled={status === 'cancelled'} />
+        </div>
+      )}
 
       <div className={`clock ${showClock ? '' : 'clock-idle'} status-${status}`} aria-live="polite">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -135,7 +142,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
           <MA className="btn btn-gold btn-sm" href={social.googleReview} target="_blank" rel="noopener">⭐ Rate us on Google</MA>
         </div>
       )}
-      {data?.payment_status === 'paid' && <p className="upi-paid">✅ Paid{data.payment_ref ? ` · UPI ref ${data.payment_ref}` : ''}</p>}
+      {data?.payment_status === 'paid' && <p className="upi-paid">✅ Payment received{data.payment_ref ? ` · UPI ref ${data.payment_ref}` : ''}</p>}
       <BillCard bill={billFrom(order, data)} phone={phone} />
       {badge && (
         <div className="tracker-badge">

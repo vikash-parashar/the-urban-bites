@@ -151,7 +151,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
             <MButton className="btn btn-gold" onClick={onClose}>Browse the menu</MButton>
           </div>
         ) : (
-          <form className="checkout" onSubmit={submit}>
+          <form className="checkout" onSubmit={submit} noValidate>
             {!shop.accepting_orders && (
               <p className="notice notice-closed" role="status">
                 <strong>Online orders are paused.</strong> {shop.notice || `Call ${business.phone.replace('+91', '')} or visit the cart.`}
