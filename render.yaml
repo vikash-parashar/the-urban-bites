@@ -17,9 +17,9 @@ services:
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: https://theurbanbites.in,https://www.theurbanbites.in,https://the-urban-bites.onrender.com,https://the-urban-bites.pages.dev
-      # Link in "forgot password" emails. Change to https://theurbanbites.in once the domain is connected.
+      # Link in "forgot password" emails.
       - key: SITE_URL
-        value: https://the-urban-bites.onrender.com
+        value: https://theurbanbites.in
       # Password reset emails go through Brevo (free, 300 a day). Fill these in the Render dashboard.
       - key: BREVO_API_KEY
         sync: false
