@@ -18,6 +18,8 @@ import (
 var (
 	ErrBadCredentials = errors.New("wrong email or password")
 	ErrWeakPassword   = errors.New("password must be at least 10 characters")
+	ErrWrongCurrent   = errors.New("your current password is not right")
+	ErrSamePassword   = errors.New("pick a new password, not the one you have now")
 )
 
 // A hash compared when the email is unknown, so a wrong email takes as long as a wrong password.
@@ -31,6 +33,12 @@ type Staff struct {
 	Email string `json:"email"`
 	Name  string `json:"name"`
 	Role  string `json:"role"`
+	// MustChangePassword: signed in with a temporary password, so only the change-password call works.
+	MustChangePassword bool `json:"must_change_password"`
+}
+
+func staffOf(u *store.User) *Staff {
+	return &Staff{ID: u.ID, Email: u.Email, Name: u.Name, Role: u.Role, MustChangePassword: u.MustChangePassword}
 }
 
 type Claims struct {
@@ -46,8 +54,11 @@ type Service struct {
 }
 
 func HashPassword(pw string) (string, error) {
-	if len(pw) < 10 {
+	if len([]rune(pw)) < 10 {
 		return "", ErrWeakPassword
+	}
+	if len(pw) > 72 { // bcrypt ignores anything past 72 bytes
+		return "", errors.New("password can be at most 72 characters")
 	}
 	h, err := bcrypt.GenerateFromPassword([]byte(pw), 12)
 	return string(h), err
@@ -65,6 +76,12 @@ func (a *Service) Login(ctx context.Context, email, password string) (string, *S
 		return "", nil, ErrBadCredentials
 	}
 	a.Store.TouchLogin(ctx, u.ID)
+	token, err := a.Issue(u)
+	return token, staffOf(u), err
+}
+
+// Issue signs a session token for a user, e.g. right after they set a new password.
+func (a *Service) Issue(u *store.User) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   u.ID,
@@ -75,8 +92,19 @@ func (a *Service) Login(ctx context.Context, email, password string) (string, *S
 		Name: u.Name,
 		Role: u.Role,
 	}
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(a.Secret)
-	return token, &Staff{ID: u.ID, Email: u.Email, Name: u.Name, Role: u.Role}, err
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(a.Secret)
+}
+
+// CheckPassword confirms a signed-in person's current password before they change it.
+func (a *Service) CheckPassword(ctx context.Context, id, password string) (*store.User, error) {
+	u, err := a.Store.UserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
+		return nil, ErrWrongCurrent
+	}
+	return u, nil
 }
 
 // Verify checks the token and that the account is still active, so deactivating someone signs them out.
@@ -94,5 +122,9 @@ func (a *Service) Verify(ctx context.Context, token string) (*Staff, error) {
 	if !u.Active {
 		return nil, errors.New("account disabled")
 	}
-	return &Staff{ID: u.ID, Email: u.Email, Name: u.Name, Role: u.Role}, nil
+	// Tokens from before the last password change no longer work.
+	if c.IssuedAt == nil || c.IssuedAt.Time.Before(u.PasswordChangedAt) {
+		return nil, errors.New("signed out after a password change")
+	}
+	return staffOf(u), nil
 }

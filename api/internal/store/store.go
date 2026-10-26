@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -93,25 +94,32 @@ type Category struct {
 }
 
 type MenuItem struct {
-	ID         string `json:"id"`
-	CategoryID string `json:"category_id"`
-	Name       string `json:"name"`
-	NameHi     string `json:"name_hi"`
-	Full       *int   `json:"full"`
-	Half       *int   `json:"half,omitempty"`
-	Image      string `json:"image"`
-	Available  bool   `json:"available"`
-	OfferPrice *int   `json:"offer_price,omitempty"` // today's offer price for the full plate
+	ID          string `json:"id"`
+	CategoryID  string `json:"category_id"`
+	Name        string `json:"name"`
+	NameHi      string `json:"name_hi"`
+	Description string `json:"description,omitempty"`
+	Tag         string `json:"tag,omitempty"` // bestseller, new, spicy, chef
+	Full        *int   `json:"full"`
+	Half        *int   `json:"half,omitempty"`
+	Image       string `json:"image"`
+	Available   bool   `json:"available"`
+	OfferPrice  *int   `json:"offer_price,omitempty"` // today's offer price for the full plate
+	// Cost prices are for the owner only; the customer menu never includes them.
+	CostFull *int `json:"cost_full,omitempty"`
+	CostHalf *int `json:"cost_half,omitempty"`
 }
 
-// Menu returns every category with its items. Customers get only available items.
-func (s *Store) Menu(ctx context.Context, includeUnavailable bool) ([]Category, error) {
+// Menu returns every category with its items. Customers get only available items and no cost prices.
+// Deleted items never show. Owners also get empty categories, so a new category can take its first item.
+func (s *Store) Menu(ctx context.Context, owner bool) ([]Category, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT c.id, c.name, c.name_hi, i.id, i.name, i.name_hi, i.price_full, i.price_half, i.image, i.available
+		SELECT c.id, c.name, c.name_hi, i.id, i.name, i.name_hi, i.description, i.tag, i.price_full, i.price_half,
+			i.image, i.available, i.cost_full, i.cost_half
 		FROM categories c
-		JOIN menu_items i ON i.category_id = c.id
-		WHERE $1 OR i.available
-		ORDER BY c.sort_order, i.sort_order`, includeUnavailable)
+		LEFT JOIN menu_items i ON i.category_id = c.id AND i.deleted_at IS NULL AND ($1 OR i.available)
+		WHERE $1 OR i.id IS NOT NULL
+		ORDER BY c.sort_order, c.id, i.sort_order, i.name`, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -123,39 +131,115 @@ func (s *Store) Menu(ctx context.Context, includeUnavailable bool) ([]Category, 
 	var out []Category
 	for rows.Next() {
 		var c Category
+		var id, name, nameHi, desc, tag, image *string
 		var it MenuItem
-		if err := rows.Scan(&c.ID, &c.Name, &c.NameHi, &it.ID, &it.Name, &it.NameHi, &it.Full, &it.Half, &it.Image, &it.Available); err != nil {
+		var avail *bool
+		if err := rows.Scan(&c.ID, &c.Name, &c.NameHi, &id, &name, &nameHi, &desc, &tag, &it.Full, &it.Half,
+			&image, &avail, &it.CostFull, &it.CostHalf); err != nil {
 			return nil, err
 		}
-		it.CategoryID = c.ID
+		if n := len(out); n == 0 || out[n-1].ID != c.ID {
+			c.Items = []MenuItem{}
+			out = append(out, c)
+		}
+		if id == nil {
+			continue
+		}
+		it.ID, it.CategoryID, it.Name, it.NameHi, it.Description, it.Tag, it.Image, it.Available =
+			*id, c.ID, *name, *nameHi, *desc, *tag, *image, *avail
+		if !owner {
+			it.CostFull, it.CostHalf = nil, nil
+		}
 		if p, ok := offers[it.ID]; ok && it.Full != nil {
 			it.OfferPrice = &p
 		}
-		if n := len(out); n > 0 && out[n-1].ID == c.ID {
-			out[n-1].Items = append(out[n-1].Items, it)
-		} else {
-			c.Items = []MenuItem{it}
-			out = append(out, c)
-		}
+		last := &out[len(out)-1]
+		last.Items = append(last.Items, it)
 	}
 	return out, rows.Err()
 }
 
+var itemTags = map[string]bool{"": true, "bestseller": true, "new": true, "spicy": true, "chef": true}
+
+// ItemUpdate changes any of an item's fields; nil leaves a field as it is. Clear* removes the half plate
+// or a cost price.
 type ItemUpdate struct {
-	Full      *int  `json:"full"`
-	Half      *int  `json:"half"`
-	Available *bool `json:"available"`
-	ClearHalf bool  `json:"clear_half"`
+	Name          *string `json:"name"`
+	NameHi        *string `json:"name_hi"`
+	Description   *string `json:"description"`
+	Tag           *string `json:"tag"`
+	CategoryID    *string `json:"category_id"`
+	Image         *string `json:"image"`
+	Full          *int    `json:"full"`
+	Half          *int    `json:"half"`
+	CostFull      *int    `json:"cost_full"`
+	CostHalf      *int    `json:"cost_half"`
+	Available     *bool   `json:"available"`
+	ClearHalf     bool    `json:"clear_half"`
+	ClearCostHalf bool    `json:"clear_cost_half"`
+}
+
+func (u *ItemUpdate) clean() error {
+	trim := func(p *string, max int, label string, required bool) error {
+		if p == nil {
+			return nil
+		}
+		*p = strings.TrimSpace(*p)
+		if required && *p == "" {
+			return fmt.Errorf("%w: %s is required", ErrInvalid, label)
+		}
+		if len([]rune(*p)) > max {
+			return fmt.Errorf("%w: %s can be at most %d characters", ErrInvalid, label, max)
+		}
+		return nil
+	}
+	if err := trim(u.Name, 60, "name", true); err != nil {
+		return err
+	}
+	if err := trim(u.NameHi, 60, "Hindi name", false); err != nil {
+		return err
+	}
+	if err := trim(u.Description, 140, "description", false); err != nil {
+		return err
+	}
+	if err := trim(u.Image, 40, "image", false); err != nil {
+		return err
+	}
+	if u.Tag != nil && !itemTags[*u.Tag] {
+		return fmt.Errorf("%w: tag must be bestseller, new, spicy, chef or empty", ErrInvalid)
+	}
+	for _, p := range []*int{u.Full, u.Half, u.CostFull, u.CostHalf} {
+		if p != nil && (*p < 0 || *p > 100000) {
+			return fmt.Errorf("%w: prices must be between ₹0 and ₹1,00,000", ErrInvalid)
+		}
+	}
+	return nil
 }
 
 func (s *Store) UpdateItem(ctx context.Context, id string, u ItemUpdate) error {
+	if err := u.clean(); err != nil {
+		return err
+	}
 	tag, err := s.db.Exec(ctx, `
 		UPDATE menu_items SET
-			price_full = COALESCE($2, price_full),
-			price_half = CASE WHEN $5 THEN NULL ELSE COALESCE($3, price_half) END,
-			available  = COALESCE($4, available),
-			updated_at = now()
-		WHERE id = $1`, id, u.Full, u.Half, u.Available, u.ClearHalf)
+			name        = COALESCE($2, name),
+			name_hi     = COALESCE($3, name_hi),
+			description = COALESCE($4, description),
+			tag         = COALESCE($5, tag),
+			category_id = COALESCE($6, category_id),
+			image       = COALESCE($7, image),
+			price_full  = COALESCE($8, price_full),
+			price_half  = CASE WHEN $12 THEN NULL ELSE COALESCE($9, price_half) END,
+			cost_full   = COALESCE($10, cost_full),
+			cost_half   = CASE WHEN $13 THEN NULL ELSE COALESCE($11, cost_half) END,
+			available   = COALESCE($14, available),
+			updated_at  = now()
+		WHERE id = $1 AND deleted_at IS NULL`,
+		id, u.Name, u.NameHi, u.Description, u.Tag, u.CategoryID, u.Image, u.Full, u.Half, u.CostFull, u.CostHalf,
+		u.ClearHalf, u.ClearCostHalf, u.Available)
+	if isFKViolation(err) {
+		return fmt.Errorf("%w: unknown category", ErrInvalid)
+	}
 	if err != nil {
 		return err
 	}
@@ -163,6 +247,114 @@ func (s *Store) UpdateItem(ctx context.Context, id string, u ItemUpdate) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
+
+// slug turns "Malai Chaap (Jumbo)" into "malai-chaap-jumbo" for a readable id.
+func slug(name string) string {
+	s := strings.Trim(slugRe.ReplaceAllString(strings.ToLower(name), "-"), "-")
+	if len(s) > 40 {
+		s = strings.TrimRight(s[:40], "-")
+	}
+	return s
+}
+
+// CreateItem adds a dish to a category. The id comes from the name, with a number added if it's taken.
+func (s *Store) CreateItem(ctx context.Context, u ItemUpdate) (*MenuItem, error) {
+	if u.Name == nil || u.CategoryID == nil {
+		return nil, fmt.Errorf("%w: name and category are required", ErrInvalid)
+	}
+	if u.Full == nil {
+		return nil, fmt.Errorf("%w: set the full plate price", ErrInvalid)
+	}
+	if err := u.clean(); err != nil {
+		return nil, err
+	}
+	base := slug(*u.Name)
+	if base == "" {
+		base = "item"
+	}
+	str := func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return *p
+	}
+	avail := u.Available == nil || *u.Available
+	var id string
+	err := pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
+		id = base
+		for n := 2; ; n++ {
+			var taken bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM menu_items WHERE id = $1)`, id).Scan(&taken); err != nil {
+				return err
+			}
+			if !taken {
+				break
+			}
+			id = fmt.Sprintf("%s-%d", base, n)
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO menu_items (id, category_id, name, name_hi, description, tag, image, price_full, price_half,
+				cost_full, cost_half, available, sort_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+				(SELECT COALESCE(max(sort_order), -1) + 1 FROM menu_items WHERE category_id = $2))`,
+			id, *u.CategoryID, *u.Name, str(u.NameHi), str(u.Description), str(u.Tag), str(u.Image),
+			u.Full, u.Half, u.CostFull, u.CostHalf, avail)
+		return err
+	})
+	if isFKViolation(err) {
+		return nil, fmt.Errorf("%w: unknown category", ErrInvalid)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &MenuItem{ID: id, CategoryID: *u.CategoryID, Name: *u.Name, NameHi: str(u.NameHi), Description: str(u.Description),
+		Tag: str(u.Tag), Image: str(u.Image), Full: u.Full, Half: u.Half, CostFull: u.CostFull, CostHalf: u.CostHalf, Available: avail}, nil
+}
+
+// DeleteItem hides an item for good. Past orders keep their lines, so the row is kept and marked deleted.
+func (s *Store) DeleteItem(ctx context.Context, id string) error {
+	tag, err := s.db.Exec(ctx, `UPDATE menu_items SET deleted_at = now(), available = false, updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	// An offer on a deleted dish would advertise something nobody can order.
+	_, err = s.db.Exec(ctx, `UPDATE offers SET active = false WHERE item_id = $1 AND active`, id)
+	return err
+}
+
+// CreateCategory adds a menu section, e.g. "Rolls" or "Combos", at the end of the menu.
+func (s *Store) CreateCategory(ctx context.Context, name, nameHi string) (*Category, error) {
+	name, nameHi = strings.TrimSpace(name), strings.TrimSpace(nameHi)
+	if name == "" || len([]rune(name)) > 40 || len([]rune(nameHi)) > 40 {
+		return nil, fmt.Errorf("%w: category name is required (up to 40 characters)", ErrInvalid)
+	}
+	id := slug(name)
+	if id == "" {
+		return nil, fmt.Errorf("%w: use letters or numbers in the category name", ErrInvalid)
+	}
+	tag, err := s.db.Exec(ctx, `
+		INSERT INTO categories (id, name, name_hi, sort_order)
+		VALUES ($1, $2, $3, (SELECT COALESCE(max(sort_order), -1) + 1 FROM categories))
+		ON CONFLICT (id) DO NOTHING`, id, name, nameHi)
+	if err != nil {
+		return nil, err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, fmt.Errorf("%w: a category called %q", ErrDuplicate, name)
+	}
+	return &Category{ID: id, Name: name, NameHi: nameHi, Items: []MenuItem{}}, nil
+}
+
+func isFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
 }
 
 // SeedCategory upserts a category and its items (used by cmd/seed).
@@ -241,6 +433,7 @@ type OrderLine struct {
 	Size      string `json:"size"`
 	UnitPrice int    `json:"unit_price"`
 	Qty       int    `json:"qty"`
+	unitCost  *int   // cost price when sold, saved for profit reports
 }
 
 type Event struct {
@@ -324,18 +517,19 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 				return fmt.Errorf("%w: bad line for %q", ErrInvalid, it.ItemID)
 			}
 			var name string
-			var full, half *int
+			var full, half, costFull, costHalf *int
 			var available bool
-			err := tx.QueryRow(ctx, `SELECT name, price_full, price_half, available FROM menu_items WHERE id = $1`, it.ItemID).
-				Scan(&name, &full, &half, &available)
+			err := tx.QueryRow(ctx, `SELECT name, price_full, price_half, cost_full, cost_half, available AND deleted_at IS NULL
+				FROM menu_items WHERE id = $1`, it.ItemID).
+				Scan(&name, &full, &half, &costFull, &costHalf, &available)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("%w: unknown item %q", ErrInvalid, it.ItemID)
 			} else if err != nil {
 				return err
 			}
-			price := full
+			price, cost := full, costFull
 			if it.Size == "half" {
-				price = half
+				price, cost = half, costHalf
 			} else if op, ok := offerPrices[it.ItemID]; ok {
 				price = &op
 				name += " (offer)"
@@ -343,7 +537,7 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 			if !available || price == nil {
 				return fmt.Errorf("%w: %s", ErrUnavailable, name)
 			}
-			lines = append(lines, OrderLine{ItemID: it.ItemID, Name: name, Size: it.Size, UnitPrice: *price, Qty: it.Qty})
+			lines = append(lines, OrderLine{ItemID: it.ItemID, Name: name, Size: it.Size, UnitPrice: *price, Qty: it.Qty, unitCost: cost})
 			subtotal += *price * it.Qty
 		}
 
@@ -383,8 +577,9 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 			return err
 		}
 		for i, l := range lines {
-			if _, err := tx.Exec(ctx, `INSERT INTO order_items (order_id, line, item_id, name, size, unit_price, qty) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				o.ID, i, l.ItemID, l.Name, l.Size, l.UnitPrice, l.Qty); err != nil {
+			if _, err := tx.Exec(ctx, `INSERT INTO order_items (order_id, line, item_id, name, size, unit_price, qty, unit_cost)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				o.ID, i, l.ItemID, l.Name, l.Size, l.UnitPrice, l.Qty, l.unitCost); err != nil {
 				return err
 			}
 		}

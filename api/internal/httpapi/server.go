@@ -18,13 +18,21 @@ import (
 	"github.com/go-chi/cors"
 
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
+	"github.com/vikash-parashar/urban-bites/api/internal/mail"
+	"github.com/vikash-parashar/urban-bites/api/internal/ratelimit"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
 type Server struct {
 	Store          *store.Store
 	Auth           *auth.Service
+	Mail           *mail.Sender
+	SiteURL        string // the website, for links in emails
 	AllowedOrigins []string
+
+	loginLimit  ratelimit.Limiter
+	forgotLimit ratelimit.Limiter
+	ipLimit     ratelimit.Limiter // all sign-in attempts from one address
 }
 
 type ctxKey struct{}
@@ -34,12 +42,15 @@ func staffFrom(r *http.Request) *auth.Staff { return r.Context().Value(ctxKey{})
 var ist = time.FixedZone("IST", 5*60*60+30*60)
 
 func (s *Server) Routes() http.Handler {
+	s.loginLimit = ratelimit.Limiter{Max: 10, Window: 15 * time.Minute}
+	s.forgotLimit = ratelimit.Limiter{Max: 5, Window: time.Hour}
+	s.ipLimit = ratelimit.Limiter{Max: 40, Window: 15 * time.Minute}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer)
 	r.Use(middleware.Timeout(15 * time.Second))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: s.AllowedOrigins,
-		AllowedMethods: []string{"GET", "POST", "PATCH", "PUT", "OPTIONS"},
+		AllowedMethods: []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Client"},
 		MaxAge:         600,
 	}))
@@ -59,15 +70,25 @@ func (s *Server) Routes() http.Handler {
 
 		// Staff side: the owner and the admin. Both run the cart; only the admin manages staff accounts.
 		r.Post("/owner/login", s.login)
+		r.Post("/owner/forgot", s.forgotPassword)
+		r.Post("/owner/reset", s.resetPassword)
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireStaff)
 			r.Get("/me", s.me)
+			r.Post("/me/password", s.changePassword)
 			r.Get("/owner/orders", s.listOrders)
 			r.Get("/owner/orders/{id}", s.getOrder)
 			r.Patch("/owner/orders/{id}", s.updateOrder)
 			r.Get("/owner/menu", s.ownerMenu)
+			r.Post("/owner/menu/items", s.createItem)
 			r.Patch("/owner/menu/items/{id}", s.updateItem)
+			r.Delete("/owner/menu/items/{id}", s.deleteItem)
+			r.Post("/owner/menu/categories", s.createCategory)
 			r.Get("/owner/earnings", s.earnings)
+			r.Get("/owner/dashboard", s.dashboard)
+			r.Get("/owner/expenses", s.listExpenses)
+			r.Post("/owner/expenses", s.addExpense)
+			r.Delete("/owner/expenses/{id}", s.deleteExpense)
 			r.Patch("/owner/shop", s.updateShop)
 			r.Get("/owner/offers", s.allOffers)
 			r.Post("/owner/offers", s.createOffer)
@@ -128,6 +149,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 	case errors.Is(err, auth.ErrWeakPassword):
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+	case errors.Is(err, auth.ErrWrongCurrent), errors.Is(err, auth.ErrSamePassword):
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
 	case errors.Is(err, auth.ErrBadCredentials):
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
 	default:
@@ -155,6 +178,11 @@ func (s *Server) requireStaff(next http.Handler) http.Handler {
 		staff, err := s.Auth.Verify(r.Context(), token)
 		if err != nil {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in with your staff email"})
+			return
+		}
+		// With a temporary password, the only thing allowed is choosing a real one.
+		if staff.MustChangePassword && r.URL.Path != "/v1/me" && r.URL.Path != "/v1/me/password" {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "choose your own password first", "code": "password_change_required"})
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, staff)))
@@ -272,11 +300,18 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	// Per account, so a changed address (X-Forwarded-For can be faked) doesn't buy more guesses.
+	key := strings.ToLower(strings.TrimSpace(in.Email))
+	if !s.loginLimit.Allow(key) || !s.ipLimit.Allow(clientIP(r)) {
+		writeTooMany(w)
+		return
+	}
 	token, staff, err := s.Auth.Login(r.Context(), in.Email, in.Password)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
+	s.loginLimit.Reset(key)
 	writeJSON(w, http.StatusOK, map[string]any{"token": token, "user": staff})
 }
 
@@ -311,7 +346,8 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	u, err := s.Store.CreateUser(r.Context(), in.Email, in.Name, in.Role, hash)
+	// Someone else picked this password, so it's temporary: the new person sets their own at first sign-in.
+	u, err := s.Store.CreateUser(r.Context(), in.Email, in.Name, in.Role, hash, true)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -343,6 +379,7 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		upd.PasswordHash = &hash
+		upd.MustChange = id != staffFrom(r).ID // a password set for someone else is temporary
 	}
 	u, err := s.Store.UpdateUser(r.Context(), id, upd)
 	if err != nil {

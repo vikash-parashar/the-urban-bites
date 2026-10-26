@@ -14,6 +14,7 @@ import (
 
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
 	"github.com/vikash-parashar/urban-bites/api/internal/httpapi"
+	"github.com/vikash-parashar/urban-bites/api/internal/mail"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
@@ -39,7 +40,16 @@ func main() {
 			Secret: []byte(mustEnv("JWT_SECRET")),
 			TTL:    30 * 24 * time.Hour, // the tablet stays signed in for a month
 		},
+		Mail: &mail.Sender{
+			APIKey:   os.Getenv("BREVO_API_KEY"),
+			From:     os.Getenv("MAIL_FROM"),
+			FromName: env("MAIL_FROM_NAME", "The Urban Bites"),
+		},
+		SiteURL:        env("SITE_URL", "https://the-urban-bites.onrender.com"),
 		AllowedOrigins: strings.Split(env("ALLOWED_ORIGINS", "*"), ","),
+	}
+	if !srv.Mail.Configured() {
+		slog.Warn("BREVO_API_KEY or MAIL_FROM not set: password reset emails are written to the log instead")
 	}
 	handler := srv.Routes()
 

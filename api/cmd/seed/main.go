@@ -17,12 +17,15 @@ import (
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
+var temporary *bool
+
 func main() {
 	menuPath := flag.String("menu", "", "path to menu.json to load")
 	addStaff := flag.Bool("add-staff", false, "create or reset a staff account (password from STAFF_PASSWORD)")
 	email := flag.String("email", "", "staff email")
 	name := flag.String("name", "", "staff display name")
 	role := flag.String("role", "owner", "admin or owner")
+	temporary = flag.Bool("temporary", false, "with -add-staff: the password is temporary and must be changed at first sign-in")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -79,7 +82,7 @@ func upsertStaff(ctx context.Context, st *store.Store, email, name, role, passwo
 	}
 	existing, err := st.UserByEmail(ctx, email)
 	if errors.Is(err, store.ErrNotFound) {
-		u, err := st.CreateUser(ctx, email, name, role, hash)
+		u, err := st.CreateUser(ctx, email, name, role, hash, *temporary)
 		if err != nil {
 			return err
 		}
@@ -89,7 +92,7 @@ func upsertStaff(ctx context.Context, st *store.Store, email, name, role, passwo
 		return err
 	}
 	active := true
-	u, err := st.UpdateUser(ctx, existing.ID, store.UserUpdate{Name: &name, Role: &role, Active: &active, PasswordHash: &hash})
+	u, err := st.UpdateUser(ctx, existing.ID, store.UserUpdate{Name: &name, Role: &role, Active: &active, PasswordHash: &hash, MustChange: *temporary})
 	if err != nil {
 		return err
 	}
