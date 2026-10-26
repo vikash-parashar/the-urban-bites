@@ -7,6 +7,8 @@ import { fetchBadge, type Badge } from './shop'
 import { BadgeResult } from './Extras'
 import { BillCard, UpiPay, billFrom } from './PayBill'
 import type { Shop } from './shop'
+import { social } from './social'
+import { MA } from './motion'
 
 const pickupSteps: { key: OrderStatus; label: string }[] = [
   { key: 'placed', label: 'Order received' },
@@ -126,6 +128,12 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
       )}
       {shop.upi_id && data && data.status !== 'cancelled' && data.payment_status !== 'paid' && (data.payment_method ?? order.payment_method) === 'online' && (
         <UpiPay shop={shop} order={order} amount={data.total} sentRef={data.payment_ref} onSent={refresh} />
+      )}
+      {finished && social.googleReview && (
+        <div className="tracker-review">
+          <p><strong>Enjoyed it?</strong> A quick Google review helps a small cart a lot.</p>
+          <MA className="btn btn-gold btn-sm" href={social.googleReview} target="_blank" rel="noopener">⭐ Rate us on Google</MA>
+        </div>
       )}
       {data?.payment_status === 'paid' && <p className="upi-paid">✅ Paid{data.payment_ref ? ` · UPI ref ${data.payment_ref}` : ''}</p>}
       <BillCard bill={billFrom(order, data)} phone={phone} />

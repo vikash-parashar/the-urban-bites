@@ -1514,3 +1514,5 @@ section[id], [id="menu"], [id="offers"], [id="regulars"], [id="visit"] { scroll-
 :root[data-theme="pop"] .brand .brand-bites { color: #b8430f; }
 .topbar .brand .brand-bites { font-size: 1.2rem; padding-top: 2px; }
 @media (max-width: 640px) { .topbar .brand .brand-bites { font-size: 1.05rem; } }
+.tracker-review { display: grid; gap: 10px; justify-items: start; padding: 14px 16px; border-radius: 14px; border: 1.5px dashed var(--gold); }
+.tracker-review p { margin: 0; }

@@ -8,7 +8,7 @@ export const social = {
   instagram: (env.VITE_INSTAGRAM_URL as string | undefined) ?? '',
   facebook: (env.VITE_FACEBOOK_URL as string | undefined) ?? '',
   // The "write a review" link from the Google Business Profile (g.page/r/…/review).
-  googleReview: (env.VITE_GOOGLE_REVIEW_URL as string | undefined) ?? '',
+  googleReview: (env.VITE_GOOGLE_REVIEW_URL as string | undefined) || 'https://g.page/r/CRzjIrqC1I_yEBM/review',
   whatsapp: `https://wa.me/91${brand.phone}?text=` + encodeURIComponent(`Hi ${brand.name}! I want to order: `),
 }
 
