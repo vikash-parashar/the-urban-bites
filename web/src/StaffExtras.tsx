@@ -266,7 +266,7 @@ export function OffersEditor({ onSignedOut }: { onSignedOut: () => void }) {
 
 // ---- Shop settings ----
 
-export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
+export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void; isAdmin: boolean }) {
   const { error, guard } = useGuard(onSignedOut)
   const [shop, setShop] = useState<Shop | null>(null)
   const [msg, setMsg] = useState('')
@@ -286,8 +286,19 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
     patch({
       min_order_delivery: n('min_d'), min_order_pickup: n('min_p'), free_delivery_min: n('free_min'),
       free_delivery_km: n('free_km'), max_delivery_km: n('max_km'), delivery_fee: n('fee'), notice: String(f.get('notice') || ''),
-      upi_id: String(f.get('upi_id') || '').trim(), upi_name: String(f.get('upi_name') || '').trim() || brand.name,
     })
+  }
+
+  function savePay(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    const cash = f.get('accept_cash') === 'on'
+    const upi = f.get('accept_upi') === 'on'
+    if (!cash && !upi) return setMsg('Keep at least one payment option on.')
+    patch({
+      accept_cash: cash, accept_upi: upi,
+      upi_id: String(f.get('upi_id') || '').trim(), upi_name: String(f.get('upi_name') || '').trim() || brand.name,
+    }, 'Payment options saved. The website shows them within a minute.')
   }
 
   function setHere() {
@@ -324,14 +335,29 @@ export function ShopSettings({ onSignedOut }: { onSignedOut: () => void }) {
           <label className="field" htmlFor="sh-fee">Delivery charge otherwise ₹<input id="sh-fee" name="fee" inputMode="numeric" defaultValue={shop.delivery_fee} /></label>
         </div>
         <label className="field" htmlFor="sh-notice">Notice on the website <span className="opt">optional, e.g. "Closed on Tuesday"</span><input id="sh-notice" name="notice" maxLength={200} defaultValue={shop.notice} /></label>
-        <h3 className="panel-h">📲 UPI payments</h3>
-        <p className="menu-sub">Customers pay with GPay, PhonePe or Paytm straight to this UPI ID. No fees. Leave empty to take cash only.</p>
-        <div className="add-staff">
-          <label className="field" htmlFor="sh-upi">UPI ID<input id="sh-upi" name="upi_id" autoComplete="off" placeholder="8398907216@ybl" pattern="[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}" title="Looks like name@bank, for example 8398907216@ybl" defaultValue={shop.upi_id} /></label>
-          <label className="field" htmlFor="sh-upi-name">Name shown in UPI apps<input id="sh-upi-name" name="upi_name" maxLength={50} defaultValue={shop.upi_name} /></label>
-        </div>
         <MButton className="btn btn-gold">Save rules</MButton>
       </form>
+
+      {isAdmin ? (
+        <form className="panel shop-form" onSubmit={savePay} key={`pay-${shop.updated_at}`}>
+          <h3 className="panel-h">💳 Payment options <span className="tag-chip">Admin only</span></h3>
+          <p className="menu-sub">Choose how customers can pay for website orders. The owner can see these but can't change them.</p>
+          <label className="check"><input type="checkbox" name="accept_cash" defaultChecked={shop.accept_cash} /> 💵 Cash (on delivery or at the counter)</label>
+          <label className="check"><input type="checkbox" name="accept_upi" defaultChecked={shop.accept_upi} /> 📲 UPI (Google Pay, PhonePe, Paytm), straight to the UPI ID below, no fees</label>
+          <div className="add-staff">
+            <label className="field" htmlFor="sh-upi">UPI ID<input id="sh-upi" name="upi_id" autoComplete="off" placeholder="8398907216@ybl" pattern="[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}" title="Looks like name@bank, for example 8398907216@ybl" defaultValue={shop.upi_id} /></label>
+            <label className="field" htmlFor="sh-upi-name">Name shown in UPI apps<input id="sh-upi-name" name="upi_name" maxLength={50} defaultValue={shop.upi_name} /></label>
+          </div>
+          {shop.accept_upi && !shop.upi_id && <p className="menu-sub">UPI is on but no UPI ID is saved, so customers only see cash for now.</p>}
+          <MButton className="btn btn-gold">Save payment options</MButton>
+        </form>
+      ) : (
+        <div className="me-row">
+          <span className="me-name"><strong>💳 Payment options</strong><br /><small className="menu-sub">
+            {[shop.accept_cash && 'Cash', shop.accept_upi && shop.upi_id && `UPI to ${shop.upi_id}`].filter(Boolean).join(' · ') || 'Cash'}. Set by the admin; ask Vikash to change them.
+          </small></span>
+        </div>
+      )}
 
       <div className="me-row">
         <span className="me-name"><strong>Cart location</strong><br /><small className="menu-sub">

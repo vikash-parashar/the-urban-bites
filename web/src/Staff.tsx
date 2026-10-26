@@ -65,7 +65,7 @@ export default function StaffApp({ hash }: { hash: string }) {
         {tab === 'offers' && <OffersEditor onSignedOut={onSignedOut} />}
         {tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} />}
         {tab === 'expenses' && <Expenses onSignedOut={onSignedOut} />}
-        {tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} />}
+        {tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={user.role === 'admin'} />}
         {tab === 'staff' && user.role === 'admin' && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
       </main>
     </div>

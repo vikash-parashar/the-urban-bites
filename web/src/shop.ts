@@ -20,6 +20,8 @@ export interface Shop {
   // The owner's UPI ID. Empty means cash only.
   upi_id: string
   upi_name: string
+  accept_cash: boolean
+  accept_upi: boolean
   updated_at?: string
 }
 
@@ -71,6 +73,8 @@ export const defaultShop: Shop = {
   notice: '',
   upi_id: '',
   upi_name: brand.name,
+  accept_cash: true,
+  accept_upi: true,
 }
 
 export const defaultTiers: Tier[] = [

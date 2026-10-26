@@ -503,6 +503,12 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 	if !shop.AcceptingOrders && in.Source != "counter" {
 		return nil, fmt.Errorf("%w: We're not taking online orders right now. Call %s or visit the cart.", ErrClosed, "8398907216")
 	}
+	if in.Source != "counter" && !shop.Allows(in.PaymentMethod) {
+		if in.PaymentMethod == "online" {
+			return nil, fmt.Errorf("%w: UPI payment isn't available right now. Please choose cash.", ErrInvalid)
+		}
+		return nil, fmt.Errorf("%w: Cash isn't accepted for online orders. Please pay by UPI.", ErrInvalid)
+	}
 	offerPrices, err := s.activeOfferPrices(ctx)
 	if err != nil {
 		return nil, err

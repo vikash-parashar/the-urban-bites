@@ -23,6 +23,8 @@ type Shop struct {
 	Notice           string    `json:"notice"`
 	UpiID            string    `json:"upi_id"`
 	UpiName          string    `json:"upi_name"`
+	AcceptCash       bool      `json:"accept_cash"`
+	AcceptUpi        bool      `json:"accept_upi"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
@@ -30,10 +32,10 @@ func (s *Store) Shop(ctx context.Context) (*Shop, error) {
 	var sh Shop
 	err := s.db.QueryRow(ctx, `
 		SELECT accepting_orders, min_order_delivery, min_order_pickup, free_delivery_min, free_delivery_km::float8,
-			max_delivery_km::float8, delivery_fee, cart_lat, cart_lng, notice, upi_id, upi_name, updated_at
+			max_delivery_km::float8, delivery_fee, cart_lat, cart_lng, notice, upi_id, upi_name, accept_cash, accept_upi, updated_at
 		FROM shop_settings WHERE id = 1`).
 		Scan(&sh.AcceptingOrders, &sh.MinOrderDelivery, &sh.MinOrderPickup, &sh.FreeDeliveryMin, &sh.FreeDeliveryKm,
-			&sh.MaxDeliveryKm, &sh.DeliveryFee, &sh.CartLat, &sh.CartLng, &sh.Notice, &sh.UpiID, &sh.UpiName, &sh.UpdatedAt)
+			&sh.MaxDeliveryKm, &sh.DeliveryFee, &sh.CartLat, &sh.CartLng, &sh.Notice, &sh.UpiID, &sh.UpiName, &sh.AcceptCash, &sh.AcceptUpi, &sh.UpdatedAt)
 	return &sh, err
 }
 
@@ -50,6 +52,24 @@ type ShopUpdate struct {
 	Notice           *string  `json:"notice"`
 	UpiID            *string  `json:"upi_id"`
 	UpiName          *string  `json:"upi_name"`
+	AcceptCash       *bool    `json:"accept_cash"`
+	AcceptUpi        *bool    `json:"accept_upi"`
+}
+
+// TouchesPayments reports whether the update changes how the shop gets paid (admin-only fields).
+func (u ShopUpdate) TouchesPayments() bool {
+	return u.UpiID != nil || u.UpiName != nil || u.AcceptCash != nil || u.AcceptUpi != nil
+}
+
+// UpiReady is true when customers can choose UPI: it's switched on and a UPI ID is saved.
+func (sh *Shop) UpiReady() bool { return sh.AcceptUpi && sh.UpiID != "" }
+
+// Allows reports whether a customer may pick this payment method ("cash" or "online").
+func (sh *Shop) Allows(method string) bool {
+	if method == "online" {
+		return sh.UpiReady()
+	}
+	return sh.AcceptCash
 }
 
 // A UPI ID (VPA) looks like name@bank: 2-256 of letters, digits, dot, dash or underscore, then @ and the handle.
@@ -90,6 +110,22 @@ func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 		}
 		u.UpiName = &v
 	}
+	if u.AcceptCash != nil || u.AcceptUpi != nil {
+		cur, err := s.Shop(ctx)
+		if err != nil {
+			return nil, err
+		}
+		cash, upi := cur.AcceptCash, cur.AcceptUpi
+		if u.AcceptCash != nil {
+			cash = *u.AcceptCash
+		}
+		if u.AcceptUpi != nil {
+			upi = *u.AcceptUpi
+		}
+		if !cash && !upi {
+			return nil, fmt.Errorf("%w: keep at least one payment option (cash or UPI) on", ErrInvalid)
+		}
+	}
 	_, err := s.db.Exec(ctx, `
 		UPDATE shop_settings SET
 			accepting_orders   = COALESCE($1, accepting_orders),
@@ -104,10 +140,12 @@ func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 			notice             = COALESCE($10, notice),
 			upi_id             = COALESCE($11, upi_id),
 			upi_name           = COALESCE($12, upi_name),
+			accept_cash        = COALESCE($13, accept_cash),
+			accept_upi         = COALESCE($14, accept_upi),
 			updated_at         = now()
 		WHERE id = 1`,
 		u.AcceptingOrders, u.MinOrderDelivery, u.MinOrderPickup, u.FreeDeliveryMin, u.FreeDeliveryKm,
-		u.MaxDeliveryKm, u.DeliveryFee, u.CartLat, u.CartLng, u.Notice, u.UpiID, u.UpiName)
+		u.MaxDeliveryKm, u.DeliveryFee, u.CartLat, u.CartLng, u.Notice, u.UpiID, u.UpiName, u.AcceptCash, u.AcceptUpi)
 	if err != nil {
 		return nil, err
 	}

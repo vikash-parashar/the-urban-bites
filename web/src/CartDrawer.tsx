@@ -22,7 +22,14 @@ type Loc = { state: 'idle' } | { state: 'busy' } | { state: 'ok'; lat: number; l
 
 export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onPlaced, onShowCart, onClose }: Props) {
   const [fulfilment, setFulfilment] = useState<OrderRequest['fulfilment']>('pickup')
-  const [payment, setPayment] = useState<OrderRequest['payment_method']>('cash')
+  // Which payment methods the admin has switched on (UPI also needs a saved UPI ID). Older API: cash + UPI if an ID is set.
+  const methods = ([
+    shop.accept_cash !== false && 'cash',
+    shop.accept_upi !== false && shop.upi_id && 'online',
+  ].filter(Boolean) as OrderRequest['payment_method'][])
+  const payOptions: OrderRequest['payment_method'][] = methods.length ? methods : ['cash']
+  const [picked, setPayment] = useState<OrderRequest['payment_method']>('cash')
+  const payment = payOptions.includes(picked) ? picked : payOptions[0]
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [loc, setLoc] = useState<Loc>({ state: 'idle' })
@@ -97,7 +104,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
           fulfilment,
           address: delivery ? address.trim() : undefined,
           note: String(f.get('note') || '') || undefined,
-          payment_method: shop.upi_id ? payment : 'cash',
+          payment_method: payment,
           items: lines.map((l) => ({ item_id: l.itemId, size: l.size, qty: l.qty })),
           ...(delivery && loc.state === 'ok' ? { lat: loc.lat, lng: loc.lng } : {}),
         },
@@ -266,7 +273,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
 
             <fieldset className="seg">
               <legend>Payment</legend>
-              {(shop.upi_id ? (['cash', 'online'] as const) : (['cash'] as const)).map((v) => (
+              {payOptions.map((v) => (
                 <label key={v} className={payment === v ? 'on' : ''}>
                   <input type="radio" name="payment" id={`pay-${v}`} checked={payment === v} onChange={() => setPayment(v)} />
                   <span className="pay-emoji" aria-hidden="true">{v === 'cash' ? '💵' : '📲'}</span>

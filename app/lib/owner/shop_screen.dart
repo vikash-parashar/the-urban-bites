@@ -138,7 +138,8 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       ),
       const SizedBox(height: 12),
-      Card(
+      // Payment settings are admin-only (the API refuses them for the owner).
+      if (Api.instance.isAdmin) Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Form(

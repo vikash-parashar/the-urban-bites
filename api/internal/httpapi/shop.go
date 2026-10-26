@@ -61,6 +61,10 @@ func (s *Server) updateShop(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	if in.TouchesPayments() && staffFrom(r).Role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin can change payment settings"})
+		return
+	}
 	sh, err := s.Store.UpdateShop(r.Context(), in)
 	if err != nil {
 		writeErr(w, r, err)
