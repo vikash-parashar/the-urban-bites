@@ -12,7 +12,7 @@ export const social = {
 }
 
 // Until the Google listing is live, this opens a Maps search for the cart.
-export const googleMaps = (lat: number, lng: number) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+export const googleMaps = (_lat?: number, _lng?: number) => 'https://maps.google.com/?cid=17478422336781869852' // The Urban Bites listing
 
 // Who built the site, shown in the footer with a lead link. VITE_DEV_CONTACT_URL can point to the agency website later.
 export const developer = {

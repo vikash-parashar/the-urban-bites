@@ -383,7 +383,7 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
 
       {isAdmin && <div className="me-row">
         <span className="me-name"><strong>Cart location</strong><br /><small className="menu-sub">
-          {shop.cart_lat != null ? `Set (${shop.cart_lat}, ${shop.cart_lng}). Distances for delivery are measured from here.` : 'Not set yet. Stand at the cart with this tablet and tap the button, so the website can measure delivery distances.'}
+          {shop.cart_lat != null ? `Set. Distances for delivery are measured from here.` : 'Not set yet. Stand at the cart with this tablet and tap the button, so the website can measure delivery distances.'}
         </small></span>
         <MButton className="btn btn-ghost" onClick={setHere}>Use this device's location</MButton>
       </div>}

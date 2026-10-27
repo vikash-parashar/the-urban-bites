@@ -28,7 +28,7 @@ class DemoServer {
   static final DemoServer instance = DemoServer._();
 
   static const _key = 'demo_state_v1';
-  static const _cartLat = 29.113493, _cartLng = 76.416352;
+  static const _cartLat = 29.115161, _cartLng = 76.416262;
   static const _tiers = [('First Bite', 1), ('Regular', 3), ('Gold Regular', 10), ('Urban Legend', 25)];
 
   Map<String, dynamic>? _s;

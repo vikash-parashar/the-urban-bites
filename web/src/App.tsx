@@ -211,7 +211,7 @@ export default function App() {
           <div className="visit-map">
             <iframe
               title={`Map: ${brand.name}, ${brand.place}`}
-              src={`https://maps.google.com/maps?q=${business.lat},${business.lng}&z=16&output=embed`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(`${brand.name}, ${brand.place}, ${brand.region}`)}&ll=${business.lat},${business.lng}&z=16&output=embed`}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
@@ -234,7 +234,7 @@ export default function App() {
           </dl>
           <MA
             className="btn btn-gold"
-            href={`https://www.google.com/maps/dir/?api=1&destination=${business.lat},${business.lng}`}
+            href={business.maps_url}
             target="_blank"
             rel="noreferrer"
           >

@@ -304,7 +304,7 @@ class Shop {
   /// The API's defaults, used until the real rules load.
   static final fallback = Shop(
     acceptingOrders: true, minOrderDelivery: 500, minOrderPickup: 0, freeDeliveryMin: 500,
-    freeDeliveryKm: 5, maxDeliveryKm: 5, deliveryFee: 40, cartLat: 29.113493, cartLng: 76.416352, notice: '',
+    freeDeliveryKm: 5, maxDeliveryKm: 5, deliveryFee: 40, cartLat: 29.115161, cartLng: 76.416262, notice: '',
   );
 
   factory Shop.fromJson(Map<String, dynamic> j) => Shop(
