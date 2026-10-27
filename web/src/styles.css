@@ -1897,3 +1897,55 @@ button.kpi-tile:hover { border-color: var(--gold); }
 }
 .party-msg b { font-size: 1.35rem; font-weight: 900; }
 .party-msg span { font-size: 0.95rem; font-weight: 600; }
+
+/* Wall of Fame: one card per badge with the customers who hold it */
+.tier-wall { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.tier-card { display: grid; align-content: start; gap: 12px; padding: 16px; border-radius: 18px; background: var(--ink); border: 1px solid var(--line); }
+@media (min-width: 760px) { .tier-card { min-height: 220px; } }
+.tier-card header { display: flex; align-items: center; gap: 12px; }
+.tier-card h3 { margin: 0; font-family: var(--display); font-size: 1.25rem; letter-spacing: 0.02em; line-height: 1.1; }
+.tier-card header small { color: var(--muted); font-weight: 700; }
+.tier-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; font-size: 1.4rem; background: var(--ink-2); flex: none; }
+.tier-count { margin-left: auto; font-family: var(--display); font-size: 1.6rem; color: var(--tier, var(--gold)); font-variant-numeric: tabular-nums; }
+.tier-names { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tier-names li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: var(--ink-2); }
+.tier-av { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--tier, var(--gold)); color: var(--on-gold); font-weight: 800; font-size: 0.85rem; flex: none; }
+.tier-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tier-who small { color: var(--muted); }
+.tier-n { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+.tier-n::after { content: ' 🧾'; font-size: 0.8em; }
+.tier-names .tier-more { justify-content: center; background: transparent; color: var(--muted); font-weight: 700; }
+.tier-empty { margin: 0; color: var(--muted); font-style: italic; }
+.tier-1 { --tier: #ffb08a; }
+.tier-2 { --tier: var(--neon-glow); }
+.tier-3 { --tier: var(--gold); }
+.tier-4 { --tier: var(--gold); border-color: var(--gold); box-shadow: 0 0 32px -12px var(--gold); background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 16%, var(--ink)), var(--ink) 60%); }
+.tier-4 .tier-icon { background: linear-gradient(135deg, var(--gold), #ffe08a); }
+.wall .reg-grid:has(> .check-badge:only-child) { grid-template-columns: 1fr; max-width: 520px; margin-inline: auto; }
+:root[data-theme="pop"] .tier-card { border-width: 2px; border-color: var(--cream); box-shadow: 4px 4px 0 var(--cream); }
+:root[data-theme="glass"] .tier-card { background: var(--glass); border-color: var(--glass-line); backdrop-filter: blur(14px); }
+
+/* "Your usual?" favourites popup */
+.fav-wrap { position: fixed; inset: 0; z-index: 80; display: grid; place-items: end center; padding: 16px; }
+@media (min-width: 640px) { .fav-wrap { place-items: center; } }
+.fav-scrim { position: absolute; inset: 0; background: rgba(4, 6, 18, 0.62); backdrop-filter: blur(3px); }
+.fav-card { position: relative; width: min(440px, 100%); max-height: calc(100dvh - 32px); overflow: auto; display: grid; gap: 10px; padding: 22px 18px 14px; border-radius: 22px; background: var(--ink); border: 1px solid var(--gold); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7), 0 0 40px -18px var(--gold); color: var(--cream); }
+.fav-card h3 { margin: 0; font-family: var(--display); font-size: 1.8rem; line-height: 1.05; }
+.fav-card .eyebrow, .fav-card .menu-sub { margin: 0; }
+.fav-x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--ink-2); color: var(--cream); font-size: 0.95rem; }
+.fav-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
+.fav-list li { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; background: var(--ink-2); overflow: hidden; }
+.fav-list img, .fav-noimg { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex: none; }
+.fav-noimg { display: grid; place-items: center; background: var(--line); font-size: 1.4rem; }
+.fav-name { display: grid; min-width: 0; flex: 1; }
+.fav-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fav-name small { color: var(--muted); }
+.fav-step { flex: none; }
+.fav-step button { width: 34px; height: 34px; font-size: 1rem; }
+.fav-total { margin: 2px 0 0; display: flex; justify-content: space-between; font-weight: 700; color: var(--muted); }
+.fav-total b { color: var(--gold); font-size: 1.2rem; }
+.fav-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+.fav-actions .btn-gold { flex: 1; min-width: 170px; }
+.fav-later { justify-self: center; border: 0; background: transparent; color: var(--muted); text-decoration: underline; padding: 6px 10px; }
+:root[data-theme="pop"] .fav-card { background: var(--ink); border-width: 2px; }
+:root[data-theme="glass"] .fav-card { background: color-mix(in srgb, var(--ink) 92%, transparent); border-color: var(--glass-line); }

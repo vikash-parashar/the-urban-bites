@@ -121,7 +121,10 @@ export async function fetchBadge(phone: string, localCount: number): Promise<Bad
   return get<Badge>(`/v1/badge?phone=${encodeURIComponent(phone)}`)
 }
 
-export async function fetchRegulars(): Promise<{ regulars: Regular[]; tiers: Tier[]; monthly_min: number }> {
+export interface WallMember { name: string; phone_hint: string; orders: number }
+export interface WallTier { tier: string; min: number; max: number | null; count: number; members: WallMember[] }
+
+export async function fetchRegulars(): Promise<{ regulars: Regular[]; tiers: Tier[]; monthly_min: number; wall?: WallTier[] }> {
   if (isPreview) {
     return {
       regulars: [
@@ -135,6 +138,12 @@ export async function fetchRegulars(): Promise<{ regulars: Regular[]; tiers: Tie
       ],
       tiers: defaultTiers,
       monthly_min: 3,
+      wall: [
+        { tier: 'Urban Legend', min: 25, max: null, count: 1, members: [{ name: 'Ravi', phone_hint: '••42', orders: 31 }] },
+        { tier: 'Gold Regular', min: 10, max: 24, count: 2, members: [{ name: 'Priya', phone_hint: '••07', orders: 18 }, { name: 'Aman', phone_hint: '••90', orders: 12 }] },
+        { tier: 'Regular', min: 3, max: 9, count: 4, members: [{ name: 'Neha', phone_hint: '••15', orders: 8 }, { name: 'Sunil', phone_hint: '••63', orders: 6 }, { name: 'Pooja', phone_hint: '••28', orders: 4 }, { name: 'Deepak', phone_hint: '••71', orders: 3 }] },
+        { tier: 'First Bite', min: 1, max: 2, count: 3, members: [{ name: 'Kiran', phone_hint: '••19', orders: 2 }, { name: 'Mohit', phone_hint: '••54', orders: 1 }, { name: 'Sonia', phone_hint: '••33', orders: 1 }] },
+      ],
     }
   }
   return get('/v1/regulars')

@@ -49,8 +49,13 @@ func (s *Server) regulars(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	wall, err := s.Store.TierWall(r.Context(), 12)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
 	w.Header().Set("Cache-Control", "public, max-age=60")
-	writeJSON(w, http.StatusOK, map[string]any{"regulars": list, "tiers": store.Tiers, "monthly_min": store.MonthlyTopMin})
+	writeJSON(w, http.StatusOK, map[string]any{"regulars": list, "tiers": store.Tiers, "monthly_min": store.MonthlyTopMin, "wall": wall})
 }
 
 // ---- staff ----
@@ -161,4 +166,16 @@ func (s *Server) addBadges(ctx context.Context, orders ...*store.Order) error {
 		o.CustomerBadge = store.BadgeName(o.CustomerOrders)
 	}
 	return nil
+}
+
+// favourites suggests a combo from everything ordered with the same phone number as this order.
+// It needs the order's tracking token, so only the person holding that order sees it.
+func (s *Server) favourites(w http.ResponseWriter, r *http.Request) {
+	f, err := s.Store.FavouritesFor(r.Context(), chi.URLParam(r, "id"), r.URL.Query().Get("t"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, f)
 }

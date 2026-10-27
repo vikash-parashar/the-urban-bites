@@ -11,6 +11,7 @@ import Menu from './Menu'
 import CartDrawer from './CartDrawer'
 import Gallery from './Gallery'
 import HeroSound from './HeroSound'
+import FavouritesPopup from './Favourites'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
 import Intro from './Intro'
 import MyOrders from './MyOrders'
@@ -244,6 +245,7 @@ export default function App() {
       <Social lat={business.lat} lng={business.lng} />
 
       <HeroSound />
+      <FavouritesPopup orders={myOrders.orders} cart={cart} accepting={shop.accepting_orders} onOpenCart={openCart} />
       <footer className="footer">
         <span className="brand">
           <img className="brand-mark" src={brand.logoUrl} alt="" width={96} height={43} />

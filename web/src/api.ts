@@ -150,3 +150,15 @@ function previewTracking(o: PlacedOrder): Tracking {
     })(),
   }
 }
+
+export interface FavItem { item_id: string; name: string; size: 'full' | 'half'; qty: number; times: number }
+export interface Favourites { orders: number; items: FavItem[] }
+
+// The dishes this customer orders most, from all their orders with the same phone number
+// (website, app and at the cart). Needs a saved order's tracking token.
+export async function fetchFavourites(o: PlacedOrder): Promise<Favourites | null> {
+  if (!API_URL) return null
+  const res = await fetch(`${API_URL}/v1/orders/${o.id}/favourites?t=${o.track_token}`, { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as Favourites
+}

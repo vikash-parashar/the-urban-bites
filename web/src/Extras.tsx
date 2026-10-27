@@ -5,7 +5,7 @@ import { rupees } from './menu'
 import type { ReactNode } from 'react'
 import { googleMaps, social } from './social'
 import { checkMobile, cleanMobile, tenDigits } from './kit'
-import { fetchBadge, fetchRegulars, loadMe, tierLevel, type Badge, type Offer, type Regular, type Shop, type Tier, defaultTiers } from './shop'
+import { fetchBadge, fetchRegulars, loadMe, tierLevel, type Badge, type Offer, type Regular, type Shop, type Tier, type WallTier, defaultTiers } from './shop'
 import { motion, type Variants } from 'motion/react'
 import { alive, lift, MA, MButton, Reveal, slideIn, stagger } from './motion'
 import { brand } from './brand'
@@ -119,6 +119,7 @@ export function Regulars({ localOrders }: { localOrders: number }) {
   const [regulars, setRegulars] = useState<Regular[]>([])
   const [tiers, setTiers] = useState<Tier[]>(defaultTiers)
   const [monthlyMin, setMonthlyMin] = useState(3)
+  const [wall, setWall] = useState<WallTier[]>([])
   const [phone, setPhone] = useState(() => tenDigits(loadMe()?.phone))
   const [mine, setMine] = useState<Badge | null>(null)
   const [error, setError] = useState('')
@@ -130,6 +131,7 @@ export function Regulars({ localOrders }: { localOrders: number }) {
         setRegulars(r.regulars)
         setTiers(r.tiers)
         setMonthlyMin(r.monthly_min)
+        setWall(r.wall ?? [])
       })
       .catch(() => {})
   }, [])
@@ -203,16 +205,9 @@ export function Regulars({ localOrders }: { localOrders: number }) {
       )}
       {isPreview && <p className="tracker-note preview-note">Preview: sample names. On the live site these are real customers who ordered this month (first name and last two digits only).</p>}
 
-      <div className="reg-grid">
-        <motion.ol className="tiers" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={stagger(0.08)}>
-          {tiers.map((t) => (
-            <motion.li key={t.name} variants={slideIn} whileHover={{ y: -4, scale: 1.04 }}>
-              <BadgeMedal name={t.name} size="lg" />
-              <span>{t.min === 1 ? 'Your first order' : `${t.min} orders`}</span>
-            </motion.li>
-          ))}
-        </motion.ol>
+      <TierCards tiers={tiers} wall={wall} />
 
+      <div className="reg-grid">
         <motion.form className="board-card check-badge" onSubmit={check} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
           <h3>Am I on the wall?</h3>
           <label className="field" htmlFor="badge-phone">
@@ -229,6 +224,51 @@ export function Regulars({ localOrders }: { localOrders: number }) {
         </motion.form>
       </div>
     </section>
+  )
+}
+
+const TIER_ICON: Record<string, string> = { 'First Bite': '🍢', Regular: '⭐', 'Gold Regular': '🏅', 'Urban Legend': '👑' }
+
+// TierCards: one card per badge, top tier first, filled with the customers who hold it right now.
+function TierCards({ tiers, wall }: { tiers: Tier[]; wall: WallTier[] }) {
+  const byName = new Map(wall.map((w) => [w.tier, w]))
+  const order = [...tiers].sort((a, b) => b.min - a.min)
+  return (
+    <motion.ol className="tier-wall" aria-label="Badge holders" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }} variants={stagger(0.12)}>
+      {order.map((t, i) => {
+        const w = byName.get(t.name)
+        const next = order[i - 1]
+        const range = next ? (next.min - 1 === t.min ? `${t.min} order${t.min === 1 ? '' : 's'}` : `${t.min}–${next.min - 1} orders`) : `${t.min}+ orders`
+        const members = w?.members ?? []
+        const more = (w?.count ?? 0) - members.length
+        return (
+          <motion.li key={t.name} className={`tier-card tier-${tierLevel(t.name)}`} variants={slideIn} whileHover={{ y: -6 }}>
+            <header>
+              <span className="tier-icon" aria-hidden="true">{TIER_ICON[t.name] ?? '✦'}</span>
+              <div>
+                <h3>{t.name}</h3>
+                <small>{range}</small>
+              </div>
+              <b className="tier-count" aria-label={`${w?.count ?? 0} customers`}>{w?.count ?? 0}</b>
+            </header>
+            {members.length === 0 ? (
+              <p className="tier-empty">{i === 0 ? 'No legend yet. Could it be you?' : 'Waiting for its first name.'}</p>
+            ) : (
+              <ul className="tier-names">
+                {members.map((m) => (
+                  <li key={m.name + m.phone_hint}>
+                    <span className="tier-av" aria-hidden="true">{m.name.slice(0, 1).toUpperCase()}</span>
+                    <span className="tier-who"><b>{m.name}</b> <small>{m.phone_hint}</small></span>
+                    <span className="tier-n">{m.orders}</span>
+                  </li>
+                ))}
+                {more > 0 && <li className="tier-more">+ {more} more</li>}
+              </ul>
+            )}
+          </motion.li>
+        )
+      })}
+    </motion.ol>
   )
 }
 

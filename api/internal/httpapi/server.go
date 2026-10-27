@@ -63,6 +63,7 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/menu", s.getMenu)
 		r.Post("/orders", s.createOrder)
 		r.Get("/orders/{id}", s.trackOrder)
+		r.Get("/orders/{id}/favourites", s.favourites)
 		r.Post("/orders/{id}/payment", s.paymentRef)
 		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
 		r.Get("/shop", s.getShop)
