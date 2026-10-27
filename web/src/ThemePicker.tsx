@@ -13,7 +13,7 @@ export function useTheme() {
   return id
 }
 
-// Look switcher in the header: Street Pop, Neon Highway or Glass Lounge.
+// Look switcher in the header: Street Pop (day) or Neon Highway (from 5 pm).
 export function LookSwitch() {
   const cur = useTheme()
   const [open, setOpen] = useState(false)

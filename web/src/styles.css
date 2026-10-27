@@ -1255,7 +1255,7 @@ section[id], [id="menu"], [id="offers"], [id="regulars"], [id="visit"] { scroll-
 :root[data-theme="pop"] .collage-tile { box-shadow: 6px 6px 0 #111; }
 :root[data-theme="pop"] h2 { letter-spacing: 0; }
 /* Pop hero: no night video. A big outlined title, a plate and stickers on the yellow. */
-:root[data-theme="pop"] :is(.hero-video, .hero-shade, .embers, .roof, .hero-where) { display: none; }
+:root[data-theme="pop"] :is(.embers, .roof, .hero-where) { display: none; }
 :root[data-theme="pop"] .hero { min-height: min(88svh, 860px); align-items: center; }
 :root[data-theme="pop"] .hero-urban span { color: #fff; -webkit-text-stroke: 3px #111; paint-order: stroke fill; text-shadow: 7px 7px 0 #111; font-size: clamp(4.4rem, 15vw, 12rem); }
 :root[data-theme="pop"] .hero-the { color: #111; }
@@ -1992,3 +1992,9 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .rope-foot .rope-close { margin: 0; }
 .rope-staff { color: #ffd98a; opacity: 0.8; font-size: 0.85rem; font-weight: 700; text-decoration: none; padding: 6px 10px; }
 @media (min-width: 761px) { .rope { left: 300px; } }
+
+/* Street Pop keeps the hero video: a warm yellow wash on the left keeps the title readable. */
+:root[data-theme="pop"] .hero-video { z-index: 0; filter: saturate(1.15) contrast(1.05); }
+:root[data-theme="pop"] .hero-shade { z-index: 0; background: linear-gradient(90deg, rgba(255, 210, 63, 0.92) 0%, rgba(255, 210, 63, 0.72) 42%, rgba(255, 210, 63, 0.18) 75%, rgba(255, 210, 63, 0.05) 100%); }
+@media (max-width: 760px) { :root[data-theme="pop"] .hero-shade { background: linear-gradient(180deg, rgba(255, 210, 63, 0.12) 0%, rgba(255, 210, 63, 0.35) 38%, rgba(255, 210, 63, 0.85) 62%, rgba(255, 210, 63, 0.95)); } }
+@media (max-width: 520px) { .hero-sound .hero-sound-label, .hero-sound .eq { display: none; } }

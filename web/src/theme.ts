@@ -1,10 +1,9 @@
-// Website looks. The site follows Indian time: Street Pop by day (6:00–18:30 IST) and Neon Highway
-// at night. Visitors can pick any of the three from the header; their pick lasts until the next
+// Website looks. The site follows Indian time: Street Pop by day (6:00–17:00 IST) and Neon Highway
+// from 5 pm. Visitors can switch between the two from the header; their pick lasts until the next
 // automatic switch. ?theme=<id> forces one (for screenshots and comparing).
 export const themes = [
   { id: 'pop', name: 'Street Pop', note: 'Bright day look', icon: '🌞', sw: ['#ffd23f', '#ff4f9a', '#111111'] },
   { id: 'neon', name: 'Neon Highway', note: 'Night look', icon: '🌃', sw: ['#0a0a10', '#ff3d8b', '#ffb23d'] },
-  { id: 'glass', name: 'Glass Lounge', note: 'Charcoal and gold', icon: '🥂', sw: ['#0f0e0c', '#e8c16a', '#f1e9da'] },
 ] as const
 export type ThemeId = (typeof themes)[number]['id']
 export type Period = 'day' | 'night'
@@ -20,7 +19,7 @@ function istMinutes(now = new Date()) {
 }
 export function autoPeriod(now = new Date()): Period {
   const m = istMinutes(now)
-  return m >= 6 * 60 && m < 18 * 60 + 30 ? 'day' : 'night'
+  return m >= 6 * 60 && m < 17 * 60 ? 'day' : 'night'
 }
 export const autoTheme = (): ThemeId => (autoPeriod() === 'day' ? DAY : NIGHT)
 
@@ -55,7 +54,7 @@ export function applyCurrent() {
   applyTheme(currentTheme())
 }
 
-const bg: Record<ThemeId, string> = { pop: '#ffd23f', neon: '#0a0a10', glass: '#0f0e0c' }
+const bg: Record<ThemeId, string> = { pop: '#ffd23f', neon: '#0a0a10' }
 function applyTheme(id: ThemeId) {
   const root = document.documentElement
   if (root.dataset.theme === id) return
@@ -64,7 +63,7 @@ function applyTheme(id: ThemeId) {
   window.dispatchEvent(new CustomEvent('ub-theme', { detail: id }))
 }
 
-// Re-check every minute so an open page switches at 6:00 and 18:30.
+// Re-check every minute so an open page switches at 6:00 and 17:00.
 export function startThemeClock() {
   applyCurrent()
   setInterval(applyCurrent, 60_000)
