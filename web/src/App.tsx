@@ -19,7 +19,7 @@ import type { PlacedOrder } from './api'
 import PopHero from './PopHero'
 import { brand } from './brand'
 import Wordmark from './Wordmark'
-import { developer } from './social'
+import { developer, social } from './social'
 
 // The opening waits for the intro card on the first visit of the session.
 function introDelay() {
@@ -255,6 +255,7 @@ export default function App() {
           <Wordmark />
         </span>
         <span>Momos · Chaap · Paneer · Paratha · Chai</span>
+        <span className="footer-follow">Follow us: <a href={social.instagram} target="_blank" rel="noopener">📸 Instagram</a> · <a href={social.facebook} target="_blank" rel="noopener">👍 Facebook</a></span>
         <span>© {new Date().getFullYear()} {brand.name} · <a href="#staff">Staff sign in</a></span>
         <span className="music-credit">Music: “The Good Times” by Infraction</span>
         <div className="dev-credit">

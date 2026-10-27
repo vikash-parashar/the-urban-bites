@@ -1949,3 +1949,5 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .fav-later { justify-self: center; border: 0; background: transparent; color: var(--muted); text-decoration: underline; padding: 6px 10px; }
 :root[data-theme="pop"] .fav-card { background: var(--ink); border-width: 2px; }
 :root[data-theme="glass"] .fav-card { background: color-mix(in srgb, var(--ink) 92%, transparent); border-color: var(--glass-line); }
+.footer-follow a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.social > .menu-sub { margin-inline: auto; text-align: center; }

@@ -186,6 +186,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         <div className="tracker-review">
           <p><strong>Enjoyed it?</strong> A quick Google review helps a small cart a lot.</p>
           <MA className="btn btn-gold btn-sm" href={social.googleReview} target="_blank" rel="noopener">⭐ Rate us on Google</MA>
+          {social.instagram && <MA className="btn btn-ghost btn-sm" href={social.instagram} target="_blank" rel="noopener">📸 Follow on Instagram</MA>}
         </div>
       )}
       {data?.payment_status === 'paid' && <p className="upi-paid">✅ Payment received{data.payment_ref ? ` · UPI ref ${data.payment_ref}` : ''}</p>}

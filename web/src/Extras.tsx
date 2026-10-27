@@ -335,8 +335,8 @@ export function Promise() {
 
 export function Social({ lat, lng }: { lat: number; lng: number }) {
   const links = [
-    social.instagram && { href: social.instagram, cls: 'ig', label: 'Instagram', sub: 'Reels from the cart' },
-    social.facebook && { href: social.facebook, cls: 'fb', label: 'Facebook', sub: 'Offers and news' },
+    social.instagram && { href: social.instagram, cls: 'ig', label: 'Follow on Instagram', sub: '@the_urban_bites._' },
+    social.facebook && { href: social.facebook, cls: 'fb', label: 'Follow on Facebook', sub: 'Offers and news' },
     { href: social.googleReview || googleMaps(lat, lng), cls: 'gg', label: social.googleReview ? 'Rate us on Google' : 'Find us on Google', sub: social.googleReview ? '⭐⭐⭐⭐⭐ takes 10 seconds' : 'Maps and directions' },
     { href: social.whatsapp, cls: 'wa', label: 'WhatsApp', sub: 'Order or ask a question' },
   ].filter(Boolean) as { href: string; cls: string; label: string; sub: string }[]
