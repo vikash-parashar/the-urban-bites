@@ -13,6 +13,7 @@ import { MA, MButton } from './motion'
 import { brand } from './brand'
 import { OrderTag, PaymentTag } from './Tags'
 import Celebrate from './Celebrate'
+import OrderScene, { sceneFor } from './OrderScene'
 
 const pickupSteps: { key: OrderStatus; label: string }[] = [
   { key: 'placed', label: 'Order received' },
@@ -140,8 +141,6 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
   }, [overdue, order.id])
   const secs = Math.floor((left % 60_000) / 1000)
   const showClock = cooking && !!data?.ready_at
-  const R = 52
-  const C = 2 * Math.PI * R
   const paid = data?.payment_status === 'paid'
   // Colour of the whole tracker: yellow while it's with the kitchen, blue once it's ready or on
   // the way (or delivered but still unpaid), green when delivered and paid, red when cancelled.
@@ -169,33 +168,13 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         </div>
       )}
 
-      <div className={`clock ${showClock ? '' : 'clock-idle'} status-${status}`} aria-live="polite">
-        <svg viewBox="0 0 120 120" aria-hidden="true">
-          <circle className="clock-track" cx="60" cy="60" r={R} />
-          <circle
-            className="clock-fill"
-            cx="60"
-            cy="60"
-            r={R}
-            strokeDasharray={C}
-            strokeDashoffset={showClock ? C * (1 - Math.min(1, Math.max(0, progress))) : status === 'placed' ? C * 0.75 : 0}
-          />
-        </svg>
-        <div className="clock-text">
-          <span className="clock-label">{headline(status, delivery, showClock)}</span>
-          {showClock && (
-            <span className="clock-time">
-              {left > 0 ? (
-                <>
-                  {mins}<small>m</small> {String(secs).padStart(2, '0')}<small>s</small>
-                </>
-              ) : (
-                'Any moment'
-              )}
-            </span>
-          )}
-        </div>
-      </div>
+      <OrderScene
+        scene={sceneFor(status, { overdue, paused: status === 'placed' && !shop.accepting_orders })}
+        label={headline(status, delivery, showClock)}
+        progress={showClock ? progress : undefined}
+        items={(data?.items ?? []).map((l) => `${l.qty}× ${l.name}`)}
+        time={showClock ? (left > 0 ? <>{mins}<small>m</small> {String(secs).padStart(2, '0')}<small>s</small></> : 'Any moment') : undefined}
+      />
 
       {status !== 'cancelled' ? (
         <ol className="steps">

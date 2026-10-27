@@ -2018,3 +2018,17 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .cancel-note { padding: 8px 12px; border-radius: 10px; border: 1px dashed var(--line); }
 .cancel-alert { display: block; width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #c62828; background: color-mix(in srgb, #c62828 14%, transparent); color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 :root[data-theme='pop'] .cancel-alert { background: #fde8e8; color: #7a1616; }
+
+/* Order step scenes (animated Manjeet) in place of the old countdown ring */
+.scene-card { display: grid; gap: 10px; width: 100%; max-width: 560px; margin: 0 auto; }
+.scene-art { position: relative; aspect-ratio: 1200 / 896; border-radius: 18px; overflow: hidden; border: 2.5px solid var(--line); background: #fbf0d6; }
+.scene-layer { position: absolute; inset: 0; }
+.scene-layer svg { display: block; width: 100%; height: 100%; }
+.scene-info { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.scene-label { font-weight: 800; line-height: 1.3; }
+.scene-time { font-family: var(--display); font-size: clamp(1.6rem, 7vw, 2.2rem); line-height: 1; font-variant-numeric: tabular-nums; color: var(--gold); }
+.scene-time small { font-size: 0.5em; margin-left: 1px; }
+.scene-bar { height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
+.scene-bar i { display: block; height: 100%; background: var(--gold); transform-origin: left center; }
+:root[data-theme='pop'] .scene-art { border-color: #141414; box-shadow: 4px 4px 0 #141414; }
+:root[data-theme='pop'] .scene-time { color: #c2185b; }
