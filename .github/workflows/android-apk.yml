@@ -1,8 +1,10 @@
-# Builds the Android app on GitHub's servers and puts the APKs on the "Latest APK" release,
-# so they can be downloaded straight to a phone.
-#   urban-bites-demo.apk  runs with no server: sample data and test logins on the phone.
-#   urban-bites-live.apk  talks to the real API (set the repository variable API_URL first).
-name: Android APK
+# Builds The Urban Bites app on GitHub's servers and puts it on the "Latest APK" release.
+# The app is the live website (theurbanbites.in) in a native shell, so new website features
+# reach the app without a new build. Rebuild only when the shell itself changes.
+#   urban-bites.apk               Android phones and tablets: download and install.
+#   urban-bites-ios-unsigned.ipa  iPhone/iPad: needs signing (Apple Developer account, or a free
+#                                 Apple ID with Sideloadly/AltStore, which lasts 7 days).
+name: Apps
 
 on:
   push:
@@ -14,7 +16,7 @@ permissions:
   contents: write
 
 jobs:
-  apk:
+  android:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,23 +34,50 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
-      - name: Build demo APK
+      - name: Build APK
         run: |
-          flutter build apk --release --dart-define=DEMO=true
-          cp build/app/outputs/flutter-apk/app-release.apk ../urban-bites-demo.apk
-      - name: Build live APK
-        if: ${{ vars.API_URL != '' }}
-        run: |
-          flutter build apk --release --dart-define=API_URL=${{ vars.API_URL }} --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://theurbanbites.in' }}
-          cp build/app/outputs/flutter-apk/app-release.apk ../urban-bites-live.apk
+          flutter build apk --release --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://theurbanbites.in' }}
+          cp build/app/outputs/flutter-apk/app-release.apk ../urban-bites.apk
+          cp ../urban-bites.apk ../urban-bites-live.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: apks
-          path: urban-bites-*.apk
+          name: android
+          path: urban-bites*.apk
       - name: Publish to the Latest APK release
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Latest APK" --notes "Built from main. Install urban-bites-demo.apk to try the app with test logins."
-          gh release upload apk-latest urban-bites-*.apk --clobber
+          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Latest APK" --notes "Built from main."
+          gh release delete-asset apk-latest urban-bites-demo.apk -y 2>/dev/null || true
+          gh release upload apk-latest urban-bites.apk urban-bites-live.apk --clobber
+
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.8"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build iOS (unsigned)
+        run: |
+          flutter build ios --release --no-codesign --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://theurbanbites.in' }}
+          mkdir -p Payload && cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr ../urban-bites-ios-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: urban-bites-ios-unsigned.ipa
+      - name: Publish to the Latest APK release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Latest APK" --notes "Built from main."
+          gh release upload apk-latest urban-bites-ios-unsigned.ipa --clobber

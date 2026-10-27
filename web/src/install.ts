@@ -28,8 +28,10 @@ export function useManifest(staff: boolean) {
   }, [staff])
 }
 
+/** inApp: running inside The Urban Bites Android/iPhone app (it adds UrbanBitesApp to the user agent). */
+export const inApp = () => /UrbanBitesApp\//.test(navigator.userAgent)
 export const isStandalone = () =>
-  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true
+  inApp() || window.matchMedia?.('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true
 export const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
 export function useInstall() {
