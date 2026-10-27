@@ -1,5 +1,5 @@
 import { LookSwitch, useTheme } from './ThemePicker'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useScroll, useTransform, type Variants } from 'motion/react'
 import { alive, ease, MA, MButton, Reveal, spring, stagger } from './motion'
 import { business, media } from './menu'
@@ -68,6 +68,8 @@ export default function App() {
   }
   const tracked = myOrders.orders.find((o) => o.id === trackId) ?? myOrders.latest
   const heroVideo = useRef<HTMLVideoElement>(null)
+  // Some phones ignore autoPlay unless muted is set on the element itself; nudge it once.
+  useEffect(() => { const v = heroVideo.current; if (v) { v.muted = true; v.play().catch(() => {}) } }, [])
   const look = useTheme()
 
   const hero = useRef<HTMLElement>(null)
@@ -115,7 +117,7 @@ export default function App() {
       <ShopNotice shop={shop} />
 
       <section className="hero" id="top" ref={hero}>
-        <motion.video ref={heroVideo} className="hero-video" style={{ y: videoY, scale: videoScale }} src={media('flame.mp4')} poster={media('flame-poster.jpg')} autoPlay muted loop playsInline />
+        <motion.video ref={heroVideo} className="hero-video" style={{ y: videoY, scale: videoScale }} src={media('hero-mix.mp4')} poster={media('hero-mix-poster.jpg')} autoPlay muted loop playsInline />
         <div className="hero-shade" />
         {look !== 'pop' && <Embers />}
         {look === 'pop' && <PopHero box={hero} freeMin={shop.free_delivery_min} delay={start} />}
