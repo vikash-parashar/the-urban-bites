@@ -35,6 +35,7 @@ export interface StaffOrder {
   payment_status: 'pending' | 'paid' | 'refunded'
   payment_ref?: string | null
   payment_rejected_ref?: string | null
+  cancelled_by?: 'customer' | 'owner' | null
   source: 'web' | 'app' | 'counter'
   subtotal: number
   delivery_fee: number

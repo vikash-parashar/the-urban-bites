@@ -65,6 +65,7 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/orders/{id}", s.trackOrder)
 		r.Get("/orders/{id}/favourites", s.favourites)
 		r.Post("/orders/{id}/payment", s.paymentRef)
+		r.Post("/orders/{id}/cancel", s.customerCancel)
 		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
 		r.Get("/shop", s.getShop)
 		r.Get("/offers", s.liveOffers)
@@ -307,6 +308,7 @@ func (s *Server) trackOrder(w http.ResponseWriter, r *http.Request) {
 		"payment_status":       o.PaymentStatus,
 		"payment_ref":          o.PaymentRef,
 		"payment_rejected_ref": o.PaymentRejectedRef,
+		"cancelled_by":         o.CancelledBy,
 		"delivery_km":          o.DeliveryKm,
 		"items":                o.Items,
 		"events":               o.Events,
@@ -516,6 +518,32 @@ func (s *Server) earnings(w http.ResponseWriter, r *http.Request) {
 }
 
 func errInvalid(msg string) error { return fmt.Errorf("%w: %s", store.ErrInvalid, msg) }
+
+// customerCancel cancels an order for the customer who placed it (tracking token required), only
+// before the owner has set the cooking time.
+func (s *Server) customerCancel(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"t"`
+	}
+	if err := decode(r, &in); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	o, err := s.Store.Order(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(in.Token), []byte(o.TrackToken)) != 1 {
+		writeErr(w, r, store.ErrNotFound)
+		return
+	}
+	if err := s.Store.CancelByCustomer(r.Context(), o.ID); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // paymentRef saves the UPI reference number a customer enters after paying from a UPI app.
 func (s *Server) paymentRef(w http.ResponseWriter, r *http.Request) {

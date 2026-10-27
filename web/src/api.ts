@@ -53,6 +53,7 @@ export interface Tracking {
   payment_status?: 'pending' | 'paid'
   payment_ref?: string | null
   payment_rejected_ref?: string | null
+  cancelled_by?: 'customer' | 'owner' | null
 }
 
 // sendPaymentRef passes the UPI reference (UTR) the customer got after paying, so the owner can match it.
@@ -82,6 +83,22 @@ export async function fetchMenu(): Promise<Category[] | null> {
   const res = await fetch(`${API_URL}/v1/menu`)
   if (!res.ok) return null
   return ((await res.json()) as { categories: Category[] }).categories
+}
+
+// cancelOrder: the customer cancels their own order. The API allows it only until the owner sets the
+// cooking time; after that it answers with a message to call the cart.
+export async function cancelOrder(o: PlacedOrder): Promise<void> {
+  if (!API_URL) return
+  const res = await fetch(`${API_URL}/v1/orders/${o.id}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ t: o.track_token }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    const msg: string = body.error ?? `Couldn't cancel (error ${res.status}). Please call the cart.`
+    throw new Error(sentence(msg.charAt(0).toUpperCase() + msg.slice(1)))
+  }
 }
 
 export const sentence = (s: string) => (/[.!?]$/.test(s) ? s : `${s}.`)

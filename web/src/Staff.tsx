@@ -179,6 +179,7 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
   const [offset, setOffset] = useState(0)
   const [sound, setSoundState] = useState(() => { try { return localStorage.getItem('ub-sound') !== 'off' } catch { return true } })
   const seen = useRef<Set<string> | null>(null)
+  const lastStatus = useRef<Map<string, string>>(new Map())
   const soundRef = useRef(sound)
   const { error, guard } = useGuard(onSignedOut)
 
@@ -194,6 +195,10 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
       const open = r.orders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length
       if (open >= 4) setTimeout(() => sayFun('rush', ['staff_rush'], 20 * 60_000), 1200)
     }
+    // A customer cancelled an order Manjeet already saw: tell him so he doesn't start making it.
+    const dropped = r.orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer' && lastStatus.current.has(o.id) && lastStatus.current.get(o.id) !== 'cancelled')
+    if (dropped.length && soundRef.current) { chime(); setTimeout(() => say('staff_cancelled', true), 900) }
+    lastStatus.current = new Map(r.orders.map((o) => [o.id, o.status]))
     const waiting = r.orders.filter((o) => o.status === 'placed').length
     document.title = waiting ? `(${waiting}) New order${waiting > 1 ? 's' : ''} · ${brand.name}` : `Orders · ${brand.name}`
     seen.current = new Set([...(seen.current ?? []), ...r.orders.map((o) => o.id)])
@@ -265,6 +270,11 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
           <h2 className="staff-h">{all ? 'All orders' : 'Open orders'}</h2>
           <label className="check"><input id="show-all" type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show done</label>
         </div>
+        {orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer').slice(0, 3).map((o) => (
+          <MButton key={o.id} className="cancel-alert" onClick={() => setSelected(o.id)}>
+            ❌ Customer cancelled order #{o.number} ({o.customer_name}) · don't make it
+          </MButton>
+        ))}
         <div className="alert-row">
           {newCount > 0 ? (
             <MButton className="new-alert" onClick={() => setFilter('placed')} animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.4, repeat: Infinity }}>
@@ -295,7 +305,7 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
               <span className="oc-total">{rupees(o.total)}</span>
             </span>
             <span className="oc-tags"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} rejected={o.payment_rejected_ref} cancelled={o.status === 'cancelled'} /></span>
-            <span className="oc-meta">{o.customer_name} · {o.fulfilment === 'delivery' ? 'Delivery' : 'Pickup'} · {sourceLabel[o.source]}</span>
+            <span className="oc-meta">{o.status === 'cancelled' && o.cancelled_by ? `Cancelled by ${o.cancelled_by === 'customer' ? 'customer' : 'you'} · ` : ''}{o.customer_name} · {o.fulfilment === 'delivery' ? 'Delivery' : 'Pickup'} · {sourceLabel[o.source]}</span>
             <CustomerTag o={o} />
             <span className="oc-items">{o.items.map((l) => `${l.qty}× ${l.name}${l.size === 'half' ? ' (H)' : ''}`).join(', ')}</span>
             {(o.status === 'accepted' || o.status === 'preparing') && <span className="oc-eta">{minsLeft(o, offset)}</span>}

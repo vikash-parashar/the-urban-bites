@@ -467,24 +467,26 @@ type Order struct {
 	PaymentStatus string  `json:"payment_status"`
 	PaymentRef    *string `json:"payment_ref,omitempty"`
 	// PaymentRejectedRef is a UPI reference the owner checked and did not find in the bank.
-	PaymentRejectedRef *string     `json:"payment_rejected_ref,omitempty"`
-	Source             string      `json:"source"`
-	Subtotal           int         `json:"subtotal"`
-	DeliveryFee        int         `json:"delivery_fee"`
-	DeliveryKm         *float64    `json:"delivery_km"`
-	DeliveryLat        *float64    `json:"delivery_lat,omitempty"`
-	DeliveryLng        *float64    `json:"delivery_lng,omitempty"`
-	RiderID            *string     `json:"rider_id,omitempty"`
-	RiderName          *string     `json:"rider_name,omitempty"`
-	RiderPickedAt      *time.Time  `json:"rider_picked_at,omitempty"`
-	HasVoiceNote       bool        `json:"has_voice_note"`
-	Total              int         `json:"total"`
-	PrepMinutes        *int        `json:"prep_minutes"`
-	ReadyAt            *time.Time  `json:"ready_at"`
-	CreatedAt          time.Time   `json:"created_at"`
-	UpdatedAt          time.Time   `json:"updated_at"`
-	Items              []OrderLine `json:"items"`
-	Events             []Event     `json:"events,omitempty"`
+	PaymentRejectedRef *string `json:"payment_rejected_ref,omitempty"`
+	// CancelledBy is "customer" or "owner" once the order is cancelled.
+	CancelledBy   *string     `json:"cancelled_by,omitempty"`
+	Source        string      `json:"source"`
+	Subtotal      int         `json:"subtotal"`
+	DeliveryFee   int         `json:"delivery_fee"`
+	DeliveryKm    *float64    `json:"delivery_km"`
+	DeliveryLat   *float64    `json:"delivery_lat,omitempty"`
+	DeliveryLng   *float64    `json:"delivery_lng,omitempty"`
+	RiderID       *string     `json:"rider_id,omitempty"`
+	RiderName     *string     `json:"rider_name,omitempty"`
+	RiderPickedAt *time.Time  `json:"rider_picked_at,omitempty"`
+	HasVoiceNote  bool        `json:"has_voice_note"`
+	Total         int         `json:"total"`
+	PrepMinutes   *int        `json:"prep_minutes"`
+	ReadyAt       *time.Time  `json:"ready_at"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
+	Items         []OrderLine `json:"items"`
+	Events        []Event     `json:"events,omitempty"`
 	// Filled in for the owner's list: how many completed orders this phone has, and its badge.
 	CustomerOrders int    `json:"customer_orders"`
 	CustomerBadge  string `json:"customer_badge,omitempty"`
@@ -635,7 +637,7 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 const orderCols = `id, number, track_token, customer_name, COALESCE(customer_phone, ''), fulfilment, address, note, status,
 	payment_method, payment_status, payment_ref, source, subtotal, delivery_fee, delivery_km::float8, total, prep_minutes, ready_at, created_at, updated_at,
 	customer_email, customer_city, delivery_lat, delivery_lng, rider_id::text, (SELECT name FROM users WHERE users.id = orders.rider_id), rider_picked_at,
-	EXISTS (SELECT 1 FROM order_voice_notes v WHERE v.order_id = orders.id), payment_rejected_ref`
+	EXISTS (SELECT 1 FROM order_voice_notes v WHERE v.order_id = orders.id), payment_rejected_ref, cancelled_by`
 
 // deliveryCoord keeps the shared location only for delivery orders.
 func deliveryCoord(in NewOrder, v *float64) *float64 {
@@ -652,7 +654,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	err := row.Scan(&o.ID, &o.Number, &o.TrackToken, &o.CustomerName, &o.CustomerPhone, &o.Fulfilment, &o.Address, &o.Note,
 		&o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentRef, &o.Source, &o.Subtotal, &o.DeliveryFee, &o.DeliveryKm, &o.Total,
 		&o.PrepMinutes, &o.ReadyAt, &o.CreatedAt, &o.UpdatedAt,
-		&o.CustomerEmail, &o.CustomerCity, &o.DeliveryLat, &o.DeliveryLng, &o.RiderID, &o.RiderName, &o.RiderPickedAt, &o.HasVoiceNote, &o.PaymentRejectedRef)
+		&o.CustomerEmail, &o.CustomerCity, &o.DeliveryLat, &o.DeliveryLng, &o.RiderID, &o.RiderName, &o.RiderPickedAt, &o.HasVoiceNote, &o.PaymentRejectedRef, &o.CancelledBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -721,7 +723,9 @@ func (s *Store) Order(ctx context.Context, id string) (*Order, error) {
 // Orders lists orders for the owner, newest first. active=true hides completed and cancelled.
 func (s *Store) Orders(ctx context.Context, active bool, since time.Time, limit int) ([]*Order, error) {
 	rows, err := s.db.Query(ctx, `SELECT `+orderCols+` FROM orders
-		WHERE (NOT $1 OR status NOT IN ('completed', 'cancelled')) AND created_at >= $2
+		WHERE (NOT $1 OR status NOT IN ('completed', 'cancelled')
+			-- a customer's own cancel stays on the open board for 15 minutes so the owner notices it
+			OR (cancelled_by = 'customer' AND updated_at > now() - interval '15 minutes')) AND created_at >= $2
 		ORDER BY created_at DESC LIMIT $3`, active, since, limit)
 	if err != nil {
 		return nil, err
@@ -783,6 +787,7 @@ func (s *Store) UpdateOrder(ctx context.Context, id string, u OrderUpdate) (*Ord
 				payment_rejected_ref = CASE WHEN $5 THEN COALESCE(payment_ref, payment_rejected_ref)
 					WHEN $4::text = 'paid' THEN NULL ELSE payment_rejected_ref END,
 				payment_ref = CASE WHEN $5 THEN NULL ELSE payment_ref END,
+				cancelled_by = CASE WHEN $2::text = 'cancelled' AND status <> 'cancelled' THEN 'owner' ELSE cancelled_by END,
 				updated_at = now()
 			WHERE id = $1
 			RETURNING status`, id, u.Status, u.PrepMinutes, u.PaymentStatus, u.PaymentNotReceived).Scan(&status)
@@ -877,6 +882,23 @@ func (s *Store) Earnings(ctx context.Context, from, to time.Time) (*Earnings, er
 		e.TopItems = append(e.TopItems, t)
 	}
 	return e, rows.Err()
+}
+
+// CancelByCustomer lets the customer cancel their own order, but only while it is still waiting for
+// the owner: once the owner sets the cooking time the food is being made, and only the owner can cancel.
+func (s *Store) CancelByCustomer(ctx context.Context, id string) error {
+	return pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE orders SET status = 'cancelled', cancelled_by = 'customer', updated_at = now()
+			WHERE id = $1 AND status = 'placed' AND prep_minutes IS NULL AND ready_at IS NULL`, id)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("%w: the cart has already started making this order, so it can't be cancelled now. Please call the cart", ErrConflict)
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO order_events (order_id, status) VALUES ($1, 'cancelled')`, id)
+		return err
+	})
 }
 
 var utrRe = regexp.MustCompile(`^[A-Za-z0-9]{6,35}$`)

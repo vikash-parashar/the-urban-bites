@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { cookingKey, say, setVoiceOn, voiceOn, type VoiceKey } from './voice'
 import type { OrderStatus, PlacedOrder } from './api'
-import { isPreview } from './api'
+import { isPreview, cancelOrder } from './api'
 import { useNow, useTracking } from './orders'
 import { rupees } from './menu'
 import { fetchBadge, type Badge } from './shop'
@@ -9,7 +9,8 @@ import { BadgeResult } from './Extras'
 import { BillCard, UpiPay, billFrom } from './PayBill'
 import type { Shop } from './shop'
 import { social } from './social'
-import { MA } from './motion'
+import { MA, MButton } from './motion'
+import { brand } from './brand'
 import { OrderTag, PaymentTag } from './Tags'
 import Celebrate from './Celebrate'
 
@@ -45,6 +46,41 @@ function headline(status: OrderStatus, delivery: boolean, hasTime: boolean) {
     case 'cancelled':
       return 'This order was cancelled'
   }
+}
+
+// CancelBox: the customer can cancel only while the order waits for the owner. Once the owner sets
+// the cooking time the food is being made, so the page says to call the cart instead.
+function CancelBox({ order, status, prep, by, paidOnline, phone, onDone }: { order: PlacedOrder; status: string; prep: number | null; by?: string | null; paidOnline: boolean; phone?: string; onDone: () => void }) {
+  const [ask, setAsk] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  if (status === 'cancelled') {
+    return <p className="tracker-note cancel-note">{by === 'customer' ? 'You cancelled this order.' : 'The cart cancelled this order.'}{paidOnline ? ' If you already paid by UPI, the owner will send the money back.' : ''}{phone ? ` Questions? Call ${phone}.` : ''}</p>
+  }
+  if (status !== 'placed' || prep != null) {
+    if (status === 'completed') return null
+    return <p className="tracker-note cancel-note">The cart has started making your food, so the order can't be cancelled now.{phone ? ` Something wrong? Call ${phone}.` : ''}</p>
+  }
+  async function go() {
+    setBusy(true); setErr('')
+    try { await cancelOrder(order); onDone() } catch (e) { setErr(e instanceof Error ? e.message : 'Could not cancel.'); setAsk(false) } finally { setBusy(false) }
+  }
+  return (
+    <div className="cancel-box">
+      {!ask ? (
+        <>
+          <p className="tracker-note">Changed your mind? You can cancel until the cart starts cooking.</p>
+          <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => setAsk(true)}>Cancel order</MButton>
+        </>
+      ) : (
+        <span className="confirm">Cancel order #{order.number}?{paidOnline ? ' If you already paid by UPI, the owner will send it back.' : ''}
+          <MButton type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={go}>{busy ? 'Cancelling…' : 'Yes, cancel'}</MButton>
+          <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => setAsk(false)}>Keep it</MButton>
+        </span>
+      )}
+      {err && <p className="error" role="alert">{err}</p>}
+    </div>
+  )
 }
 
 export default function Tracker({ order, phone, shop }: { order: PlacedOrder; phone?: string; shop: Shop }) {
@@ -183,6 +219,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         </ol>
       )}
 
+      {data && <CancelBox order={order} status={status} prep={data.prep_minutes} by={data.cancelled_by} paidOnline={!!data.payment_ref || data.payment_status === 'paid'} phone={brand.phone_display} onDone={refresh} />}
       {data?.prep_minutes != null && cooking && (
         <p className="tracker-note">
           The owner set {data.prep_minutes} minutes for this order. This page updates on its own.

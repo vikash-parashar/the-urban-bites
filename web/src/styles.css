@@ -2012,3 +2012,9 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .link-btn { justify-self: start; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; }
 .upi-rejected { margin: 0; padding: 10px 14px; border-radius: 12px; line-height: 1.5; background: color-mix(in srgb, #c62828 14%, transparent); border: 1.5px solid #c62828; }
 :root[data-theme='pop'] .upi-rejected { color: #7a1616; background: #fde8e8; }
+
+/* Customer cancel: allowed until the owner sets the cooking time */
+.cancel-box { display: grid; gap: 8px; justify-items: start; }
+.cancel-note { padding: 8px 12px; border-radius: 10px; border: 1px dashed var(--line); }
+.cancel-alert { display: block; width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #c62828; background: color-mix(in srgb, #c62828 14%, transparent); color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+:root[data-theme='pop'] .cancel-alert { background: #fde8e8; color: #7a1616; }
