@@ -52,6 +52,7 @@ export interface Tracking {
   payment_method?: 'online' | 'cash'
   payment_status?: 'pending' | 'paid'
   payment_ref?: string | null
+  payment_rejected_ref?: string | null
 }
 
 // sendPaymentRef passes the UPI reference (UTR) the customer got after paying, so the owner can match it.

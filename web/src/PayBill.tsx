@@ -10,7 +10,7 @@ import { brand } from './brand'
 
 // UPI: pay link (opens GPay/PhonePe/Paytm on a phone), QR for paying from another phone, and a box
 // for the reference. UPI links don't report back, so the owner matches the reference with the bank SMS.
-export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; order: PlacedOrder; amount: number; sentRef?: string | null; onSent: () => void }) {
+export function UpiPay({ shop, order, amount, sentRef, rejectedRef, onSent }: { shop: Shop; order: PlacedOrder; amount: number; sentRef?: string | null; rejectedRef?: string | null; onSent: () => void }) {
   const link = upiLink(shop.upi_id, shop.upi_name, amount, `${brand.name} order #${order.number}`)
   const [qr, setQr] = useState('')
   const [ref, setRef] = useState('')
@@ -22,8 +22,9 @@ export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; o
   useEffect(() => {
     QRCode.toDataURL(link, { margin: 1, width: 240, color: { dark: '#0b1033', light: '#ffffff' } }).then(setQr).catch(() => {})
   }, [link])
+  // The owner can turn a reference down (money not in the bank), which clears it: show the form again.
   useEffect(() => {
-    if (sentRef) setDone(sentRef)
+    setDone(sentRef ?? '')
   }, [sentRef])
 
   async function submit(e: FormEvent) {
@@ -56,6 +57,12 @@ export function UpiPay({ shop, order, amount, sentRef, onSent }: { shop: Shop; o
         <p className="upi-sent">⏳ UPI ref <b>{done}</b> sent. The owner will confirm it.</p>
       ) : (
         <>
+          {rejectedRef && (
+            <p className="upi-rejected" role="alert">
+              ❌ <b>Payment not received yet.</b> The owner checked UPI ref <b>{rejectedRef}</b> and the money hasn't reached the bank.
+              Check the number in your UPI app's payment details and send it again, pay again below, or pay cash {order.fulfilment === 'delivery' ? 'on delivery' : 'when you collect'}.
+            </p>
+          )}
           <div className="upi-body">
             {qr && <img className="upi-qr" src={qr} width={180} height={180} alt={`UPI QR code to pay ${rupees(amount)}`} />}
             <div className="upi-side">

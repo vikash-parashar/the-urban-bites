@@ -1998,3 +1998,17 @@ button.kpi-tile:hover { border-color: var(--gold); }
 :root[data-theme="pop"] .hero-shade { z-index: 0; background: linear-gradient(90deg, rgba(255, 210, 63, 0.92) 0%, rgba(255, 210, 63, 0.72) 42%, rgba(255, 210, 63, 0.18) 75%, rgba(255, 210, 63, 0.05) 100%); }
 @media (max-width: 760px) { :root[data-theme="pop"] .hero-shade { background: linear-gradient(180deg, rgba(255, 210, 63, 0.12) 0%, rgba(255, 210, 63, 0.35) 38%, rgba(255, 210, 63, 0.85) 62%, rgba(255, 210, 63, 0.95)); } }
 @media (max-width: 520px) { .hero-sound .hero-sound-label, .hero-sound .eq { display: none; } }
+
+/* Owner confirms a UPI payment against the bank; customer sees when it didn't arrive */
+.pay-check { display: grid; gap: 8px; margin: 0; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--gold); background: color-mix(in srgb, var(--gold) 10%, transparent); }
+.pay-check p { margin: 0; }
+.pay-check-ref { font-size: 1.05rem; }
+.pay-check-ref strong { letter-spacing: 0.04em; }
+.pay-check-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.pay-check.is-no { border-color: #c62828; background: color-mix(in srgb, #c62828 12%, transparent); }
+.pay-check.is-yes { border-color: #15803d; background: color-mix(in srgb, #15803d 14%, transparent); }
+:root[data-theme='pop'] .pay-check.is-no { background: #fde8e8; color: #7a1616; }
+:root[data-theme='pop'] .pay-check.is-yes { background: #e3f6e9; color: #0f5f2c; }
+.link-btn { justify-self: start; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; }
+.upi-rejected { margin: 0; padding: 10px 14px; border-radius: 12px; line-height: 1.5; background: color-mix(in srgb, #c62828 14%, transparent); border: 1.5px solid #c62828; }
+:root[data-theme='pop'] .upi-rejected { color: #7a1616; background: #fde8e8; }

@@ -73,6 +73,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
     if (status === 'out_for_delivery') events.push(['out', 'on_the_way'])
     if (status === 'completed') events.push(['done', delivery0 ? 'delivered' : 'collected'])
     if (status === 'cancelled') events.push(['cancelled', 'cancelled'])
+    if (data.payment_rejected_ref && !data.payment_ref && data.payment_status !== 'paid' && status !== 'cancelled') events.push([`norecv-${data.payment_rejected_ref}`, 'payment_rejected'])
     if (data.payment_status === 'paid' && status !== 'cancelled') events.push(['paid', 'paid'])
     const first = said.length === 0 && !fresh
     const todo = events.filter(([k]) => !said.includes(k))
@@ -128,7 +129,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
       {data && (
         <div className="tracker-tags">
           <OrderTag status={status} who="customer" delivery={delivery} />
-          <PaymentTag method={data.payment_method ?? order.payment_method} paid={data.payment_status === 'paid'} ref={data.payment_ref} cancelled={status === 'cancelled'} />
+          <PaymentTag method={data.payment_method ?? order.payment_method} paid={data.payment_status === 'paid'} ref={data.payment_ref} rejected={data.payment_rejected_ref} cancelled={status === 'cancelled'} />
         </div>
       )}
 
@@ -188,7 +189,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         </p>
       )}
       {shop.upi_id && data && data.status !== 'cancelled' && data.payment_status !== 'paid' && (data.payment_method ?? order.payment_method) === 'online' && (
-        <UpiPay shop={shop} order={order} amount={data.total} sentRef={data.payment_ref} onSent={refresh} />
+        <UpiPay shop={shop} order={order} amount={data.total} sentRef={data.payment_ref} rejectedRef={data.payment_rejected_ref} onSent={refresh} />
       )}
       {finished && social.googleReview && (
         <div className="tracker-review">

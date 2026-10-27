@@ -452,37 +452,39 @@ type Event struct {
 }
 
 type Order struct {
-	ID            string      `json:"id"`
-	Number        int         `json:"number"`
-	TrackToken    string      `json:"-"`
-	CustomerName  string      `json:"customer_name"`
-	CustomerPhone string      `json:"customer_phone"`
-	CustomerEmail *string     `json:"customer_email,omitempty"`
-	CustomerCity  *string     `json:"customer_city,omitempty"`
-	Fulfilment    string      `json:"fulfilment"`
-	Address       *string     `json:"address,omitempty"`
-	Note          *string     `json:"note,omitempty"`
-	Status        Status      `json:"status"`
-	PaymentMethod string      `json:"payment_method"`
-	PaymentStatus string      `json:"payment_status"`
-	PaymentRef    *string     `json:"payment_ref,omitempty"`
-	Source        string      `json:"source"`
-	Subtotal      int         `json:"subtotal"`
-	DeliveryFee   int         `json:"delivery_fee"`
-	DeliveryKm    *float64    `json:"delivery_km"`
-	DeliveryLat   *float64    `json:"delivery_lat,omitempty"`
-	DeliveryLng   *float64    `json:"delivery_lng,omitempty"`
-	RiderID       *string     `json:"rider_id,omitempty"`
-	RiderName     *string     `json:"rider_name,omitempty"`
-	RiderPickedAt *time.Time  `json:"rider_picked_at,omitempty"`
-	HasVoiceNote  bool        `json:"has_voice_note"`
-	Total         int         `json:"total"`
-	PrepMinutes   *int        `json:"prep_minutes"`
-	ReadyAt       *time.Time  `json:"ready_at"`
-	CreatedAt     time.Time   `json:"created_at"`
-	UpdatedAt     time.Time   `json:"updated_at"`
-	Items         []OrderLine `json:"items"`
-	Events        []Event     `json:"events,omitempty"`
+	ID            string  `json:"id"`
+	Number        int     `json:"number"`
+	TrackToken    string  `json:"-"`
+	CustomerName  string  `json:"customer_name"`
+	CustomerPhone string  `json:"customer_phone"`
+	CustomerEmail *string `json:"customer_email,omitempty"`
+	CustomerCity  *string `json:"customer_city,omitempty"`
+	Fulfilment    string  `json:"fulfilment"`
+	Address       *string `json:"address,omitempty"`
+	Note          *string `json:"note,omitempty"`
+	Status        Status  `json:"status"`
+	PaymentMethod string  `json:"payment_method"`
+	PaymentStatus string  `json:"payment_status"`
+	PaymentRef    *string `json:"payment_ref,omitempty"`
+	// PaymentRejectedRef is a UPI reference the owner checked and did not find in the bank.
+	PaymentRejectedRef *string     `json:"payment_rejected_ref,omitempty"`
+	Source             string      `json:"source"`
+	Subtotal           int         `json:"subtotal"`
+	DeliveryFee        int         `json:"delivery_fee"`
+	DeliveryKm         *float64    `json:"delivery_km"`
+	DeliveryLat        *float64    `json:"delivery_lat,omitempty"`
+	DeliveryLng        *float64    `json:"delivery_lng,omitempty"`
+	RiderID            *string     `json:"rider_id,omitempty"`
+	RiderName          *string     `json:"rider_name,omitempty"`
+	RiderPickedAt      *time.Time  `json:"rider_picked_at,omitempty"`
+	HasVoiceNote       bool        `json:"has_voice_note"`
+	Total              int         `json:"total"`
+	PrepMinutes        *int        `json:"prep_minutes"`
+	ReadyAt            *time.Time  `json:"ready_at"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+	Items              []OrderLine `json:"items"`
+	Events             []Event     `json:"events,omitempty"`
 	// Filled in for the owner's list: how many completed orders this phone has, and its badge.
 	CustomerOrders int    `json:"customer_orders"`
 	CustomerBadge  string `json:"customer_badge,omitempty"`
@@ -633,7 +635,7 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 const orderCols = `id, number, track_token, customer_name, COALESCE(customer_phone, ''), fulfilment, address, note, status,
 	payment_method, payment_status, payment_ref, source, subtotal, delivery_fee, delivery_km::float8, total, prep_minutes, ready_at, created_at, updated_at,
 	customer_email, customer_city, delivery_lat, delivery_lng, rider_id::text, (SELECT name FROM users WHERE users.id = orders.rider_id), rider_picked_at,
-	EXISTS (SELECT 1 FROM order_voice_notes v WHERE v.order_id = orders.id)`
+	EXISTS (SELECT 1 FROM order_voice_notes v WHERE v.order_id = orders.id), payment_rejected_ref`
 
 // deliveryCoord keeps the shared location only for delivery orders.
 func deliveryCoord(in NewOrder, v *float64) *float64 {
@@ -650,7 +652,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	err := row.Scan(&o.ID, &o.Number, &o.TrackToken, &o.CustomerName, &o.CustomerPhone, &o.Fulfilment, &o.Address, &o.Note,
 		&o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentRef, &o.Source, &o.Subtotal, &o.DeliveryFee, &o.DeliveryKm, &o.Total,
 		&o.PrepMinutes, &o.ReadyAt, &o.CreatedAt, &o.UpdatedAt,
-		&o.CustomerEmail, &o.CustomerCity, &o.DeliveryLat, &o.DeliveryLng, &o.RiderID, &o.RiderName, &o.RiderPickedAt, &o.HasVoiceNote)
+		&o.CustomerEmail, &o.CustomerCity, &o.DeliveryLat, &o.DeliveryLng, &o.RiderID, &o.RiderName, &o.RiderPickedAt, &o.HasVoiceNote, &o.PaymentRejectedRef)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -747,6 +749,9 @@ type OrderUpdate struct {
 	Status        *Status `json:"status"`
 	PrepMinutes   *int    `json:"prep_minutes"`
 	PaymentStatus *string `json:"payment_status"`
+	// PaymentNotReceived: the owner checked the bank and the money is not there. The order goes back
+	// to payment pending and the customer is asked to check the UPI reference or pay again.
+	PaymentNotReceived bool `json:"payment_not_received"`
 }
 
 // UpdateOrder lets the owner move an order along and set how long it will take.
@@ -764,6 +769,9 @@ func (s *Store) UpdateOrder(ctx context.Context, id string, u OrderUpdate) (*Ord
 	if u.PaymentStatus != nil && *u.PaymentStatus != "pending" && *u.PaymentStatus != "paid" && *u.PaymentStatus != "refunded" {
 		return nil, fmt.Errorf("%w: bad payment_status", ErrInvalid)
 	}
+	if u.PaymentNotReceived && u.PaymentStatus != nil {
+		return nil, fmt.Errorf("%w: send payment_status or payment_not_received, not both", ErrInvalid)
+	}
 	err := pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
 		var status Status
 		err := tx.QueryRow(ctx, `
@@ -771,10 +779,13 @@ func (s *Store) UpdateOrder(ctx context.Context, id string, u OrderUpdate) (*Ord
 				status = COALESCE($2::order_status, status),
 				prep_minutes = COALESCE($3, prep_minutes),
 				ready_at = CASE WHEN $3::int IS NOT NULL THEN now() + make_interval(mins => $3::int) ELSE ready_at END,
-				payment_status = COALESCE($4::payment_status, payment_status),
+				payment_status = CASE WHEN $5 THEN 'pending'::payment_status ELSE COALESCE($4::payment_status, payment_status) END,
+				payment_rejected_ref = CASE WHEN $5 THEN COALESCE(payment_ref, payment_rejected_ref)
+					WHEN $4::text = 'paid' THEN NULL ELSE payment_rejected_ref END,
+				payment_ref = CASE WHEN $5 THEN NULL ELSE payment_ref END,
 				updated_at = now()
 			WHERE id = $1
-			RETURNING status`, id, u.Status, u.PrepMinutes, u.PaymentStatus).Scan(&status)
+			RETURNING status`, id, u.Status, u.PrepMinutes, u.PaymentStatus, u.PaymentNotReceived).Scan(&status)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
 		} else if err != nil {
@@ -877,12 +888,19 @@ func (s *Store) SetPaymentRef(ctx context.Context, id, ref string) error {
 	if !utrRe.MatchString(ref) {
 		return fmt.Errorf("%w: the UPI reference is the 12-digit number in your UPI app's payment details", ErrInvalid)
 	}
-	tag, err := s.db.Exec(ctx, `UPDATE orders SET payment_ref = $2, updated_at = now() WHERE id = $1 AND payment_status <> 'paid'`, id, ref)
-	if err != nil {
+	var paid, sameAsRejected bool
+	err := s.db.QueryRow(ctx, `SELECT payment_status = 'paid', COALESCE(payment_rejected_ref = $2, false) FROM orders WHERE id = $1`, id, ref).Scan(&paid, &sameAsRejected)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
 		return err
 	}
-	if tag.RowsAffected() == 0 {
+	if paid {
 		return fmt.Errorf("%w: this order is already paid", ErrConflict)
 	}
-	return nil
+	if sameAsRejected {
+		return fmt.Errorf("%w: the owner checked this reference and the payment hasn't arrived. Check the number in your UPI app, or call the cart", ErrInvalid)
+	}
+	_, err = s.db.Exec(ctx, `UPDATE orders SET payment_ref = $2, payment_rejected_ref = NULL, updated_at = now() WHERE id = $1 AND payment_status <> 'paid'`, id, ref)
+	return err
 }

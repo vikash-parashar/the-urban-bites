@@ -26,11 +26,12 @@ export function orderTag(status: string, who: Who, delivery = false): { label: s
   }
 }
 
-export function paymentTag(p: { method?: string; paid?: boolean; ref?: string | null; cancelled?: boolean }): { label: string; tone: Tone } {
+export function paymentTag(p: { method?: string; paid?: boolean; ref?: string | null; rejected?: string | null; cancelled?: boolean }): { label: string; tone: Tone } {
   const how = p.method === 'online' ? 'UPI' : 'Cash'
   if (p.paid) return { label: `Payment received · ${how}`, tone: 'success' }
   if (p.cancelled) return { label: `Not charged · ${how}`, tone: 'neutral' }
   if (p.method === 'online' && p.ref) return { label: 'UPI sent · check bank', tone: 'info' }
+  if (p.method === 'online' && p.rejected) return { label: 'UPI not received', tone: 'danger' }
   return { label: `Payment pending · ${how}`, tone: 'warn' }
 }
 
@@ -48,6 +49,6 @@ export function OrderTag({ status, who, delivery }: { status: string; who: Who; 
   return <Tag {...t} pulse={who === 'staff' && status === 'placed'} />
 }
 
-export function PaymentTag(p: { method?: string; paid?: boolean; ref?: string | null; cancelled?: boolean }) {
+export function PaymentTag(p: { method?: string; paid?: boolean; ref?: string | null; rejected?: string | null; cancelled?: boolean }) {
   return <Tag {...paymentTag(p)} />
 }

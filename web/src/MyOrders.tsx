@@ -63,7 +63,7 @@ export default function MyOrders({ orders, status, onOpen }: { orders: PlacedOrd
                 <div className="my-order-bottom">
                   <span className="my-order-pay">
                     <b>{rupees(t?.total ?? o.total)}</b>
-                    {t && <PaymentTag method={t.payment_method ?? o.payment_method} paid={paid} ref={t.payment_ref} cancelled={status === 'cancelled'} />}
+                    {t && <PaymentTag method={t.payment_method ?? o.payment_method} paid={paid} ref={t.payment_ref} rejected={t.payment_rejected_ref} cancelled={status === 'cancelled'} />}
                   </span>
                   <MButton className="btn btn-gold btn-sm" onClick={(e) => { e.stopPropagation(); onOpen(o) }}>
                     {status === 'completed' || status === 'cancelled' ? 'View' : 'Track'}

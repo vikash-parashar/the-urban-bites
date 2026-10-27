@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { loadSession, signOut, staffApi, type Staff, type StaffAccount, type StaffOrder } from './staffApi'
+import { loadSession, signOut, staffApi, type Staff, type StaffAccount, type StaffOrder, type OrderChange } from './staffApi'
 import { rupees } from './menu'
 import { CustomerTag, OffersEditor, ShopSettings, sourceLabel, useGuard, WalkIn } from './StaffExtras'
 import DashboardView from './Dashboard'
@@ -245,12 +245,13 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
     ['ready', 'Ready', (o) => o.status === 'ready'],
     ['out', 'On the way', (o) => o.status === 'out_for_delivery'],
     ['unpaid', 'Not paid', (o) => o.payment_status !== 'paid' && o.status !== 'cancelled'],
+    ['upi', 'Check UPI', (o) => o.payment_method === 'online' && !!o.payment_ref && o.payment_status !== 'paid' && o.status !== 'cancelled'],
   ]
   if (all) groups.push(['done', 'Done', (o) => o.status === 'completed'], ['cancelled', 'Cancelled', (o) => o.status === 'cancelled'])
   const test = groups.find((g) => g[0] === filter)?.[2] ?? (() => true)
   const shown = orders.filter(test)
 
-  async function update(o: StaffOrder, u: { status?: string; prep_minutes?: number; payment_status?: string }) {
+  async function update(o: StaffOrder, u: OrderChange) {
     const r = await guard(staffApi.updateOrder(o.id, u))
     if (r) load()
   }
@@ -293,7 +294,7 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
               <OrderTag status={o.status} who="staff" delivery={o.fulfilment === 'delivery'} />
               <span className="oc-total">{rupees(o.total)}</span>
             </span>
-            <span className="oc-tags"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} cancelled={o.status === 'cancelled'} /></span>
+            <span className="oc-tags"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} rejected={o.payment_rejected_ref} cancelled={o.status === 'cancelled'} /></span>
             <span className="oc-meta">{o.customer_name} · {o.fulfilment === 'delivery' ? 'Delivery' : 'Pickup'} · {sourceLabel[o.source]}</span>
             <CustomerTag o={o} />
             <span className="oc-items">{o.items.map((l) => `${l.qty}× ${l.name}${l.size === 'half' ? ' (H)' : ''}`).join(', ')}</span>
@@ -376,7 +377,52 @@ function staffBill(o: StaffOrder): Bill {
   }
 }
 
-function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; onUpdate: (u: { status?: string; prep_minutes?: number; payment_status?: string }) => void }) {
+// PaymentCheck: the customer typed a UPI reference, so the owner checks the bank or UPI app and
+// says whether the money arrived. "Not received" sends the order back to payment pending and asks
+// the customer (on their tracker) to check the number or pay again.
+function PaymentCheck({ o, onUpdate }: { o: StaffOrder; onUpdate: (u: OrderChange) => void }) {
+  const [ask, setAsk] = useState(false)
+  useEffect(() => setAsk(false), [o.id, o.payment_ref, o.payment_status])
+  if (o.payment_method !== 'online' || o.status === 'cancelled') return null
+  const paid = o.payment_status === 'paid'
+  const confirm = ask && (
+    <span className="confirm">The customer will be asked to check the UPI ref or pay again.
+      <MButton className="btn btn-danger btn-sm" onClick={() => onUpdate({ payment_not_received: true })}>Yes, not received</MButton>
+      <MButton className="btn btn-ghost btn-sm" onClick={() => setAsk(false)}>Back</MButton>
+    </span>
+  )
+  if (!paid && o.payment_ref) {
+    return (
+      <div className="pay-check">
+        <p><strong>Did {rupees(o.total)} reach your bank?</strong> The customer says they paid by UPI.</p>
+        <p className="pay-check-ref">UPI ref / UTR <strong className="selectable">{o.payment_ref}</strong></p>
+        <p className="menu-sub">Open your bank or UPI app and look for this number and amount.</p>
+        {confirm || (
+          <div className="pay-check-btns">
+            <MButton className="btn btn-gold" onClick={() => onUpdate({ payment_status: 'paid' })}>✅ Yes, received</MButton>
+            <MButton className="btn btn-danger" onClick={() => setAsk(true)}>❌ Not received</MButton>
+          </div>
+        )}
+      </div>
+    )
+  }
+  if (!paid && o.payment_rejected_ref) {
+    return (
+      <p className="pay-check is-no">❌ You marked UPI ref <strong className="selectable">{o.payment_rejected_ref}</strong> as not received. The customer has been asked to check it or pay again. Take cash if they pay at the cart.</p>
+    )
+  }
+  if (paid) {
+    return (
+      <div className="pay-check is-yes">
+        <p>✅ UPI payment received{o.payment_ref ? <> · ref <strong className="selectable">{o.payment_ref}</strong></> : null}</p>
+        {confirm || <button type="button" className="link-btn" onClick={() => setAsk(true)}>Marked by mistake? Money not in bank</button>}
+      </div>
+    )
+  }
+  return null
+}
+
+function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; onUpdate: (u: OrderChange) => void }) {
   const [custom, setCustom] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [nav, setNav] = useState(false)
@@ -425,10 +471,8 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
       {o.fulfilment === 'delivery' && (
         <div className="sums"><div><span>Items</span><span>{rupees(o.subtotal)}</span></div><div><span>Delivery</span><span className={o.delivery_fee === 0 ? 'free' : ''}>{o.delivery_fee === 0 ? 'Free' : rupees(o.delivery_fee)}</span></div></div>
       )}
-      <div className="total-row"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} cancelled={o.status === 'cancelled'} /><strong>{rupees(o.total)}</strong></div>
-      {o.payment_ref && (
-        <p className="upi-ref-staff">📲 UPI ref <strong className="selectable">{o.payment_ref}</strong>{o.payment_status !== 'paid' && ' · match it with your bank or UPI app, then Mark paid'}</p>
-      )}
+      <div className="total-row"><PaymentTag method={o.payment_method} paid={o.payment_status === 'paid'} ref={o.payment_ref} rejected={o.payment_rejected_ref} cancelled={o.status === 'cancelled'} /><strong>{rupees(o.total)}</strong></div>
+      <PaymentCheck o={o} onUpdate={onUpdate} />
       <div className="bill-actions">
         <MA className="btn btn-wa btn-sm" target="_blank" rel="noopener" href={whatsappBill(staffBill(o), o.customer_phone)}>Send bill on WhatsApp</MA>
         <MButton type="button" className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(billText(staffBill(o)))}>Copy bill</MButton>
@@ -447,7 +491,7 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
           </div>
           <div className="panel-actions">
             {next && <MButton className="btn btn-gold" onClick={() => onUpdate({ status: next[0] })}>{next[1]}</MButton>}
-            {o.payment_status !== 'paid' && <MButton className="btn btn-ghost" onClick={() => onUpdate({ payment_status: 'paid' })}>Mark paid</MButton>}
+            {o.payment_status !== 'paid' && !o.payment_ref && <MButton className="btn btn-ghost" onClick={() => onUpdate({ payment_status: 'paid' })}>Mark paid</MButton>}
             {!confirmCancel ? (
               <MButton className="btn btn-danger" onClick={() => setConfirmCancel(true)}>Cancel order</MButton>
             ) : (

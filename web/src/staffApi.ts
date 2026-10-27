@@ -34,6 +34,7 @@ export interface StaffOrder {
   payment_method: 'cash' | 'online'
   payment_status: 'pending' | 'paid' | 'refunded'
   payment_ref?: string | null
+  payment_rejected_ref?: string | null
   source: 'web' | 'app' | 'counter'
   subtotal: number
   delivery_fee: number
@@ -188,6 +189,8 @@ export async function voiceNoteUrl(orderId: string): Promise<string> {
 
 export type RiderAction = 'take' | 'leave' | 'start' | 'delivered'
 
+export type OrderChange = { status?: string; prep_minutes?: number; payment_status?: string; payment_not_received?: boolean }
+
 export const staffApi = {
   riderOrders: () => call<{ orders: StaffOrder[] }>('GET', '/v1/delivery/orders'),
   riderAction: (id: string, action: RiderAction, cash_collected = false) => call<StaffOrder>('POST', `/v1/delivery/orders/${id}`, { action, cash_collected }),
@@ -196,7 +199,7 @@ export const staffApi = {
   updateRider: (id: string, u: { active?: boolean; password?: string }) => call<StaffAccount>('PATCH', `/v1/owner/riders/${id}`, u),
   orders: (all: boolean) =>
     call<{ orders: StaffOrder[]; server_time: string }>('GET', `/v1/owner/orders?status=${all ? 'all' : 'active'}`),
-  updateOrder: (id: string, u: { status?: string; prep_minutes?: number; payment_status?: string }) =>
+  updateOrder: (id: string, u: OrderChange) =>
     call<StaffOrder>('PATCH', `/v1/owner/orders/${id}`, u),
   menu: () => call<{ categories: MenuCategoryAdmin[] }>('GET', '/v1/owner/menu'),
   updateItem: (id: string, u: ItemInput) => call<null>('PATCH', `/v1/owner/menu/items/${encodeURIComponent(id)}`, u),
