@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform, type Variants } from 'motion/react'
 import { alive, ease, MA, MButton, Reveal, spring, stagger } from './motion'
 import { business, media } from './menu'
 import { registerOffers, useCart } from './cart'
-import { useMyOrders } from './orders'
+import { useMyOrders, useStillOpen } from './orders'
 import { useShop } from './shop'
 import Embers from './Embers'
 import Menu from './Menu'
@@ -66,6 +66,7 @@ export default function App() {
     setView('track')
     setCartOpen(true)
   }
+  const latestOpen = useStillOpen(myOrders.latest)
   const tracked = myOrders.orders.find((o) => o.id === trackId) ?? myOrders.latest
   const heroVideo = useRef<HTMLVideoElement>(null)
   // Some phones ignore autoPlay unless muted is set on the element itself; nudge it once.
@@ -262,7 +263,7 @@ export default function App() {
         </div>
       </footer>
 
-      {cart.count === 0 && !cartOpen && myOrders.latest && (
+      {cart.count === 0 && !cartOpen && myOrders.latest && latestOpen && (
         <motion.button className="cart-bar track-bar" onClick={() => openTracker()} style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
           <span className="live-dot" aria-hidden="true" />
           <span>Order #{myOrders.latest.number}</span>

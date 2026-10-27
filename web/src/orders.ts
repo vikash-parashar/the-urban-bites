@@ -86,3 +86,39 @@ export function useNow(active: boolean) {
   }, [active])
   return now
 }
+
+const DONE_KEY = 'ub-done-orders'
+function doneIds(): string[] {
+  try { return JSON.parse(localStorage.getItem(DONE_KEY) || '[]') as string[] } catch { return [] }
+}
+
+// useStillOpen says whether an order is still on its way (so the "Track it" bar is worth showing).
+// It checks every 30 s and remembers finished orders, so a delivered or cancelled one never comes back.
+export function useStillOpen(order: PlacedOrder | undefined) {
+  const [open, setOpen] = useState<boolean | null>(null)
+  useEffect(() => {
+    setOpen(null)
+    if (!order) return
+    if (doneIds().includes(order.id)) { setOpen(false); return }
+    let stop = false
+    let timer = 0
+    const tick = async () => {
+      try {
+        const t = await trackOrder(order)
+        if (stop) return
+        if (DONE.has(t.status)) {
+          setOpen(false)
+          try { localStorage.setItem(DONE_KEY, JSON.stringify([order.id, ...doneIds()].slice(0, 20))) } catch { /* blocked */ }
+          return
+        }
+        setOpen(true)
+      } catch {
+        if (!stop) setOpen((o) => o ?? true) // offline: keep the bar so they can still open the tracker
+      }
+      timer = window.setTimeout(tick, 30_000)
+    }
+    tick()
+    return () => { stop = true; clearTimeout(timer) }
+  }, [order?.id])
+  return open === true
+}
