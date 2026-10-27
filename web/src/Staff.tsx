@@ -12,7 +12,7 @@ import { brand } from './brand'
 import Wordmark from './Wordmark'
 import { OrderTag, PaymentTag } from './Tags'
 import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
-import { greetOnce, say, sayFun } from './voice'
+import { firstName, greetOnce, say, sayFun, sayText, spokenNumber } from './voice'
 import { audio, loadPrefs, ring } from './sounds'
 import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
@@ -191,14 +191,19 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
     setOrders(r.orders)
     const arrived = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
     if (arrived.length && soundRef.current) {
-      ring('new'); setTimeout(() => say('staff_new_order', true), 1600)
+      ring('new')
+      setTimeout(() => {
+        say('staff_new_order', true)
+        // Then each new order by number and name: "ऑर्डर नंबर 10 42, रमेश जी का, डिलीवरी"
+        arrived.slice(0, 3).forEach((o) => sayText(`ऑर्डर नंबर ${spokenNumber(o.number)}, ${firstName(o.customer_name)} जी का, ${o.fulfilment === 'delivery' ? 'डिलीवरी' : 'पिकअप'}।`, true))
+      }, 1600)
       // A busy rush (4+ orders open): a cheeky "have a sip of chai" every 20 minutes at most.
       const open = r.orders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length
       if (open >= 4) setTimeout(() => sayFun('rush', ['staff_rush'], 20 * 60_000), 1200)
     }
     // A customer cancelled an order Manjeet already saw: tell him so he doesn't start making it.
     const dropped = r.orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer' && lastStatus.current.has(o.id) && lastStatus.current.get(o.id) !== 'cancelled')
-    if (dropped.length && soundRef.current) { ring('cancelled'); setTimeout(() => say('staff_cancelled', true), 1400) }
+    if (dropped.length && soundRef.current) { ring('cancelled'); setTimeout(() => { say('staff_cancelled', true); dropped.slice(0, 3).forEach((o) => sayText(`ऑर्डर नंबर ${spokenNumber(o.number)}, ${firstName(o.customer_name)} जी का, कैंसिल हो गया।`, true)) }, 1400) }
     lastStatus.current = new Map(r.orders.map((o) => [o.id, o.status]))
     const waiting = r.orders.filter((o) => o.status === 'placed').length
     document.title = waiting ? `(${waiting}) New order${waiting > 1 ? 's' : ''} · ${brand.name}` : `Orders · ${brand.name}`

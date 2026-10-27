@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { cookingKey, say, setVoiceOn, voiceOn, type VoiceKey } from './voice'
+import { cookingKey, firstName, say, sayText, setVoiceOn, spokenNumber, voiceOn, type VoiceKey } from './voice'
+import { play } from './sounds'
 import type { OrderStatus, PlacedOrder } from './api'
 import { isPreview, cancelOrder } from './api'
 import { useNow, useTracking } from './orders'
@@ -116,7 +117,17 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
     const first = said.length === 0 && !fresh
     const todo = events.filter(([k]) => !said.includes(k))
     // Opening an old order later: remember its state quietly instead of reading it all out.
-    if (!first) todo.slice(-2).forEach(([, key]) => say(key))
+    if (!first) {
+      todo.slice(-2).forEach(([, key]) => say(key))
+      // Then the customer's own order number, like a counter calling it out. Ready gets a ding and a buzz first.
+      const n = spokenNumber(order.number)
+      const last = todo[todo.length - 1]?.[0]
+      if (last === 'ready') {
+        play('kitchen', 'loud'); try { navigator.vibrate?.([300, 150, 300]) } catch { /* not supported */ }
+        sayText(`ऑर्डर नंबर ${n}, ${firstName(order.customer_name)} जी, थारा ऑर्डर तैयार सै!`)
+      } else if (last === 'placed') sayText(`थारा ऑर्डर नंबर ${n} सै जी।`)
+      else if (last === 'out') { play('kitchen', 'normal'); sayText(`ऑर्डर नंबर ${n} रास्ते में सै।`) }
+    }
     try { sessionStorage.setItem(memo, JSON.stringify([...said, ...todo.map(([k]) => k)])) } catch { /* blocked */ }
   }, [data, status, cooking, delivery0, order.id, order.placed_at])
   const now = useNow(cooking && !!data?.ready_at) + clockOffset

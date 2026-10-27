@@ -83,6 +83,26 @@ export function say(key: VoiceKey, force = false) {
   })
 }
 
+/** sayText reads a line that changes every time (order number, customer name) with the phone's
+ *  Hindi voice, queued after any clip that is playing. */
+export function sayText(text: string, force = false) {
+  if (!force && !voiceOn()) return
+  queue = queue.then(async () => {
+    window.dispatchEvent(new CustomEvent('ub-voice', { detail: true }))
+    await speakText(text)
+    window.dispatchEvent(new CustomEvent('ub-voice', { detail: false }))
+  })
+}
+
+/** spokenNumber reads 1042 the way counters call it out: "10 42" (दस बयालीस). */
+export function spokenNumber(n: number | string) {
+  const s = String(n)
+  return s.length === 4 ? `${s.slice(0, 2)} ${s.slice(2)}` : s
+}
+
+/** firstName keeps the first word of a customer's name, for "Ramesh ji". */
+export const firstName = (name?: string | null) => (name ?? '').trim().split(/\s+/)[0] || 'ग्राहक'
+
 /** greetOnce says a greeting once a day per browser, at the visitor's first tap or key press
  *  (browsers block sound before that). */
 export function greetOnce(key: VoiceKey, pick?: () => VoiceKey) {
