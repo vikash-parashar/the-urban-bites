@@ -20,17 +20,21 @@ async def main(force: bool) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     seen = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
     made = 0
+    recorded = set(data.get("recorded", []))  # real human recordings: never overwrite
     for key, line in data["lines"].items():
-        voice = data["voices"][line["voice"]]
-        sig = hashlib.sha1(f"{voice}|{RATE}|{line['text']}".encode()).hexdigest()
+        if key in recorded:
+            continue
+        voice, _, pitch = data["voices"][line["voice"]].partition("|")
+        pitch = pitch or "+0Hz"
+        sig = hashlib.sha1(f"{voice}|{pitch}|{RATE}|{line['text']}".encode()).hexdigest()
         path = OUT / f"{key}.mp3"
         if not force and seen.get(key) == sig and path.exists():
             continue
-        await edge_tts.Communicate(line["text"], voice, rate=RATE).save(str(path))
+        await edge_tts.Communicate(line["text"], voice, rate=RATE, pitch=pitch).save(str(path))
         seen[key] = sig
         made += 1
         print(f"recorded {key} ({voice})")
-    for stale in set(seen) - set(data["lines"]):
+    for stale in set(seen) - set(data["lines"]) - recorded:
         (OUT / f"{stale}.mp3").unlink(missing_ok=True)
         del seen[stale]
     MANIFEST.write_text(json.dumps(seen, indent=2, sort_keys=True) + "\n")

@@ -1,7 +1,7 @@
 {
-  "_note": "Every spoken line on the site, in Haryanvi. Edit a line here and push: the 'Voice clips' GitHub Action records it again with a natural neural voice into public/voice/hr/<key>.mp3.",
+  "_note": "Every spoken line on the site, in Haryanvi. Edit a line here and push: the 'Voice clips' GitHub Action records it again with a natural neural voice into public/voice/hr/<key>.mp3. A voice can carry a pitch after '|', e.g. 'hi-IN-MadhurNeural|-8Hz'. Real recordings: list their keys in 'recorded' and the Action leaves those files alone.",
   "voices": {
-    "customer": "hi-IN-SwaraNeural",
+    "customer": "hi-IN-MadhurNeural|-8Hz",
     "staff": "hi-IN-MadhurNeural"
   },
   "lines": {
@@ -141,5 +141,6 @@
       "text": "भाई जी, आज तो ऑर्डर पै ऑर्डर आ रे सैं! एक घूंट चाय का ले ल्यो, फेर लाग ज्याओ।",
       "voice": "staff"
     }
-  }
+  },
+  "recorded": []
 }
