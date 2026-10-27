@@ -371,6 +371,8 @@ export function Riders({ onSignedOut }: { onSignedOut: () => void }) {
       <p className="menu-sub">Each rider gets their own login. They only see delivery orders, the customer's location and the map, nothing else.</p>
       {error && <p className="error" role="alert">{error}</p>}
       {msg && <p className="upi-sent" role="status">{msg}</p>}
+      <div className="riders-cols">
+      <div className="riders-list">
       {sorted.map((u) => (
         <div key={u.id} className={`me-row ${u.active ? '' : 'off'}`}>
           <span className="me-name"><strong>{u.name}</strong> {!u.active && <span className="tag tag-neutral">Switched off</span>}{u.must_change_password && <span className="tag-chip">Temporary password</span>}<br />
@@ -381,7 +383,8 @@ export function Riders({ onSignedOut }: { onSignedOut: () => void }) {
           </span>
         </div>
       ))}
-      {list.length === 0 && <p className="menu-sub">No delivery partners yet.</p>}
+      {list.length === 0 && <p className="menu-sub riders-none">No delivery partners yet. Add the first one here.</p>}
+      </div>
       <form className="panel rider-add" onSubmit={add}>
         <h3 className="panel-h">Add a delivery partner</h3>
         <label className="field" htmlFor="rd-name">Name<input id="rd-name" name="name" required maxLength={40} placeholder="Raju" /></label>
@@ -389,6 +392,7 @@ export function Riders({ onSignedOut }: { onSignedOut: () => void }) {
         <label className="field" htmlFor="rd-pw">Temporary password<input id="rd-pw" name="password" required minLength={10} placeholder="At least 10 characters" /></label>
         <MButton className="btn btn-gold">Create login</MButton>
       </form>
+      </div>
     </div>
   )
 }

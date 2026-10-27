@@ -2032,3 +2032,111 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .scene-bar i { display: block; height: 100%; background: var(--gold); transform-origin: left center; }
 :root[data-theme='pop'] .scene-art { border-color: #141414; box-shadow: 4px 4px 0 #141414; }
 :root[data-theme='pop'] .scene-time { color: #c2185b; }
+
+/* ---------- Alignment pass (2026-10-27, from Vikash's screenshots) ---------- */
+/* Staff header: one tidy row; tabs scroll instead of pushing the name and buttons to a second line. */
+@media (min-width: 761px) {
+  .staff-bar { flex-wrap: nowrap; gap: 12px 16px; }
+  .staff-tabs { flex: 1 1 auto; min-width: 0; scrollbar-width: none; }
+  .staff-tabs::-webkit-scrollbar { display: none; }
+  .staff-bar .help-btn { margin-left: 0; flex: 0 0 auto; }
+  .staff-who { flex: 0 0 auto; gap: 8px; }
+  .staff-who > span { white-space: nowrap; }
+}
+/* Tablets (Manjeet's screen): Password / Sign out move into the round account button so every tab fits. */
+@media (min-width: 761px) and (max-width: 1240px) {
+  .staff-who { display: none; }
+  .staff-acct { display: block; position: relative; flex: 0 0 auto; }
+  .help-btn { width: 40px; padding: 0; justify-content: center; }
+  .help-btn .help-txt { display: none; }
+  .staff-tabs .tab { padding: 8px 12px; }
+}
+@media (max-width: 1279px) { .today { grid-template-columns: 1fr; } }
+/* Every tab the same height; the selected one is filled, never lifted out of line. */
+.staff-tabs { align-items: center; }
+.staff-tabs .tab { min-height: 42px; display: inline-flex; align-items: center; border-width: 1.5px; }
+.staff-tabs .tab > span { display: inline-flex; align-items: center; white-space: nowrap; }
+.staff-tabs .tab[aria-selected='true'] { box-shadow: none; outline: none; }
+
+/* Every owner/admin screen uses the same content width and left edge. */
+.staff-main > * { width: 100%; }
+.rider, .riders { max-width: none; }
+
+/* Orders: heading on the left, "Show done" and "Sound on" together on the right. */
+.board-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 6px; }
+.board-head .staff-h { margin: 0; }
+.board-tools { display: inline-flex; align-items: center; gap: 12px; }
+.alert-row { display: flex; align-items: center; gap: 10px; min-height: 36px; margin-bottom: 8px; }
+.alert-row .new-alert { flex: 1 1 auto; }
+/* Filter chips line up as an even grid instead of a ragged wrap. */
+.order-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.order-filters .size { justify-content: space-between; width: 100%; }
+/* Stat tiles: same height, icon and text centred the same way. */
+.today-kpis { align-items: stretch; }
+.kpi-tile { min-height: 84px; align-content: center; }
+.kpi-tile small { min-height: 1.1em; }
+
+/* Walk-in: Save button sits under the customer card on wide screens; dish list fades at the bottom edge. */
+@media (min-width: 960px) {
+  .walkin { grid-template-columns: 320px 1fr; grid-template-rows: auto 1fr; grid-template-areas: 'who items' 'save items'; align-items: start; }
+  .walkin > .walkin-who { grid-area: who; }
+  .walkin > .walkin-items { grid-area: items; }
+  .walkin > .walkin-save { grid-area: save; align-self: start; justify-self: stretch; width: 100%; }
+  .walkin > .btn { grid-column: auto; }
+}
+.walkin-save { min-height: 50px; }
+.walkin-grid { padding-bottom: 12px; -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent); mask-image: linear-gradient(#000 calc(100% - 28px), transparent); }
+.field > span:first-child .opt { margin-left: 6px; }
+
+/* Riders: list on the left, "Add a delivery partner" on the right, both full height of the page width. */
+.riders-cols { display: grid; gap: 16px; }
+.riders-list { display: grid; gap: 10px; align-content: start; }
+.riders-none { padding: 18px; border-radius: 14px; border: 1px dashed var(--line); margin: 0; }
+.rider-add { max-width: none; }
+@media (min-width: 960px) { .riders-cols { grid-template-columns: minmax(0, 1fr) 400px; align-items: start; } }
+.me-row { justify-content: space-between; }
+
+/* Cart drawer: a plain edge, no neon glow. */
+.drawer { border-left: 1px solid var(--line); box-shadow: -24px 0 60px -30px rgba(0, 0, 0, 0.8); }
+
+/* Logo: no pink glow on "URBAN" (staff screens, password screen, footer). */
+.wm-urban { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+
+/* Tracker: Pay bill box (cash at the counter or UPI) */
+.paybox { display: grid; gap: 12px; padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--ink); }
+.paybox-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.paybox-head h3 { margin: 0; font-size: 1.1rem; }
+.paybox-head b { font-size: 1.3rem; }
+.paybox-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.paybox-opt { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px; min-height: 64px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--night); color: var(--cream); font: inherit; cursor: pointer; }
+.paybox-opt i { font-style: normal; font-size: 1.5rem; }
+.paybox-opt span { display: grid; gap: 2px; min-width: 0; }
+.paybox-opt small { color: var(--muted); font-size: 0.8rem; }
+.paybox-opt.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--night)); }
+.paybox-opt:disabled:not(.on) { opacity: 0.5; cursor: not-allowed; }
+.paybox-note { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.paybox .upi { margin: 0; }
+.paybox-paid { margin: 0; padding: 12px 16px; border-radius: 14px; font-weight: 800; color: var(--good, #22c55e); border: 1px solid color-mix(in srgb, var(--good, #22c55e) 45%, transparent); background: color-mix(in srgb, var(--good, #22c55e) 10%, transparent); }
+:root[data-theme="pop"] .paybox, :root[data-theme="pop"] .paybox-opt { background: #fff; border: 2px solid #111; color: #111; }
+:root[data-theme="pop"] .paybox-opt.on { background: #ffe9a8; }
+.paybox .upi { border: 0; padding: 0; background: none; box-shadow: none; }
+
+/* Account button + menu: also used on tablets */
+.acct-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--cream);
+  font-weight: 800; font-size: 1rem; display: grid; place-items: center; cursor: pointer;
+}
+.acct-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 57; min-width: 220px;
+  display: grid; padding: 6px; border-radius: 14px; background: var(--ink); border: 1px solid var(--line);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+}
+.acct-who { display: grid; gap: 2px; padding: 10px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.acct-who span { color: var(--muted); font-size: 0.85rem; font-weight: 700; }
+.acct-menu button, .more-sheet button {
+  display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--cream); font: inherit; font-weight: 700; text-align: left; cursor: pointer;
+}
+.acct-menu button:active, .more-sheet button:active { background: color-mix(in srgb, var(--cream) 8%, transparent); }
+.rider-add .panel-h { margin-top: 0; }

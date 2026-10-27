@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import QRCode from 'qrcode'
-import { sendPaymentRef, type PlacedOrder, type Tracking } from './api'
+import { sendPaymentRef, setPayMethod, type PlacedOrder, type Tracking } from './api'
 import { lookup, unitPrice } from './cart'
 import { rupees } from './menu'
 import { billText, checkUpiRef, itemKind, upiLink, whatsappBill, type Bill } from './kit'
@@ -83,6 +83,47 @@ export function UpiPay({ shop, order, amount, sentRef, rejectedRef, onSent }: { 
         </>
       )}
     </div>
+  )
+}
+
+// PayBillBox: on an open, unpaid order the customer picks how to pay: cash at the counter (or on
+// delivery) or UPI. The choice goes to the owner's screen; the owner marks it paid, and this page follows.
+export function PayBillBox({ shop, order, data, onChange }: { shop: Shop; order: PlacedOrder; data: Tracking; onChange: () => void }) {
+  const method = data.payment_method ?? order.payment_method
+  const upiReady = !!shop.upi_id && shop.accept_upi
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const delivery = order.fulfilment === 'delivery'
+  const cashLabel = delivery ? 'Cash on delivery' : 'Cash at counter'
+
+  async function pick(m: 'cash' | 'online') {
+    if (m === method || busy) return
+    setBusy(true); setErr('')
+    try { await setPayMethod(order, m); onChange() } catch (e) { setErr(e instanceof Error ? e.message : 'Could not change it. Try again.') } finally { setBusy(false) }
+  }
+
+  return (
+    <section className="paybox" aria-labelledby="paybox-h">
+      <div className="paybox-head">
+        <h3 id="paybox-h">🧾 Pay bill</h3>
+        <b>{rupees(data.total)}</b>
+      </div>
+      <div className="paybox-opts" role="radiogroup" aria-label="How will you pay?">
+        <button type="button" role="radio" aria-checked={method === 'cash'} className={`paybox-opt ${method === 'cash' ? 'on' : ''}`} onClick={() => pick('cash')} disabled={busy}>
+          <i aria-hidden="true">💵</i><span><strong>{cashLabel}</strong><small>{delivery ? 'Give it to the rider' : 'Pay when you collect'}</small></span>
+        </button>
+        <button type="button" role="radio" aria-checked={method === 'online'} className={`paybox-opt ${method === 'online' ? 'on' : ''}`} onClick={() => pick('online')} disabled={busy || !upiReady}>
+          <i aria-hidden="true">📲</i><span><strong>UPI</strong><small>{upiReady ? 'GPay, PhonePe, Paytm' : 'Not set up yet'}</small></span>
+        </button>
+      </div>
+      {err && <p className="error" role="alert">{err}</p>}
+      {method === 'cash' && (
+        <p className="paybox-note">Pay {rupees(data.total)} {delivery ? 'to the rider' : 'at the counter'}. The cart marks it paid and this page turns green on its own.</p>
+      )}
+      {method === 'online' && upiReady && (
+        <UpiPay shop={shop} order={order} amount={data.total} sentRef={data.payment_ref} rejectedRef={data.payment_rejected_ref} onSent={onChange} />
+      )}
+    </section>
   )
 }
 

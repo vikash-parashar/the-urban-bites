@@ -79,7 +79,7 @@ export default function StaffApp({ hash }: { hash: string }) {
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
           {tabs.map(([id, label, emoji]) => (
-            <MButton key={id} role="tab" aria-selected={shown === id} className="tab" data-tour={id} onClick={() => setTab(id)}>
+            <MButton key={id} role="tab" aria-selected={shown === id} className="tab" data-tour={id} onClick={() => setTab(id)} whileHover={{ y: 0, scale: 1 }}>
               <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}{id === 'orders' && feed.newCount > 0 && <b className="tab-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}</span>
             </MButton>
           ))}
@@ -112,14 +112,14 @@ export default function StaffApp({ hash }: { hash: string }) {
         </div>
       </header>
       <main className="staff-main">
-        {!isRider && tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
-        {shown === 'deliveries' && <RiderBoard onSignedOut={onSignedOut} meId={user.id} />}
-        {!isRider && shown === 'riders' && <Riders onSignedOut={onSignedOut} />}
         {!isRider && tab !== 'orders' && feed.newCount > 0 && (
           <MButton className="new-alert new-alert-top" onClick={() => setTab('orders')}>
             🔔 {feed.newCount === 1 ? '1 new order' : `${feed.newCount} new orders`} waiting · open Orders
           </MButton>
         )}
+        {!isRider && tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
+        {shown === 'deliveries' && <RiderBoard onSignedOut={onSignedOut} meId={user.id} />}
+        {!isRider && shown === 'riders' && <Riders onSignedOut={onSignedOut} />}
         {!isRider && tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} name={user.name} goTo={setTab} />}
         {!isRider && tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
         {!isRider && tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
@@ -268,7 +268,12 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
       <div className="board-list">
         <div className="board-head">
           <h2 className="staff-h">{all ? 'All orders' : 'Open orders'}</h2>
-          <label className="check"><input id="show-all" type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show done</label>
+          <div className="board-tools">
+            <label className="check"><input id="show-all" type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show done</label>
+            <MButton className={`btn btn-ghost btn-sm sound-btn ${sound ? '' : 'is-off'}`} onClick={() => setSound(!sound)} aria-pressed={sound}>
+              {sound ? '🔔 Sound on' : '🔕 Sound off'}
+            </MButton>
+          </div>
         </div>
         {orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer').slice(0, 3).map((o) => (
           <MButton key={o.id} className="cancel-alert" onClick={() => setSelected(o.id)}>
@@ -283,9 +288,6 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
           ) : (
             <span className="menu-sub">No new orders waiting.</span>
           )}
-          <MButton className={`btn btn-ghost btn-sm sound-btn ${sound ? '' : 'is-off'}`} onClick={() => setSound(!sound)} aria-pressed={sound}>
-            {sound ? '🔔 Sound on' : '🔕 Sound off'}
-          </MButton>
         </div>
         <div className="order-filters" role="radiogroup" aria-label="Show orders">
           {groups.map(([id, label, f]) => {

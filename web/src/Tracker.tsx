@@ -6,7 +6,7 @@ import { useNow, useTracking } from './orders'
 import { rupees } from './menu'
 import { fetchBadge, type Badge } from './shop'
 import { BadgeResult } from './Extras'
-import { BillCard, UpiPay, billFrom } from './PayBill'
+import { BillCard, PayBillBox, billFrom } from './PayBill'
 import type { Shop } from './shop'
 import { social } from './social'
 import { MA, MButton } from './motion'
@@ -204,8 +204,11 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
           The owner set {data.prep_minutes} minutes for this order. This page updates on its own.
         </p>
       )}
-      {shop.upi_id && data && data.status !== 'cancelled' && data.payment_status !== 'paid' && (data.payment_method ?? order.payment_method) === 'online' && (
-        <UpiPay shop={shop} order={order} amount={data.total} sentRef={data.payment_ref} rejectedRef={data.payment_rejected_ref} onSent={refresh} />
+      {data && data.status !== 'cancelled' && data.payment_status !== 'paid' && (
+        <PayBillBox shop={shop} order={order} data={data} onChange={refresh} />
+      )}
+      {data && data.payment_status === 'paid' && data.status !== 'cancelled' && (
+        <p className="paybox-paid" role="status">✅ Bill paid · {rupees(data.total)} {(data.payment_method ?? order.payment_method) === 'online' ? 'by UPI' : 'in cash'}. Thank you!</p>
       )}
       {finished && social.googleReview && (
         <div className="tracker-review">

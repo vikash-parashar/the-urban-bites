@@ -923,6 +923,26 @@ func (s *Store) SetPaymentRef(ctx context.Context, id, ref string) error {
 	if sameAsRejected {
 		return fmt.Errorf("%w: the owner checked this reference and the payment hasn't arrived. Check the number in your UPI app, or call the cart", ErrInvalid)
 	}
-	_, err = s.db.Exec(ctx, `UPDATE orders SET payment_ref = $2, payment_rejected_ref = NULL, updated_at = now() WHERE id = $1 AND payment_status <> 'paid'`, id, ref)
+	// Sending a UPI reference means they paid by UPI, even if the order was placed as cash.
+	_, err = s.db.Exec(ctx, `UPDATE orders SET payment_ref = $2, payment_rejected_ref = NULL, payment_method = 'online', updated_at = now() WHERE id = $1 AND payment_status <> 'paid'`, id, ref)
 	return err
+}
+
+// SetPaymentMethodByCustomer lets the customer switch an unpaid, open order between cash at the
+// counter (or on delivery) and UPI from the tracking page. Switching to cash drops an unchecked UPI ref.
+func (s *Store) SetPaymentMethodByCustomer(ctx context.Context, id, method string) error {
+	if method != "cash" && method != "online" {
+		return fmt.Errorf("%w: pay by cash or UPI", ErrInvalid)
+	}
+	tag, err := s.db.Exec(ctx, `UPDATE orders SET payment_method = $2::payment_method,
+		payment_ref = CASE WHEN $2::payment_method = 'cash' THEN NULL ELSE payment_ref END,
+		updated_at = now()
+		WHERE id = $1 AND payment_status <> 'paid' AND status NOT IN ('cancelled', 'completed')`, id, method)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("%w: this order is already paid or closed", ErrConflict)
+	}
+	return nil
 }

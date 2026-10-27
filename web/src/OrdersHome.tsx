@@ -51,6 +51,7 @@ export function TodayStrip({ name, orders, goTo }: { name: string; orders: Staff
           <i aria-hidden="true">{shop && !shop.accepting_orders ? '⏸️' : '🟢'}</i>
           <span>Website orders</span>
           <b>{!shop ? '…' : shop.accepting_orders ? 'Open' : 'Paused'}</b>
+          <small>{!shop ? '' : shop.accepting_orders ? 'taking orders' : 'tap to open again'}</small>
         </MButton>
         <MButton className="kpi-tile" onClick={() => goTo('dashboard')}>
           <i aria-hidden="true">💰</i>

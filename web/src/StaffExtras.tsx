@@ -114,8 +114,8 @@ export function WalkIn({ onSignedOut }: { onSignedOut: () => void }) {
       )}
       <form className="walkin" onSubmit={save}>
         <div className="walkin-who">
-          <label className="field" htmlFor="wi-phone">Customer phone <span className="opt">for the badge</span><span className="phone-in"><span className="cc" aria-hidden="true">+91</span><input id="wi-phone" name="phone" inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}" title="10-digit mobile starting with 6, 7, 8 or 9" placeholder="98765 43210" onInput={(e) => { e.currentTarget.value = cleanMobile(e.currentTarget.value) }} /></span></label>
-          <label className="field" htmlFor="wi-name">Name <span className="opt">optional</span><input id="wi-name" name="name" /></label>
+          <label className="field" htmlFor="wi-phone"><span>Customer phone <span className="opt">for the badge</span></span><span className="phone-in"><span className="cc" aria-hidden="true">+91</span><input id="wi-phone" name="phone" inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}" title="10-digit mobile starting with 6, 7, 8 or 9" placeholder="98765 43210" onInput={(e) => { e.currentTarget.value = cleanMobile(e.currentTarget.value) }} /></span></label>
+          <label className="field" htmlFor="wi-name"><span>Name <span className="opt">optional</span></span><input id="wi-name" name="name" /></label>
           <fieldset className="seg">
             <legend>Paid by</legend>
             {(['cash', 'online'] as const).map((v) => (
@@ -149,7 +149,7 @@ export function WalkIn({ onSignedOut }: { onSignedOut: () => void }) {
           )}
         </div>
 
-        <MButton className="btn btn-gold" disabled={picked.length === 0 && !(parseInt(amount, 10) > 0)}>
+        <MButton className="btn btn-gold walkin-save" disabled={picked.length === 0 && !(parseInt(amount, 10) > 0)}>
           Save sale · {rupees(picked.length ? itemsTotal : parseInt(amount, 10) || 0)}
         </MButton>
       </form>

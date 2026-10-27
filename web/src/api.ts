@@ -101,6 +101,21 @@ export async function cancelOrder(o: PlacedOrder): Promise<void> {
   }
 }
 
+// setPayMethod: the customer chooses cash at the counter (or on delivery) or UPI for an open order.
+export async function setPayMethod(o: PlacedOrder, method: 'cash' | 'online'): Promise<void> {
+  if (!API_URL) return
+  const res = await fetch(`${API_URL}/v1/orders/${o.id}/pay-method`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ t: o.track_token, method }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    const msg: string = body.error ?? `Couldn't change it (error ${res.status}). Please call the cart.`
+    throw new Error(sentence(msg.charAt(0).toUpperCase() + msg.slice(1)))
+  }
+}
+
 export const sentence = (s: string) => (/[.!?]$/.test(s) ? s : `${s}.`)
 
 export async function placeOrder(req: OrderRequest, cartTotal: number, lines: CartLine[]): Promise<PlacedOrder> {

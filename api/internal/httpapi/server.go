@@ -65,6 +65,7 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/orders/{id}", s.trackOrder)
 		r.Get("/orders/{id}/favourites", s.favourites)
 		r.Post("/orders/{id}/payment", s.paymentRef)
+		r.Post("/orders/{id}/pay-method", s.payMethod)
 		r.Post("/orders/{id}/cancel", s.customerCancel)
 		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
 		r.Get("/shop", s.getShop)
@@ -546,6 +547,32 @@ func (s *Server) customerCancel(w http.ResponseWriter, r *http.Request) {
 }
 
 // paymentRef saves the UPI reference number a customer enters after paying from a UPI app.
+// payMethod: the customer picks cash at the counter or UPI for an order that is still open.
+func (s *Server) payMethod(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token  string `json:"t"`
+		Method string `json:"method"`
+	}
+	if err := decode(r, &in); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	o, err := s.Store.Order(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(in.Token), []byte(o.TrackToken)) != 1 {
+		writeErr(w, r, store.ErrNotFound)
+		return
+	}
+	if err := s.Store.SetPaymentMethodByCustomer(r.Context(), o.ID, in.Method); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) paymentRef(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Token string `json:"t"`
