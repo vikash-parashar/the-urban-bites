@@ -12,7 +12,7 @@ import { brand } from './brand'
 import Wordmark from './Wordmark'
 import { OrderTag, PaymentTag } from './Tags'
 import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
-import { say } from './voice'
+import { greetOnce, say } from './voice'
 import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
 import Tour, { ownerSteps } from './Tour'
@@ -41,6 +41,9 @@ export default function StaffApp({ hash }: { hash: string }) {
     try { seen = localStorage.getItem(`ub-tour-${user.id}`) === '1' } catch { /* private mode */ }
     if (!seen) setTouring(true)
   }, [ownerReady, user])
+  // "Ram Ram ji" once a day when staff open the area.
+  const signedIn = !!user && !user.must_change_password
+  useEffect(() => (signedIn ? greetOnce('staff_welcome') : undefined), [signedIn])
 
   if (hash.startsWith('#staff/reset')) {
     const token = new URLSearchParams(hash.split('?')[1] ?? '').get('token') ?? ''

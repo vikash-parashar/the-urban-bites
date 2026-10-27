@@ -1,0 +1,93 @@
+{
+  "_note": "Every spoken line on the site, in Haryanvi. Edit a line here and push: the 'Voice clips' GitHub Action records it again with a natural neural voice into public/voice/hr/<key>.mp3.",
+  "voices": {
+    "customer": "hi-IN-SwaraNeural",
+    "staff": "hi-IN-MadhurNeural"
+  },
+  "lines": {
+    "placed": {
+      "text": "राम राम जी! द अर्बन बाइट्स पै ऑर्डर करण खातर घणा धन्यवाद। थारा ऑर्डर मिल ग्या सै, सारी खबर इसे पेज पै मिलती रहवैगी।",
+      "voice": "customer"
+    },
+    "cooking": {
+      "text": "थारा ऑर्डर बण रह्या सै। थोड़ी देर म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "cooking_5": {
+      "text": "थारा ऑर्डर बण रह्या सै। बस पाँच मिनट म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "cooking_10": {
+      "text": "थारा ऑर्डर बण रह्या सै। बस दस मिनट म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "cooking_15": {
+      "text": "थारा ऑर्डर बण रह्या सै। पंद्रह मिनट म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "cooking_20": {
+      "text": "थारा ऑर्डर बण रह्या सै। बीस मिनट म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "cooking_30": {
+      "text": "थारा ऑर्डर बण रह्या सै। आध घंटे म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "cooking_45": {
+      "text": "थारा ऑर्डर बण रह्या सै। पैंतालीस मिनट म्है तैयार हो ज्यागा।",
+      "voice": "customer"
+    },
+    "ready_pickup": {
+      "text": "राम राम जी, थारा ऑर्डर तैयार सै! आ कै ले ज्याओ।",
+      "voice": "customer"
+    },
+    "ready_delivery": {
+      "text": "थारा ऑर्डर पैक हो ग्या सै, जल्दी ए निकलैगा।",
+      "voice": "customer"
+    },
+    "on_the_way": {
+      "text": "थारा ऑर्डर चाल पड़्या सै! राइडर रस्ते म्है सै, फोन चालू राखियो।",
+      "voice": "customer"
+    },
+    "delivered": {
+      "text": "ऑर्डर पहोंच ग्या! खाणे का मजा ल्यो, अर फेर आइयो। राम राम जी!",
+      "voice": "customer"
+    },
+    "collected": {
+      "text": "ऑर्डर ले लिया! खाणे का मजा ल्यो, अर फेर आइयो। राम राम जी!",
+      "voice": "customer"
+    },
+    "paid": {
+      "text": "राम राम जी, थारी पेमेंट मिल गी सै। घणा धन्यवाद!",
+      "voice": "customer"
+    },
+    "payment_pending": {
+      "text": "पेमेंट अजे बाकी सै। डिलीवरी पै नकद दे दियो या यू पी आई तै भेज दियो।",
+      "voice": "customer"
+    },
+    "cancelled": {
+      "text": "माफ करियो जी, थारा ऑर्डर कैंसिल हो ग्या सै। कोए बात हो तो फोन कर लियो। राम राम!",
+      "voice": "customer"
+    },
+    "staff_new_order": {
+      "text": "राम राम जी, एक नया ऑर्डर आया सै! फोन देख ल्यो।",
+      "voice": "staff"
+    },
+    "rider_new_delivery": {
+      "text": "राम राम जी, डिलीवरी का नया ऑर्डर आया सै! फोन देख ल्यो।",
+      "voice": "staff"
+    },
+    "rider_order_ready": {
+      "text": "ऑर्डर तैयार सै, ले कै निकल ल्यो।",
+      "voice": "staff"
+    },
+    "welcome": {
+      "text": "राम राम जी! द अर्बन बाइट्स पै थारा घणा स्वागत सै। मीनू देख ल्यो, अर जो मन करै, ऑर्डर कर दियो।",
+      "voice": "customer"
+    },
+    "staff_welcome": {
+      "text": "राम राम जी! दुकान का काम शुरू करां। नया ऑर्डर आते ए मैं बता द्यूंगा।",
+      "voice": "staff"
+    }
+  }
+}

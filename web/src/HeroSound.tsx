@@ -78,6 +78,18 @@ export default function HeroSound() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Dip the music while a spoken greeting or order update plays, then bring it back.
+  useEffect(() => {
+    const duck = (e: Event) => {
+      const a = music.current
+      if (!a || !playing.current) return
+      rampTo(a, (e as CustomEvent<boolean>).detail ? 0.12 : MUSIC_VOL, 350)
+    }
+    window.addEventListener('ub-voice', duck)
+    return () => window.removeEventListener('ub-voice', duck)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function toggle() {
     // On but blocked by the browser (not playing yet): a tap on the button starts it.
     const next = !(on && playing.current)

@@ -10,6 +10,7 @@ import Embers from './Embers'
 import Menu from './Menu'
 import CartDrawer from './CartDrawer'
 import Gallery from './Gallery'
+import { greetOnce } from './voice'
 import HeroSound from './HeroSound'
 import FavouritesPopup from './Favourites'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
@@ -70,6 +71,8 @@ export default function App() {
   const tracked = myOrders.orders.find((o) => o.id === trackId) ?? myOrders.latest
   const heroVideo = useRef<HTMLVideoElement>(null)
   // Some phones ignore autoPlay unless muted is set on the element itself; nudge it once.
+  // Haryanvi "Ram Ram ji" welcome, once a day, at the visitor's first tap.
+  useEffect(() => greetOnce('welcome'), [])
   useEffect(() => { const v = heroVideo.current; if (v) { v.muted = true; v.play().catch(() => {}) } }, [])
   const look = useTheme()
 

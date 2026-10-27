@@ -1,0 +1,37 @@
+name: Voice clips
+
+# Records the Haryanvi voice lines (web/voice-lines.json) as MP3s and commits them,
+# so the website plays a natural voice instead of the phone's robot voice.
+on:
+  push:
+    branches: [main]
+    paths: [web/voice-lines.json, scripts/voice_clips.py]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Record every line again
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency: voice-clips
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install edge-tts==7.2.8
+      - run: python scripts/voice_clips.py ${{ inputs.force && '--force' || '' }}
+      - name: Commit clips
+        run: |
+          git add web/public/voice/hr
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Voice clips: record changed lines"
+          git pull --rebase origin main
+          git push origin HEAD:main
