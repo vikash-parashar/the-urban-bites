@@ -12,7 +12,7 @@
     {
       "id": "momos",
       "name": "Momos",
-      "name_hi": "मोमोज आईटम",
+      "name_hi": "मोमोज",
       "items": [
         {
           "id": "momos",
@@ -31,14 +31,14 @@
         {
           "id": "tandoori-momos",
           "name": "Tandoori Momos",
-          "name_hi": "तन्दूरी मोमोज",
+          "name_hi": "तंदूरी मोमोज",
           "full": 120,
           "image": "momos"
         },
         {
           "id": "afghani-momos",
           "name": "Afghani Momos",
-          "name_hi": "अफगानी मोमोज",
+          "name_hi": "अफ़गानी मोमोज",
           "full": 120,
           "image": "momos"
         },
@@ -54,7 +54,7 @@
     {
       "id": "chaap",
       "name": "Chaap",
-      "name_hi": "चाप आईटम",
+      "name_hi": "चाप",
       "items": [
         {
           "id": "gravy-chaap",
@@ -75,7 +75,7 @@
         {
           "id": "tandoori-chaap",
           "name": "Tandoori Chaap",
-          "name_hi": "तन्दूरी चाप",
+          "name_hi": "तंदूरी चाप",
           "full": 230,
           "half": 160,
           "image": "chaap"
@@ -83,7 +83,7 @@
         {
           "id": "lemon-chaap",
           "name": "Lemon Chaap",
-          "name_hi": "लेमन चाप",
+          "name_hi": "नींबू चाप",
           "full": 210,
           "half": 150,
           "image": "chaap"
@@ -99,7 +99,7 @@
         {
           "id": "afghani-chaap",
           "name": "Afghani Chaap",
-          "name_hi": "अफगानी चाप",
+          "name_hi": "अफ़गानी चाप",
           "full": 240,
           "half": 160,
           "image": "chaap"
@@ -109,7 +109,7 @@
     {
       "id": "paneer",
       "name": "Paneer & Sabzi",
-      "name_hi": "सब्जी आईटम",
+      "name_hi": "पनीर व सब्ज़ी",
       "items": [
         {
           "id": "matar-paneer",
@@ -129,8 +129,8 @@
         },
         {
           "id": "butter-paneer-masala",
-          "name": "Butter Paneer Masala",
-          "name_hi": "बटर पनीर मसाला",
+          "name": "Paneer Butter Masala",
+          "name_hi": "पनीर बटर मसाला",
           "full": 240,
           "half": 160,
           "image": "kadhai-paneer"
@@ -138,7 +138,7 @@
         {
           "id": "kadhai-paneer",
           "name": "Kadhai Paneer",
-          "name_hi": "कढ़ाई पनीर",
+          "name_hi": "कड़ाही पनीर",
           "full": 240,
           "half": 160,
           "image": "kadhai-paneer"
@@ -154,7 +154,7 @@
         {
           "id": "paneer-pasanda",
           "name": "Paneer Pasanda",
-          "name_hi": "पनीर पसन्दा",
+          "name_hi": "पनीर पसंदा",
           "full": 240,
           "half": 160,
           "image": "kadhai-paneer"
@@ -176,8 +176,8 @@
       "items": [
         {
           "id": "paneer-chilli",
-          "name": "Paneer Chilli",
-          "name_hi": "पनीर चिल्ली",
+          "name": "Chilli Paneer",
+          "name_hi": "चिली पनीर",
           "full": 270,
           "image": "chilli-paneer"
         },
@@ -200,33 +200,33 @@
     {
       "id": "snacks",
       "name": "Fries & Snacks",
-      "name_hi": "फिंगर आईटम",
+      "name_hi": "फ्राइज़ व नमकीन",
       "items": [
         {
           "id": "finger-chips",
-          "name": "Finger Chips",
+          "name": "French Fries",
           "name_hi": "फिंगर चिप्स",
           "full": 90,
           "image": "fries"
         },
         {
           "id": "finger-chilli",
-          "name": "Finger Chilli",
-          "name_hi": "फिंगर चिली",
+          "name": "Chilli Fries",
+          "name_hi": "चिली फिंगर चिप्स",
           "full": 160,
           "image": "honey-chilli"
         },
         {
           "id": "finger-peri-peri",
-          "name": "Finger Peri-Peri",
-          "name_hi": "फिंगर पेरी-पेरी",
+          "name": "Peri-Peri Fries",
+          "name_hi": "पेरी-पेरी फिंगर चिप्स",
           "full": 110,
           "image": "fries"
         },
         {
           "id": "finger-honey-chilli",
-          "name": "Finger Honey Chilli",
-          "name_hi": "फिंगर हनी चिली",
+          "name": "Honey Chilli Fries",
+          "name_hi": "हनी चिली फिंगर चिप्स",
           "full": 120,
           "image": "honey-chilli"
         },
@@ -247,7 +247,7 @@
         {
           "id": "peanut-masala",
           "name": "Peanut Masala",
-          "name_hi": "पीनट मसाला",
+          "name_hi": "मूंगफली मसाला",
           "full": 110,
           "image": "peanut-masala"
         }
@@ -261,7 +261,7 @@
         {
           "id": "garlic-naan",
           "name": "Garlic Naan",
-          "name_hi": "गार्लिक नान",
+          "name_hi": "लहसुन नान",
           "full": 70,
           "image": "naan",
           "description": "1 piece"
@@ -269,16 +269,15 @@
         {
           "id": "ginger-naan",
           "name": "Ginger Naan",
-          "name_hi": "जिंजर नान",
+          "name_hi": "अदरक नान",
           "full": 70,
           "image": "naan",
-          "_check": "board reads 'जनजर नान'; confirm name with owner",
           "description": "1 piece"
         },
         {
           "id": "omiya-naan",
           "name": "Onion Naan",
-          "name_hi": "अनियन नान",
+          "name_hi": "प्याज़ नान",
           "full": 60,
           "image": "naan",
           "description": "1 piece"
@@ -286,7 +285,7 @@
         {
           "id": "plain-naan",
           "name": "Plain Naan",
-          "name_hi": "प्लेन नान",
+          "name_hi": "सादा नान",
           "full": 50,
           "image": "naan",
           "description": "1 piece"
@@ -294,7 +293,7 @@
         {
           "id": "tandoori-roti",
           "name": "Tandoori Roti",
-          "name_hi": "तन्दूरी रोटी",
+          "name_hi": "तंदूरी रोटी",
           "full": 20,
           "image": "naan",
           "description": "1 piece"
@@ -310,7 +309,7 @@
         {
           "id": "tandoori-paratha",
           "name": "Tandoori Paratha",
-          "name_hi": "तन्दूरी परांठा",
+          "name_hi": "तंदूरी परांठा",
           "full": 60,
           "image": "paratha",
           "description": "1 piece"
@@ -341,8 +340,8 @@
         },
         {
           "id": "pyaz-paratha",
-          "name": "Pyaz Paratha",
-          "name_hi": "प्याज परांठा",
+          "name": "Onion Paratha",
+          "name_hi": "प्याज़ परांठा",
           "full": 60,
           "image": "paratha",
           "description": "1 piece"
@@ -359,20 +358,20 @@
     },
     {
       "id": "drinks",
-      "name": "Chai, Coffee & Sides",
-      "name_hi": "चाय, कॉफी व रायता",
+      "name": "Chai, Coffee & Raita",
+      "name_hi": "चाय, कॉफ़ी व रायता",
       "items": [
         {
           "id": "shakkar-chai",
-          "name": "Special Shakkar Wali Chai",
-          "name_hi": "स्पे. शक्कर वाली चाय",
+          "name": "Special Shakkar Chai",
+          "name_hi": "स्पेशल शक्कर वाली चाय",
           "full": null,
           "image": "chai"
         },
         {
           "id": "cold-coffee",
           "name": "Cold Coffee",
-          "name_hi": "कोल्ड कॉफी",
+          "name_hi": "कोल्ड कॉफ़ी",
           "full": 80,
           "image": "cold-coffee"
         },
@@ -385,7 +384,7 @@
         },
         {
           "id": "dahi",
-          "name": "Dahi",
+          "name": "Curd",
           "name_hi": "दही",
           "full": null,
           "image": "raita"
@@ -393,14 +392,14 @@
         {
           "id": "plain-raita",
           "name": "Plain Raita",
-          "name_hi": "प्लेन रायता",
+          "name_hi": "सादा रायता",
           "full": null,
           "image": "raita"
         },
         {
           "id": "green-raita",
-          "name": "Green Raita",
-          "name_hi": "ग्रीन रायता",
+          "name": "Mint Raita",
+          "name_hi": "पुदीना रायता",
           "full": null,
           "image": "raita"
         },
@@ -416,12 +415,12 @@
     {
       "id": "cold-drinks",
       "name": "Cold Drinks",
-      "name_hi": "कोल्ड ड्रिंक्स",
+      "name_hi": "ठंडे पेय",
       "items": [
         {
           "id": "pepsi-250",
           "name": "Pepsi 250 ml",
-          "name_hi": "पेप्सी",
+          "name_hi": "पेप्सी 250 मि.ली.",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -429,7 +428,7 @@
         {
           "id": "coca-cola-250",
           "name": "Coca-Cola 250 ml",
-          "name_hi": "कोका-कोला",
+          "name_hi": "कोका-कोला 250 मि.ली.",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -437,7 +436,7 @@
         {
           "id": "thums-up-250",
           "name": "Thums Up 250 ml",
-          "name_hi": "थम्स अप",
+          "name_hi": "थम्स अप 250 मि.ली.",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -445,7 +444,7 @@
         {
           "id": "sprite-250",
           "name": "Sprite 250 ml",
-          "name_hi": "स्प्राइट",
+          "name_hi": "स्प्राइट 250 मि.ली.",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -453,7 +452,7 @@
         {
           "id": "maaza-250",
           "name": "Maaza 250 ml",
-          "name_hi": "माज़ा",
+          "name_hi": "माज़ा 250 मि.ली.",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -461,7 +460,7 @@
         {
           "id": "cold-drink-750",
           "name": "Cold Drink 750 ml",
-          "name_hi": "कोल्ड ड्रिंक 750 ml",
+          "name_hi": "कोल्ड ड्रिंक 750 मि.ली.",
           "full": 40,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -469,7 +468,7 @@
         {
           "id": "red-bull",
           "name": "Red Bull 250 ml",
-          "name_hi": "रेड बुल",
+          "name_hi": "रेड बुल 250 मि.ली.",
           "full": 125,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -477,7 +476,7 @@
         {
           "id": "water-1l",
           "name": "Mineral Water 1 L",
-          "name_hi": "पानी की बोतल",
+          "name_hi": "पानी की बोतल 1 लीटर",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"
@@ -516,7 +515,7 @@
         {
           "id": "dairy-milk",
           "name": "Cadbury Dairy Milk",
-          "name_hi": "डेरी मिल्क",
+          "name_hi": "कैडबरी डेयरी मिल्क",
           "full": 20,
           "image": "",
           "_check": "MRP guess; confirm with owner"

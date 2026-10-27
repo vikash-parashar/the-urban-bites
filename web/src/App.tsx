@@ -34,13 +34,13 @@ const rise: Variants = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0
 
 const marqueeItems = [
   ['Momos', 'मोमोज'],
-  ['Afghani Chaap', 'अफगानी चाप'],
+  ['Afghani Chaap', 'अफ़गानी चाप'],
   ['Paneer Tikka', 'पनीर टिक्का'],
   ['Lachha Paratha', 'लच्छा परांठा'],
-  ['Honey Chilli', 'हनी चिली'],
+  ['Honey Chilli Fries', 'हनी चिली फिंगर चिप्स'],
   ['Shakkar Wali Chai', 'शक्कर वाली चाय'],
-  ['Cold Coffee', 'कोल्ड कॉफी'],
-  ['Paneer Chilli', 'पनीर चिल्ली'],
+  ['Cold Coffee', 'कोल्ड कॉफ़ी'],
+  ['Chilli Paneer', 'चिली पनीर'],
 ]
 
 
