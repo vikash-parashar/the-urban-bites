@@ -4,6 +4,7 @@ import { fetchFavourites, type FavItem, type PlacedOrder } from './api'
 import { lookup, unitPrice, type Cart } from './cart'
 import { dishImage, rupees } from './menu'
 import { loadMe } from './shop'
+import { say } from './voice'
 
 const SHOWN = 'ub-fav-shown'
 
@@ -24,7 +25,7 @@ export default function FavouritesPopup({ orders, cart, accepting, onOpenCart }:
         if (!live || !f) return
         const usable = f.items.filter((i) => { const m = lookup(i.item_id); return m && unitPrice(m, i.size) > 0 })
         if (!usable.length || cart.count > 0) return
-        setItems(usable); setCount(f.orders); setOpen(true)
+        setItems(usable); setCount(f.orders); setOpen(true); say('returning')
         try { sessionStorage.setItem(SHOWN, '1') } catch { /* blocked */ }
       }).catch(() => {})
     }, 2500) // let the page settle (and the intro play) first

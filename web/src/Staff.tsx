@@ -12,7 +12,7 @@ import { brand } from './brand'
 import Wordmark from './Wordmark'
 import { OrderTag, PaymentTag } from './Tags'
 import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
-import { greetOnce, say } from './voice'
+import { greetOnce, say, sayFun } from './voice'
 import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
 import Tour, { ownerSteps } from './Tour'
@@ -188,7 +188,12 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
     setOffset(Date.parse(r.server_time) - Date.now())
     setOrders(r.orders)
     const arrived = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
-    if (arrived.length && soundRef.current) { chime(); setTimeout(() => say('staff_new_order', true), 900) }
+    if (arrived.length && soundRef.current) {
+      chime(); setTimeout(() => say('staff_new_order', true), 900)
+      // A busy rush (4+ orders open): a cheeky "have a sip of chai" every 20 minutes at most.
+      const open = r.orders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length
+      if (open >= 4) setTimeout(() => sayFun('rush', ['staff_rush'], 20 * 60_000), 1200)
+    }
     const waiting = r.orders.filter((o) => o.status === 'placed').length
     document.title = waiting ? `(${waiting}) New order${waiting > 1 ? 's' : ''} · ${brand.name}` : `Orders · ${brand.name}`
     seen.current = new Set([...(seen.current ?? []), ...r.orders.map((o) => o.id)])

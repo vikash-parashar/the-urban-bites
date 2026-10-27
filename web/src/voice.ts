@@ -5,13 +5,7 @@
 
 import data from '../voice-lines.json'
 
-export type VoiceKey =
-  | 'welcome' | 'staff_welcome'
-  | 'placed'
-  | 'cooking' | 'cooking_5' | 'cooking_10' | 'cooking_15' | 'cooking_20' | 'cooking_30' | 'cooking_45'
-  | 'ready_pickup' | 'ready_delivery' | 'on_the_way' | 'delivered' | 'collected'
-  | 'paid' | 'payment_pending' | 'cancelled'
-  | 'staff_new_order' | 'rider_new_delivery' | 'rider_order_ready'
+export type VoiceKey = keyof typeof data.lines
 
 // Haryanvi lines live in web/voice-lines.json, shared with the GitHub Action that records the clips.
 export const LINES = Object.fromEntries(Object.entries(data.lines).map(([k, v]) => [k, v.text])) as Record<VoiceKey, string>
@@ -91,7 +85,7 @@ export function say(key: VoiceKey, force = false) {
 
 /** greetOnce says a greeting once a day per browser, at the visitor's first tap or key press
  *  (browsers block sound before that). */
-export function greetOnce(key: VoiceKey) {
+export function greetOnce(key: VoiceKey, pick?: () => VoiceKey) {
   const k = `ub-greet-${key}`
   const today = new Date().toDateString()
   try { if (localStorage.getItem(k) === today) return () => {} } catch { /* private mode: still greet */ }
@@ -100,11 +94,20 @@ export function greetOnce(key: VoiceKey) {
     off()
     if (!voiceOn()) return
     try { localStorage.setItem(k, today) } catch { /* blocked */ }
-    say(key)
+    say(pick ? pick() : key)
   }
   const off = () => events.forEach((e) => removeEventListener(e, go))
   events.forEach((e) => addEventListener(e, go, { once: true, passive: true }))
   return off
+}
+
+const lastFun = new Map<string, number>()
+/** sayFun plays a light-hearted line, but not too often: each group waits `gapMs` before it can talk again. */
+export function sayFun(group: string, keys: VoiceKey[], gapMs = 90_000) {
+  const now = Date.now()
+  if (now - (lastFun.get(group) ?? -Infinity) < gapMs) return
+  lastFun.set(group, now)
+  say(keys[Math.floor(Math.random() * keys.length)])
 }
 
 /** cookingKey picks the clip for the ready time the owner set. */

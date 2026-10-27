@@ -93,6 +93,14 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
     progress = 1 - left / total
   }
   const mins = Math.floor(left / 60_000)
+  // The countdown ran out but the food isn't ready yet: a gentle, funny "patience" once per order.
+  const overdue = cooking && !!data?.ready_at && left === 0 && !!data?.prep_minutes
+  useEffect(() => {
+    if (!overdue) return
+    const k = `ub-wait-${order.id}`
+    try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1') } catch { /* blocked */ }
+    say('cooking_wait')
+  }, [overdue, order.id])
   const secs = Math.floor((left % 60_000) / 1000)
   const showClock = cooking && !!data?.ready_at
   const R = 52
@@ -207,3 +215,4 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
     </div>
   )
 }
+

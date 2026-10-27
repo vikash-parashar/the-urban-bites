@@ -10,7 +10,7 @@ import Embers from './Embers'
 import Menu from './Menu'
 import CartDrawer from './CartDrawer'
 import Gallery from './Gallery'
-import { greetOnce } from './voice'
+import { greetOnce, sayFun } from './voice'
 import HeroSound from './HeroSound'
 import FavouritesPopup from './Favourites'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
@@ -72,7 +72,24 @@ export default function App() {
   const heroVideo = useRef<HTMLVideoElement>(null)
   // Some phones ignore autoPlay unless muted is set on the element itself; nudge it once.
   // Haryanvi "Ram Ram ji" welcome, once a day, at the visitor's first tap.
-  useEffect(() => greetOnce('welcome'), [])
+  // Closed for the night or paused: a different (still friendly) line.
+  const shopRef = useRef(shop); shopRef.current = shop
+  useEffect(() => greetOnce('welcome', () => {
+    const t = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+    const mins = t.getHours() * 60 + t.getMinutes()
+    if (mins < 11 * 60 + 30 || mins >= 23 * 60) return 'closed'
+    return shopRef.current.accepting_orders ? 'welcome' : 'paused'
+  }), [])
+  // Little Haryanvi reactions to the cart: a compliment on adding, a cheer for free delivery.
+  const prevCart = useRef({ count: cart.count, total: cart.total })
+  useEffect(() => {
+    const p = prevCart.current
+    prevCart.current = { count: cart.count, total: cart.total }
+    if (cart.count > p.count) {
+      if (p.total < shop.free_delivery_min && cart.total >= shop.free_delivery_min) sayFun('free', ['free_delivery'], 10 * 60_000)
+      else if (cart.count - p.count === 1) sayFun('add', ['add_1', 'add_2', 'add_3', 'add_4'], 2 * 60_000)
+    } else if (cart.count === 0 && p.count > 0) sayFun('empty', ['cart_empty'], 5 * 60_000)
+  }, [cart.count, cart.total, shop.free_delivery_min])
   useEffect(() => { const v = heroVideo.current; if (v) { v.muted = true; v.play().catch(() => {}) } }, [])
   const look = useTheme()
 

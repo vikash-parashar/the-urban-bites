@@ -4,6 +4,7 @@ import { isPreview } from './api'
 import { rupees } from './menu'
 import type { ReactNode } from 'react'
 import { googleMaps, social } from './social'
+import { say } from './voice'
 import { checkMobile, cleanMobile, tenDigits } from './kit'
 import { fetchBadge, fetchRegulars, loadMe, tierLevel, type Badge, type Offer, type Regular, type Shop, type Tier, type WallTier, defaultTiers } from './shop'
 import { motion, type Variants } from 'motion/react'
@@ -141,7 +142,9 @@ export function Regulars({ localOrders }: { localOrders: number }) {
     setBusy(true)
     setError('')
     try {
-      setMine(await fetchBadge(`+91${phone}`, localOrders))
+      const b = await fetchBadge(`+91${phone}`, localOrders)
+      setMine(b)
+      say(b.badge ? 'badge_yes' : 'badge_no')
     } catch (err) {
       setMine(null)
       setError(err instanceof Error ? err.message : 'Could not check right now.')
