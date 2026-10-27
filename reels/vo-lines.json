@@ -1,6 +1,7 @@
 {
  "_note": "Voice-over lines for the 30 s WhatsApp/Instagram reels. Each line is [start seconds, text]. The 'Reel voice-over' Action records every line with the website's customer voice into reels/vo/<voice>/<film>_<n>.mp3. A voice can carry a pitch after '|'.",
  "voices": {
+  "female": "hi-IN-SwaraNeural",
   "male": "hi-IN-MadhurNeural|-8Hz"
  },
  "rate": "+22%",
