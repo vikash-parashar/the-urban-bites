@@ -6,10 +6,15 @@
 --
 -- Run:  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/db/fresh-start.sql
 -- Add -v with_expenses=1 to also clear the Expenses list (test expenses).
+-- Add -v only_admin_owner=1 to also delete every login that is not admin or owner (test rider accounts).
 
 \if :{?with_expenses}
 \else
   \set with_expenses 0
+\endif
+\if :{?only_admin_owner}
+\else
+  \set only_admin_owner 0
 \endif
 
 \echo 'Before:'
@@ -26,6 +31,10 @@ DELETE FROM orders;
 SELECT :with_expenses = 1 AS clear_expenses \gset
 \if :clear_expenses
   DELETE FROM expenses;
+\endif
+SELECT :only_admin_owner = 1 AS drop_other_users \gset
+\if :drop_other_users
+  DELETE FROM users WHERE role::text NOT IN ('admin', 'owner');
 \endif
 ALTER SEQUENCE order_number_seq RESTART WITH 1001;
 COMMIT;
