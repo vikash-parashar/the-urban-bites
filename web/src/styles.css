@@ -1624,3 +1624,4 @@ p.error[role='alert'] { padding: 10px 14px; border-radius: 12px; background: col
   :root[data-theme="pop"] .topbar .brand-urban, :root[data-theme="pop"] .topbar .brand-bites { font-size: 0.88rem; }
   .cart-pill { padding-right: 6px; gap: 6px; }
 }
+.music-credit { font-size: 0.78rem; opacity: 0.7; }

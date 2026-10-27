@@ -252,6 +252,7 @@ export default function App() {
         </span>
         <span>Momos · Chaap · Paneer · Paratha · Chai</span>
         <span>© {new Date().getFullYear()} {brand.name} · <a href="#staff">Staff sign in</a></span>
+        <span className="music-credit">Music: “The Good Times” by Infraction</span>
         <div className="dev-credit">
           <span>Website & app designed and developed by <strong>{developer.name}</strong>, founder of <strong>{developer.company}</strong></span>
           <MA className="btn btn-ghost btn-sm" href={developer.contact} target="_blank" rel="noopener">💻 Want a website like this? Contact the developer</MA>
