@@ -11,12 +11,13 @@ DATA = json.loads((ROOT / "reels" / "vo-lines.json").read_text(encoding="utf-8")
 
 
 async def main() -> None:
-    for name, voice in DATA["voices"].items():
+    for name, spec in DATA["voices"].items():
+        voice, _, pitch = spec.partition("|")
         out = ROOT / "reels" / "vo" / name
         out.mkdir(parents=True, exist_ok=True)
         for film, lines in DATA["films"].items():
             for i, (_, text) in enumerate(lines):
-                await edge_tts.Communicate(text, voice, rate=DATA["rate"]).save(str(out / f"{film}_{i}.mp3"))
+                await edge_tts.Communicate(text, voice, rate=DATA["rate"], pitch=pitch or "+0Hz").save(str(out / f"{film}_{i}.mp3"))
                 print(f"recorded {name} {film}_{i}")
 
 
