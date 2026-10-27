@@ -59,7 +59,7 @@ function speakText(text: string): Promise<void> {
     const u = new SpeechSynthesisUtterance(text)
     u.voice = bestHindiVoice(synth.getVoices())
     u.lang = 'hi-IN'
-    u.rate = 1.08
+    u.rate = 1.15
     u.pitch = 1
     u.onend = () => done()
     u.onerror = () => done()

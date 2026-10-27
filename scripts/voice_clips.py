@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINES = ROOT / "web" / "voice-lines.json"
 OUT = ROOT / "web" / "public" / "voice" / "hr"
 MANIFEST = OUT / "manifest.json"
-RATE = "+12%"  # Vikash found the default pace slow (2026-10-27)
+RATE = "+22%"  # Vikash asked for faster twice (2026-10-27)
 
 
 async def main(force: bool) -> None:
