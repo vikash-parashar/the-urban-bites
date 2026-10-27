@@ -14,3 +14,11 @@ export const social = {
 
 // Until the Google listing is live, this opens a Maps search for the cart.
 export const googleMaps = (lat: number, lng: number) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+
+// Who built the site, shown in the footer with a lead link. VITE_DEV_CONTACT_URL can point to the agency website later.
+export const developer = {
+  name: 'Vikash Parashar',
+  company: 'Ampli Digital World',
+  contact: (env.VITE_DEV_CONTACT_URL as string | undefined) ||
+    `mailto:gowithvikash@gmail.com?subject=${encodeURIComponent('Website like The Urban Bites')}&body=${encodeURIComponent('Hi Vikash, I saw theurbanbites.in and want a website for my business.\n\nName:\nBusiness:\nPhone:')}`,
+}

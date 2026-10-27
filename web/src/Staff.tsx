@@ -10,10 +10,13 @@ import { billText, itemKind, whatsappBill, type Bill } from './kit'
 import { MA, MButton } from './motion'
 import { brand } from './brand'
 import { OrderTag, PaymentTag } from './Tags'
+import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
+import { say } from './voice'
+import { voiceNoteUrl } from './staffApi'
 
 const PREP = [5, 10, 15, 20, 30, 45]
 
-type Tab = 'dashboard' | 'orders' | 'walkin' | 'offers' | 'menu' | 'expenses' | 'shop' | 'staff'
+type Tab = 'dashboard' | 'orders' | 'walkin' | 'offers' | 'menu' | 'expenses' | 'shop' | 'staff' | 'riders' | 'deliveries'
 
 // Staff area of the website (#staff): orders, menu, offers, sales dashboard and accounts.
 export default function StaffApp({ hash }: { hash: string }) {
@@ -23,7 +26,7 @@ export default function StaffApp({ hash }: { hash: string }) {
   // Signed out, or told to change a temporary password: re-read the saved session.
   const onSignedOut = useCallback(() => setUser(loadSession()?.user ?? null), [])
   const [all, setAll] = useState(false)
-  const feed = useOrderFeed(onSignedOut, all, !!user && !user.must_change_password)
+  const feed = useOrderFeed(onSignedOut, all, !!user && !user.must_change_password && user.role !== 'delivery')
 
   if (hash.startsWith('#staff/reset')) {
     const token = new URLSearchParams(hash.split('?')[1] ?? '').get('token') ?? ''
@@ -36,9 +39,13 @@ export default function StaffApp({ hash }: { hash: string }) {
 
   // The owner runs the day (orders, walk-ins, sales, sold-out dishes, pausing orders); the admin sets everything else.
   const isAdmin = user.role === 'admin'
-  const tabs: [Tab, string, string][] = isAdmin
-    ? [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['offers', 'Offers', '🏷️'], ['menu', 'Menu', '🍽️'], ['expenses', 'Expenses', '💸'], ['shop', 'Shop', '🏪'], ['staff', 'Staff', '👥']]
-    : [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['menu', 'Sold out', '🍽️'], ['shop', 'Shop', '🏪']]
+  const isRider = user.role === 'delivery'
+  const tabs: [Tab, string, string][] = isRider
+    ? [['deliveries', 'Deliveries', '🛵']]
+    : isAdmin
+    ? [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['offers', 'Offers', '🏷️'], ['menu', 'Menu', '🍽️'], ['expenses', 'Expenses', '💸'], ['shop', 'Shop', '🏪'], ['riders', 'Riders', '🛵'], ['staff', 'Staff', '👥']]
+    : [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['menu', 'Sold out', '🍽️'], ['shop', 'Shop', '🏪'], ['riders', 'Riders', '🛵']]
+  const shown: Tab = isRider ? 'deliveries' : tab
 
   return (
     <div className="staff">
@@ -49,35 +56,39 @@ export default function StaffApp({ hash }: { hash: string }) {
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
           {tabs.map(([id, label, emoji]) => (
-            <MButton key={id} role="tab" aria-selected={tab === id} className="tab" onClick={() => setTab(id)}>
+            <MButton key={id} role="tab" aria-selected={shown === id} className="tab" onClick={() => setTab(id)}>
               <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}{id === 'orders' && feed.newCount > 0 && <b className="tab-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}</span>
             </MButton>
           ))}
         </nav>
         <div className="staff-who">
-          <span>{user.name} · {user.role === 'admin' ? 'Admin' : 'Owner'}</span>
+          <span>{user.name} · {roleName(user.role)}</span>
           <MButton className="btn btn-ghost btn-sm" onClick={() => setChanging(true)}>Password</MButton>
           <MButton className="btn btn-ghost btn-sm" onClick={() => { signOut(); setUser(null) }}>Sign out</MButton>
         </div>
       </header>
       <main className="staff-main">
-        {tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
-        {tab !== 'orders' && feed.newCount > 0 && (
+        {!isRider && tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
+        {shown === 'deliveries' && <RiderBoard onSignedOut={onSignedOut} meId={user.id} />}
+        {!isRider && shown === 'riders' && <Riders onSignedOut={onSignedOut} />}
+        {!isRider && tab !== 'orders' && feed.newCount > 0 && (
           <MButton className="new-alert new-alert-top" onClick={() => setTab('orders')}>
             🔔 {feed.newCount === 1 ? '1 new order' : `${feed.newCount} new orders`} waiting · open Orders
           </MButton>
         )}
-        {tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} />}
-        {tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
-        {tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
-        {tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} canEdit={isAdmin} />}
-        {tab === 'expenses' && isAdmin && <Expenses onSignedOut={onSignedOut} />}
-        {tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={isAdmin} />}
-        {tab === 'staff' && isAdmin && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} canEdit={isAdmin} />}
+        {!isRider && tab === 'expenses' && isAdmin && <Expenses onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={isAdmin} />}
+        {!isRider && tab === 'staff' && isAdmin && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
       </main>
     </div>
   )
 }
+
+const roleName = (r: string) => (r === 'admin' ? 'Admin' : r === 'delivery' ? 'Delivery partner' : 'Owner')
 
 function minsLeft(o: StaffOrder, offset: number) {
   if (!o.ready_at) return ''
@@ -103,7 +114,7 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
     setOffset(Date.parse(r.server_time) - Date.now())
     setOrders(r.orders)
     const arrived = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
-    if (arrived.length && soundRef.current) chime()
+    if (arrived.length && soundRef.current) { chime(); setTimeout(() => say('staff_new_order', true), 900) }
     const waiting = r.orders.filter((o) => o.status === 'placed').length
     document.title = waiting ? `(${waiting}) New order${waiting > 1 ? 's' : ''} · ${brand.name}` : `Orders · ${brand.name}`
     seen.current = new Set([...(seen.current ?? []), ...r.orders.map((o) => o.id)])
@@ -286,6 +297,7 @@ function staffBill(o: StaffOrder): Bill {
 function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; onUpdate: (u: { status?: string; prep_minutes?: number; payment_status?: string }) => void }) {
   const [custom, setCustom] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [nav, setNav] = useState(false)
   const active = o.status !== 'completed' && o.status !== 'cancelled'
   const cooking = o.status === 'accepted' || o.status === 'preparing'
   const startStatus = o.status === 'placed' ? 'preparing' : undefined
@@ -306,8 +318,23 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
       <p><strong className="selectable">{o.customer_name}{o.customer_phone ? ` · ${o.customer_phone}` : ''}</strong>
         {o.customer_phone && <MA className="btn btn-ghost btn-sm call-btn" href={`tel:${o.customer_phone}`}>Call</MA>}<br />
         <span className="menu-sub">{o.fulfilment === 'delivery' ? `Delivery to: ${o.address ?? ''}${o.delivery_km != null ? ` · about ${o.delivery_km.toFixed(1)} km` : ''}` : 'Pickup at the cart'} · from the {sourceLabel[o.source].toLowerCase()}</span></p>
+      {(o.customer_email || o.customer_city) && (
+        <p className="menu-sub">{o.customer_city && <>📍 {o.customer_city}</>}{o.customer_city && o.customer_email && ' · '}{o.customer_email && <>✉️ <span className="selectable">{o.customer_email}</span></>}</p>
+      )}
       <CustomerTag o={o} />
       {o.note && <p className="note">Note: {o.note}</p>}
+      {o.has_voice_note && <VoicePlayer id={o.id} />}
+      {o.fulfilment === 'delivery' && (
+        o.delivery_lat != null && o.delivery_lng != null ? (
+          <>
+            {nav && <NavView order={o} onClose={() => setNav(false)} />}
+            <CustomerMap lat={o.delivery_lat} lng={o.delivery_lng} label={o.customer_name} onNavigate={() => setNav(true)} />
+          </>
+        ) : <p className="menu-sub">No map location on this order (older order or from the app). Call the customer for directions.</p>
+      )}
+      {o.fulfilment === 'delivery' && (
+        <p className="rider-line">{o.rider_name ? <>🛵 Rider: <strong>{o.rider_name}</strong>{o.status === 'out_for_delivery' ? ' · on the way' : ' · will deliver'}</> : '🛵 No rider has taken this yet. Riders see it in their Deliveries screen.'}</p>
+      )}
       <ul className="lines">
         {o.items.map((l, i) => (
           <li key={i}><span className="line-emoji" aria-hidden="true">{itemKind(l.name).emoji}</span><div><strong>{l.qty}× {l.name}</strong>{l.size === 'half' && <small>Half plate</small>}</div><span /><span className="line-total">{rupees(l.qty * l.unit_price)}</span></li>
@@ -354,6 +381,22 @@ function OrderPanel({ o, offset, onUpdate }: { o: StaffOrder; offset: number; on
   )
 }
 
+function VoicePlayer({ id }: { id: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    let u: string | null = null
+    voiceNoteUrl(id).then((x) => { u = x; setUrl(x) }).catch((e) => setErr(e.message))
+    return () => { if (u) URL.revokeObjectURL(u) }
+  }, [id])
+  return (
+    <div className="voice-note staff-voice">
+      <span className="panel-h">🎤 Voice note from the customer</span>
+      {url ? <audio controls src={url} /> : err ? <span className="field-err">{err}</span> : <span className="menu-sub">Loading…</span>}
+    </div>
+  )
+}
+
 function StaffAccounts({ me, onSignedOut }: { me: Staff; onSignedOut: () => void }) {
   const [users, setUsers] = useState<StaffAccount[]>([])
   const [msg, setMsg] = useState('')
@@ -387,7 +430,7 @@ function StaffAccounts({ me, onSignedOut }: { me: Staff; onSignedOut: () => void
       {msg && <p className="oc-eta" role="status">{msg}</p>}
       {users.map((u) => (
         <div key={u.id} className={`me-row ${u.active ? '' : 'off'}`}>
-          <span className="me-name"><strong>{u.name}</strong> · {u.role === 'admin' ? 'Admin' : 'Owner'}{u.must_change_password && <span className="tag-chip">Temporary password</span>}<br /><small className="menu-sub">{u.email} · {u.last_login_at ? `last in ${new Date(u.last_login_at).toLocaleString('en-IN')}` : 'never signed in'}</small></span>
+          <span className="me-name"><strong>{u.name}</strong> · {roleName(u.role)}{u.must_change_password && <span className="tag-chip">Temporary password</span>}<br /><small className="menu-sub">{u.email} · {u.last_login_at ? `last in ${new Date(u.last_login_at).toLocaleString('en-IN')}` : 'never signed in'}</small></span>
           <form className="prep-custom" onSubmit={(e) => reset(u, e)}>
             <input id={`pw-${u.id}`} name="pw" type="password" minLength={10} required placeholder={u.id === me.id ? 'New password' : 'Temporary password'} aria-label={`New password for ${u.name}`} />
             <MButton className="size">Reset</MButton>
@@ -401,7 +444,7 @@ function StaffAccounts({ me, onSignedOut }: { me: Staff; onSignedOut: () => void
         <label className="field" htmlFor="ns-name">Name<input id="ns-name" name="name" required /></label>
         <label className="field" htmlFor="ns-email">Email<input id="ns-email" name="email" type="email" required /></label>
         <label className="field" htmlFor="ns-pass">Password<input id="ns-pass" name="password" type="password" minLength={10} required placeholder="Temporary, 10+ characters" /></label>
-        <label className="field" htmlFor="ns-role">Role<select id="ns-role" name="role" defaultValue="owner"><option value="owner">Owner</option><option value="admin">Admin</option></select></label>
+        <label className="field" htmlFor="ns-role">Role<select id="ns-role" name="role" defaultValue="owner"><option value="owner">Owner</option><option value="delivery">Delivery partner</option><option value="admin">Admin</option></select></label>
         <MButton className="btn btn-gold">Add staff</MButton>
       </form>
     </div>

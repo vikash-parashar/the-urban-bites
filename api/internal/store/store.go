@@ -416,6 +416,8 @@ func (s Status) Valid() bool {
 type NewOrder struct {
 	CustomerName  string         `json:"customer_name"`
 	CustomerPhone string         `json:"customer_phone"`
+	CustomerEmail string         `json:"customer_email"`
+	CustomerCity  string         `json:"customer_city"`
 	Fulfilment    string         `json:"fulfilment"`
 	Address       string         `json:"address"`
 	Note          string         `json:"note"`
@@ -455,6 +457,8 @@ type Order struct {
 	TrackToken    string      `json:"-"`
 	CustomerName  string      `json:"customer_name"`
 	CustomerPhone string      `json:"customer_phone"`
+	CustomerEmail *string     `json:"customer_email,omitempty"`
+	CustomerCity  *string     `json:"customer_city,omitempty"`
 	Fulfilment    string      `json:"fulfilment"`
 	Address       *string     `json:"address,omitempty"`
 	Note          *string     `json:"note,omitempty"`
@@ -466,6 +470,12 @@ type Order struct {
 	Subtotal      int         `json:"subtotal"`
 	DeliveryFee   int         `json:"delivery_fee"`
 	DeliveryKm    *float64    `json:"delivery_km"`
+	DeliveryLat   *float64    `json:"delivery_lat,omitempty"`
+	DeliveryLng   *float64    `json:"delivery_lng,omitempty"`
+	RiderID       *string     `json:"rider_id,omitempty"`
+	RiderName     *string     `json:"rider_name,omitempty"`
+	RiderPickedAt *time.Time  `json:"rider_picked_at,omitempty"`
+	HasVoiceNote  bool        `json:"has_voice_note"`
 	Total         int         `json:"total"`
 	PrepMinutes   *int        `json:"prep_minutes"`
 	ReadyAt       *time.Time  `json:"ready_at"`
@@ -501,6 +511,18 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 	}
 	if in.Source == "" {
 		in.Source = "web"
+	}
+	in.CustomerEmail = strings.TrimSpace(in.CustomerEmail)
+	in.CustomerCity = strings.TrimSpace(in.CustomerCity)
+	if in.CustomerEmail != "" && (len(in.CustomerEmail) > 120 || !emailRe.MatchString(in.CustomerEmail)) {
+		return nil, fmt.Errorf("%w: That email doesn't look right. Leave it empty or fix it.", ErrInvalid)
+	}
+	if len(in.CustomerCity) > 60 {
+		return nil, fmt.Errorf("%w: Village or city name is too long.", ErrInvalid)
+	}
+	// Website delivery orders must share a location so the shop and the rider can find the customer.
+	if in.Fulfilment == "delivery" && in.Source == "web" && (in.Lat == nil || in.Lng == nil) {
+		return nil, fmt.Errorf("%w: Please share your location for delivery (tap Share my location), or choose pickup.", ErrInvalid)
 	}
 
 	shop, err := s.Shop(ctx)
@@ -580,11 +602,12 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 		o := &Order{Items: lines, TrackToken: newToken()}
 		err := tx.QueryRow(ctx, `
 			INSERT INTO orders (track_token, customer_name, customer_phone, phone_key, fulfilment, address, note, payment_method,
-				source, subtotal, delivery_fee, delivery_km, total)
-			VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), NULLIF($7, ''), $8, $9, $10, $11, $12, $13)
+				source, subtotal, delivery_fee, delivery_km, total, customer_email, customer_city, delivery_lat, delivery_lng)
+			VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), NULLIF($7, ''), $8, $9, $10, $11, $12, $13,
+				NULLIF($14, ''), NULLIF($15, ''), $16, $17)
 			RETURNING id, number, status, payment_status, created_at, updated_at`,
 			o.TrackToken, in.CustomerName, phone, PhoneKey(phone), in.Fulfilment, in.Address, in.Note, in.PaymentMethod,
-			in.Source, subtotal, fee, km, subtotal+fee).
+			in.Source, subtotal, fee, km, subtotal+fee, in.CustomerEmail, in.CustomerCity, deliveryCoord(in, in.Lat), deliveryCoord(in, in.Lng)).
 			Scan(&o.ID, &o.Number, &o.Status, &o.PaymentStatus, &o.CreatedAt, &o.UpdatedAt)
 		if err != nil {
 			return err
@@ -608,13 +631,26 @@ func (s *Store) CreateOrder(ctx context.Context, in NewOrder) (*Order, error) {
 }
 
 const orderCols = `id, number, track_token, customer_name, COALESCE(customer_phone, ''), fulfilment, address, note, status,
-	payment_method, payment_status, payment_ref, source, subtotal, delivery_fee, delivery_km::float8, total, prep_minutes, ready_at, created_at, updated_at`
+	payment_method, payment_status, payment_ref, source, subtotal, delivery_fee, delivery_km::float8, total, prep_minutes, ready_at, created_at, updated_at,
+	customer_email, customer_city, delivery_lat, delivery_lng, rider_id::text, (SELECT name FROM users WHERE users.id = orders.rider_id), rider_picked_at,
+	EXISTS (SELECT 1 FROM order_voice_notes v WHERE v.order_id = orders.id)`
+
+// deliveryCoord keeps the shared location only for delivery orders.
+func deliveryCoord(in NewOrder, v *float64) *float64 {
+	if in.Fulfilment != "delivery" {
+		return nil
+	}
+	return v
+}
+
+var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
 func scanOrder(row pgx.Row) (*Order, error) {
 	var o Order
 	err := row.Scan(&o.ID, &o.Number, &o.TrackToken, &o.CustomerName, &o.CustomerPhone, &o.Fulfilment, &o.Address, &o.Note,
 		&o.Status, &o.PaymentMethod, &o.PaymentStatus, &o.PaymentRef, &o.Source, &o.Subtotal, &o.DeliveryFee, &o.DeliveryKm, &o.Total,
-		&o.PrepMinutes, &o.ReadyAt, &o.CreatedAt, &o.UpdatedAt)
+		&o.PrepMinutes, &o.ReadyAt, &o.CreatedAt, &o.UpdatedAt,
+		&o.CustomerEmail, &o.CustomerCity, &o.DeliveryLat, &o.DeliveryLng, &o.RiderID, &o.RiderName, &o.RiderPickedAt, &o.HasVoiceNote)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}

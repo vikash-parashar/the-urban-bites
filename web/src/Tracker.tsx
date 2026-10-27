@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { cookingKey, say, setVoiceOn, voiceOn, type VoiceKey } from './voice'
 import type { OrderStatus, PlacedOrder } from './api'
 import { isPreview } from './api'
 import { useNow, useTracking } from './orders'
@@ -55,6 +56,29 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
   }, [phone, finished])
   const status = data?.status ?? 'placed'
   const cooking = status === 'accepted' || status === 'preparing'
+  const delivery0 = order.fulfilment === 'delivery'
+  const [voice, setVoice] = useState(voiceOn)
+  // Speak each new update once per order (remembered for this tab so a reload doesn't repeat it).
+  useEffect(() => {
+    if (!data) return
+    const memo = `ub-said-${order.id}`
+    let said: string[] = []
+    try { said = JSON.parse(sessionStorage.getItem(memo) || '[]') } catch { /* blocked */ }
+    const fresh = Date.now() - Date.parse(order.placed_at) < 3 * 60_000
+    const events: [string, VoiceKey][] = []
+    if (status === 'placed' && fresh) events.push(['placed', 'placed'])
+    if (cooking) events.push([`cook-${data.prep_minutes ?? ''}`, cookingKey(data.prep_minutes)])
+    if (status === 'ready') events.push(['ready', delivery0 ? 'ready_delivery' : 'ready_pickup'])
+    if (status === 'out_for_delivery') events.push(['out', 'on_the_way'])
+    if (status === 'completed') events.push(['done', delivery0 ? 'delivered' : 'collected'])
+    if (status === 'cancelled') events.push(['cancelled', 'cancelled'])
+    if (data.payment_status === 'paid' && status !== 'cancelled') events.push(['paid', 'paid'])
+    const first = said.length === 0 && !fresh
+    const todo = events.filter(([k]) => !said.includes(k))
+    // Opening an old order later: remember its state quietly instead of reading it all out.
+    if (!first) todo.slice(-2).forEach(([, key]) => say(key))
+    try { sessionStorage.setItem(memo, JSON.stringify([...said, ...todo.map(([k]) => k)])) } catch { /* blocked */ }
+  }, [data, status, cooking, delivery0, order.id, order.placed_at])
   const now = useNow(cooking && !!data?.ready_at) + clockOffset
   const delivery = order.fulfilment === 'delivery'
   const steps = delivery ? deliverySteps : pickupSteps
@@ -79,6 +103,10 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         Order #{order.number} · {rupees(data?.total ?? order.total)}
         {order.fulfilment === 'delivery' && (data?.delivery_fee ?? order.delivery_fee) === 0 && <span className="free"> · Free delivery</span>}
       </p>
+      <button type="button" className={`voice-toggle ${voice ? '' : 'is-off'}`} aria-pressed={voice}
+        onClick={() => { setVoiceOn(!voice); setVoice(!voice) }}>
+        {voice ? '🔊 Voice updates on' : '🔇 Voice updates off'}
+      </button>
       {data && (
         <div className="tracker-tags">
           <OrderTag status={status} who="customer" delivery={delivery} />

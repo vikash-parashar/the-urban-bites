@@ -56,10 +56,10 @@ type ShopUpdate struct {
 	AcceptUpi        *bool    `json:"accept_upi"`
 }
 
-// OnlyPause is true when the update just pauses or resumes online orders (all the owner may change).
-func (u ShopUpdate) OnlyPause() bool {
-	return u.AcceptingOrders != nil && u.MinOrderDelivery == nil && u.MinOrderPickup == nil && u.FreeDeliveryMin == nil &&
-		u.FreeDeliveryKm == nil && u.MaxDeliveryKm == nil && u.DeliveryFee == nil && u.CartLat == nil && u.CartLng == nil &&
+// OwnerMay is true when the update only touches what the owner may change: pausing orders and the delivery range.
+func (u ShopUpdate) OwnerMay() bool {
+	return (u.AcceptingOrders != nil || u.MaxDeliveryKm != nil) && u.MinOrderDelivery == nil && u.MinOrderPickup == nil &&
+		u.FreeDeliveryMin == nil && u.FreeDeliveryKm == nil && u.DeliveryFee == nil && u.CartLat == nil && u.CartLng == nil &&
 		u.Notice == nil && !u.TouchesPayments()
 }
 

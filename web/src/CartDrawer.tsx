@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { lookup, offerPrice, unitPrice, type Cart, type CartLine } from './cart'
 import { business, rupees } from './menu'
-import { placeOrder, type OrderRequest, type PlacedOrder } from './api'
+import { placeOrder, uploadVoiceNote, type OrderRequest, type PlacedOrder } from './api'
 import { deliveryFee, distanceKm, loadMe, saveMe, type Shop } from './shop'
 import Tracker from './Tracker'
 import { checkAddress, checkFirstName, checkLastName, checkMobile, cleanMobile, cleanName, itemKind, tenDigits } from './kit'
 import { MButton } from './motion'
+import VoiceNote from './VoiceNote'
 
 interface Props {
   cart: Cart
@@ -38,6 +39,10 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
   const [last, setLast] = useState(me?.last ?? me?.name?.split(' ').slice(1).join(' ') ?? '')
   const [mobile, setMobile] = useState(tenDigits(me?.phone))
   const [address, setAddress] = useState(me?.address ?? '')
+  const [email, setEmail] = useState(me?.email ?? '')
+  const [city, setCity] = useState(me?.city ?? '')
+  const [note, setNote] = useState('')
+  const [voice, setVoice] = useState<Blob | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => ({ ...t, [k]: true }))
   const errs = {
@@ -45,6 +50,8 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
     last: checkLastName(last),
     mobile: checkMobile(mobile),
     address: fulfilment === 'delivery' ? checkAddress(address) : '',
+    email: email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) ? 'Check the email, or leave it empty' : '',
+    location: fulfilment === 'delivery' && loc.state !== 'ok' ? 'Tap "Share my location" so the rider can find you' : '',
   }
   const show = (k: keyof typeof errs) => (touched[k] ? errs[k] : '')
 
@@ -67,7 +74,7 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
 
   function locate() {
     if (!navigator.geolocation) {
-      setLoc({ state: 'error', msg: "This browser can't share location. Type your address and we'll call if needed." })
+      setLoc({ state: 'error', msg: "This browser can't share location. Choose pickup, or call us to order for delivery." })
       return
     }
     setLoc({ state: 'busy' })
@@ -77,8 +84,8 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
         const d = shop.cart_lat != null && shop.cart_lng != null ? distanceKm(shop.cart_lat, shop.cart_lng, lat, lng) : null
         setLoc({ state: 'ok', lat, lng, km: d })
       },
-      () => setLoc({ state: 'error', msg: "Couldn't get your location. Type your address and we'll call if needed." }),
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+      () => setLoc({ state: 'error', msg: "Couldn't get your location. Turn on location (GPS) and allow it for this site, then tap again." }),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
     )
   }
 
@@ -86,11 +93,10 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
     e.preventDefault()
     if (!canOrder) return
     if (Object.values(errs).some(Boolean)) {
-      setTouched({ first: true, last: true, mobile: true, address: true })
+      setTouched({ first: true, last: true, mobile: true, address: true, email: true, location: true })
       setError('Please fix the highlighted fields.')
       return
     }
-    const f = new FormData(e.currentTarget)
     const name = [first.trim(), last.trim()].filter(Boolean).join(' ')
     const phone = `+91${mobile}`
     setBusy(true)
@@ -103,7 +109,9 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
           customer_phone: phone,
           fulfilment,
           address: delivery ? address.trim() : undefined,
-          note: String(f.get('note') || '') || undefined,
+          note: note.trim() || undefined,
+          customer_email: email.trim() || undefined,
+          customer_city: city.trim() || undefined,
           payment_method: payment,
           items: lines.map((l) => ({ item_id: l.itemId, size: l.size, qty: l.qty })),
           ...(delivery && loc.state === 'ok' ? { lat: loc.lat, lng: loc.lng } : {}),
@@ -111,7 +119,10 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
         total,
         lines,
       )
-      saveMe({ name, phone, first: first.trim(), last: last.trim(), address: address.trim() || undefined })
+      saveMe({ name, phone, first: first.trim(), last: last.trim(), address: address.trim() || undefined, email: email.trim() || undefined, city: city.trim() || undefined })
+      if (voice) await uploadVoiceNote(placed, voice).catch((e) => console.warn(e))
+      setVoice(null)
+      setNote('')
       onPlaced(placed)
       cart.dispatch({ type: 'clear' })
     } catch (err) {
@@ -241,6 +252,19 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
               {show('mobile') ? <span className="field-err">{show('mobile')}</span>
                 : <span className="opt" id="co-phone-help">Your bill and order updates come to this number. Orders count toward your Urban Regulars badge.</span>}
             </label>
+            <div className="field-row">
+              <label className="field" htmlFor="co-email">
+                <span>Email <span className="opt">optional</span></span>
+                <input id="co-email" type="email" inputMode="email" autoComplete="email" maxLength={120} placeholder="you@gmail.com" value={email}
+                  onChange={(e) => setEmail(e.target.value)} onBlur={() => touch('email')} aria-invalid={!!show('email')} />
+                {show('email') && <span className="field-err">{show('email')}</span>}
+              </label>
+              <label className="field" htmlFor="co-city">
+                <span>Village / city <span className="opt">optional</span></span>
+                <input id="co-city" autoComplete="address-level2" maxLength={60} placeholder="Julana, Brahmanwas…" value={city}
+                  onChange={(e) => setCity(e.target.value)} />
+              </label>
+            </div>
             {delivery && (
               <>
                 <label className="field" htmlFor="co-address">
@@ -249,15 +273,17 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
                     onChange={(e) => setAddress(e.target.value)} onBlur={() => touch('address')} aria-invalid={!!show('address')} />
                   {show('address') && <span className="field-err">{show('address')}</span>}
                 </label>
-                <div className="locate">
-                  <MButton type="button" className="btn btn-ghost btn-sm" onClick={locate} disabled={loc.state === 'busy'}>
-                    {loc.state === 'busy' ? 'Finding you…' : loc.state === 'ok' ? 'Location added ✓' : 'Share my location'}
+                <div className={`locate ${show('location') ? 'locate-bad' : ''} ${loc.state === 'ok' ? 'locate-ok' : ''}`}>
+                  <span className="locate-h">Your location * <span className="opt">needed for delivery</span></span>
+                  <MButton type="button" className={`btn btn-sm ${loc.state === 'ok' ? 'btn-ghost' : 'btn-gold'}`} onClick={locate} disabled={loc.state === 'busy'}>
+                    {loc.state === 'busy' ? 'Finding you…' : loc.state === 'ok' ? '✓ Location added · update' : '📍 Share my location'}
                   </MButton>
-                  <span className="opt">
-                    {loc.state === 'error' ? loc.msg
-                      : loc.state === 'ok' && km == null ? 'Saved. The cart will see it on your order.'
-                      : `Helps the rider find you. We deliver within ${shop.max_delivery_km} km.`}
-                  </span>
+                  {loc.state === 'error' ? <span className="field-err">{loc.msg}</span>
+                    : show('location') ? <span className="field-err">{errs.location}</span>
+                    : <span className="opt">
+                        {loc.state === 'ok' ? `Saved${km != null ? `: about ${km.toFixed(1)} km from the cart` : ''}. The shop and the rider will see it on a map.`
+                          : `The rider uses it to reach you. We deliver within ${shop.max_delivery_km} km.`}
+                      </span>}
                 </div>
                 {tooFar && (
                   <p className="error" role="alert">
@@ -266,10 +292,11 @@ export default function CartDrawer({ cart, shop, open, tracking, pastOrders, onP
                 )}
               </>
             )}
-            <label className="field" htmlFor="co-note">
-              Note for the kitchen <span className="opt">optional</span>
-              <input id="co-note" name="note" maxLength={120} placeholder="Less spicy, extra chutney…" />
-            </label>
+            <div className="field">
+              <label htmlFor="co-note">Note for the kitchen <span className="opt">optional · type, speak or record</span></label>
+              <textarea id="co-note" name="note" rows={2} maxLength={300} placeholder="Less spicy, extra chutney…" value={note} onChange={(e) => setNote(e.target.value)} />
+              <VoiceNote blob={voice} onBlob={setVoice} onSpoken={(t) => setNote((n) => (n ? `${n} ${t}` : t).slice(0, 300))} />
+            </div>
 
             <fieldset className="seg">
               <legend>Payment</legend>

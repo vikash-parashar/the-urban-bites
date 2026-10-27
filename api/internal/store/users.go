@@ -68,8 +68,8 @@ func (s *Store) Users(ctx context.Context) ([]*User, error) {
 
 // CreateUser adds a staff account. With mustChange, the password is temporary and must be replaced on first sign-in.
 func (s *Store) CreateUser(ctx context.Context, email, name, role, passwordHash string, mustChange bool) (*User, error) {
-	if role != "admin" && role != "owner" {
-		return nil, fmt.Errorf("%w: role must be admin or owner", ErrInvalid)
+	if !ValidRole(role) {
+		return nil, fmt.Errorf("%w: role must be admin, owner or delivery", ErrInvalid)
 	}
 	if !strings.Contains(email, "@") || strings.TrimSpace(name) == "" {
 		return nil, fmt.Errorf("%w: email and name are required", ErrInvalid)
@@ -85,6 +85,9 @@ func (s *Store) CreateUser(ctx context.Context, email, name, role, passwordHash 
 	return u, err
 }
 
+// ValidRole: admin (everything), owner (runs the day) or delivery (delivers orders).
+func ValidRole(r string) bool { return r == "admin" || r == "owner" || r == "delivery" }
+
 type UserUpdate struct {
 	Name         *string
 	Role         *string
@@ -98,8 +101,8 @@ func (s *Store) UpdateUser(ctx context.Context, id string, u UserUpdate) (*User,
 	if !uuidRe.MatchString(id) {
 		return nil, ErrNotFound
 	}
-	if u.Role != nil && *u.Role != "admin" && *u.Role != "owner" {
-		return nil, fmt.Errorf("%w: role must be admin or owner", ErrInvalid)
+	if u.Role != nil && !ValidRole(*u.Role) {
+		return nil, fmt.Errorf("%w: role must be admin, owner or delivery", ErrInvalid)
 	}
 	return scanUser(s.db.QueryRow(ctx, `
 		UPDATE users SET

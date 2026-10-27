@@ -327,9 +327,24 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
       {!isAdmin && (
         <div className="me-row">
           <span className="me-name"><strong>Order rules</strong><br /><small className="menu-sub">
-            Delivery minimum {rupees(shop.min_order_delivery)} · free delivery above {rupees(shop.free_delivery_min)} within {shop.free_delivery_km} km · delivery up to {shop.max_delivery_km} km. Set by the admin.
+            Delivery minimum {rupees(shop.min_order_delivery)} · free delivery above {rupees(shop.free_delivery_min)} within {shop.free_delivery_km} km. Set by the admin.
           </small></span>
         </div>
+      )}
+      {!isAdmin && (
+        <form className="me-row" key={`km-${shop.updated_at}`} onSubmit={(e) => {
+          e.preventDefault()
+          const km = Number(new FormData(e.currentTarget).get('max_km'))
+          if (!(km > 0 && km <= 50)) return setMsg('Delivery range must be between 1 and 50 km.')
+          patch({ max_delivery_km: km }, `Saved. You now deliver up to ${km} km.`)
+        }}>
+          <span className="me-name"><strong>Delivery range</strong><br /><small className="menu-sub">Customers farther than this can only pick up.</small></span>
+          <span className="prep-custom">
+            <input id="own-max-km" name="max_km" inputMode="decimal" defaultValue={shop.max_delivery_km} aria-label="Deliver up to km" style={{ width: 80 }} />
+            <span className="menu-sub">km</span>
+            <MButton className="size">Save</MButton>
+          </span>
+        </form>
       )}
       {isAdmin && <form className="panel shop-form" onSubmit={save} key={shop.updated_at}>
         <h3 className="panel-h">Order rules</h3>

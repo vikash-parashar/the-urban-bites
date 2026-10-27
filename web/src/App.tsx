@@ -17,6 +17,7 @@ import MyOrders from './MyOrders'
 import type { PlacedOrder } from './api'
 import PopHero from './PopHero'
 import { brand } from './brand'
+import { developer } from './social'
 
 // The opening waits for the intro card on the first visit of the session.
 function introDelay() {
@@ -96,8 +97,12 @@ export default function App() {
           {offers.length > 0 && <a href="#offers"><span aria-hidden="true">🔥</span>Offers</a>}
           <a href="#regulars"><span aria-hidden="true">👑</span>Regulars</a>
           <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
+          <a href="#staff" className="topnav-staff"><span aria-hidden="true">👤</span>Staff login</a>
         </nav>
         <div className="top-actions">
+          <a className="staff-pill" href="#staff" aria-label="Staff login: owner and delivery partners">
+            <span aria-hidden="true">👤</span><span className="staff-pill-text">Staff login</span>
+          </a>
           <LookSwitch />
           <MButton className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
             <span aria-hidden="true">🛒</span><span className="cart-label">Order</span>
@@ -247,6 +252,10 @@ export default function App() {
         </span>
         <span>Momos · Chaap · Paneer · Paratha · Chai</span>
         <span>© {new Date().getFullYear()} {brand.name} · <a href="#staff">Staff sign in</a></span>
+        <div className="dev-credit">
+          <span>Website & app designed and developed by <strong>{developer.name}</strong>, founder of <strong>{developer.company}</strong></span>
+          <MA className="btn btn-ghost btn-sm" href={developer.contact} target="_blank" rel="noopener">💻 Want a website like this? Contact the developer</MA>
+        </div>
       </footer>
 
       {cart.count === 0 && !cartOpen && myOrders.latest && (

@@ -172,6 +172,8 @@ export interface Me {
   first?: string
   last?: string
   address?: string
+  email?: string
+  city?: string
 }
 export function loadMe(): Me | null {
   try {

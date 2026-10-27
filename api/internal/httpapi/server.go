@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -63,6 +64,7 @@ func (s *Server) Routes() http.Handler {
 		r.Post("/orders", s.createOrder)
 		r.Get("/orders/{id}", s.trackOrder)
 		r.Post("/orders/{id}/payment", s.paymentRef)
+		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
 		r.Get("/shop", s.getShop)
 		r.Get("/offers", s.liveOffers)
 		r.Get("/badge", s.badge)
@@ -77,31 +79,46 @@ func (s *Server) Routes() http.Handler {
 			r.Use(s.requireStaff)
 			r.Get("/me", s.me)
 			r.Post("/me/password", s.changePassword)
-			r.Get("/owner/orders", s.listOrders)
-			r.Get("/owner/orders/{id}", s.getOrder)
-			r.Patch("/owner/orders/{id}", s.updateOrder)
-			r.Get("/owner/menu", s.ownerMenu)
-			r.Patch("/owner/menu/items/{id}", s.updateItem) // the owner may only change "available"
-			r.Get("/owner/earnings", s.earnings)
-			r.Get("/owner/dashboard", s.dashboard)
-			r.Patch("/owner/shop", s.updateShop) // the owner may only pause or resume orders
-			r.Get("/owner/offers", s.allOffers)
-			r.Post("/owner/counter-sales", s.counterSale)
+			r.Get("/staff/orders/{id}/voice", s.voiceNote)
+
+			// Delivery partners (the owner and admin can open these too).
+			r.Group(func(r chi.Router) {
+				r.Use(requireRole("delivery", "owner", "admin"))
+				r.Get("/delivery/orders", s.riderOrders)
+				r.Post("/delivery/orders/{id}", s.riderAction)
+			})
 
 			r.Group(func(r chi.Router) {
-				r.Use(requireRole("admin"))
-				r.Post("/owner/menu/items", s.createItem)
-				r.Delete("/owner/menu/items/{id}", s.deleteItem)
-				r.Post("/owner/menu/categories", s.createCategory)
-				r.Get("/owner/expenses", s.listExpenses)
-				r.Post("/owner/expenses", s.addExpense)
-				r.Delete("/owner/expenses/{id}", s.deleteExpense)
-				r.Post("/owner/offers", s.createOffer)
-				r.Put("/owner/offers/{id}", s.updateOffer)
-				r.Post("/owner/offers/{id}/end", s.endOffer)
-				r.Get("/admin/users", s.listUsers)
-				r.Post("/admin/users", s.createUser)
-				r.Patch("/admin/users/{id}", s.updateUser)
+				r.Use(requireRole("owner", "admin"))
+				r.Get("/owner/riders", s.listRiders)
+				r.Post("/owner/riders", s.createRider)
+				r.Patch("/owner/riders/{id}", s.updateRider)
+				r.Get("/owner/orders", s.listOrders)
+				r.Get("/owner/orders/{id}", s.getOrder)
+				r.Patch("/owner/orders/{id}", s.updateOrder)
+				r.Get("/owner/menu", s.ownerMenu)
+				r.Patch("/owner/menu/items/{id}", s.updateItem) // the owner may only change "available"
+				r.Get("/owner/earnings", s.earnings)
+				r.Get("/owner/dashboard", s.dashboard)
+				r.Patch("/owner/shop", s.updateShop) // the owner may only pause or resume orders
+				r.Get("/owner/offers", s.allOffers)
+				r.Post("/owner/counter-sales", s.counterSale)
+
+				r.Group(func(r chi.Router) {
+					r.Use(requireRole("admin"))
+					r.Post("/owner/menu/items", s.createItem)
+					r.Delete("/owner/menu/items/{id}", s.deleteItem)
+					r.Post("/owner/menu/categories", s.createCategory)
+					r.Get("/owner/expenses", s.listExpenses)
+					r.Post("/owner/expenses", s.addExpense)
+					r.Delete("/owner/expenses/{id}", s.deleteExpense)
+					r.Post("/owner/offers", s.createOffer)
+					r.Put("/owner/offers/{id}", s.updateOffer)
+					r.Post("/owner/offers/{id}/end", s.endOffer)
+					r.Get("/admin/users", s.listUsers)
+					r.Post("/admin/users", s.createUser)
+					r.Patch("/admin/users/{id}", s.updateUser)
+				})
 			})
 		})
 	})
@@ -190,11 +207,15 @@ func (s *Server) requireStaff(next http.Handler) http.Handler {
 	})
 }
 
-func requireRole(role string) func(http.Handler) http.Handler {
+func requireRole(roles ...string) func(http.Handler) http.Handler {
+	msg := "only the admin (Vikash) can do this"
+	if len(roles) > 1 {
+		msg = "your account can't open this"
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if staffFrom(r).Role != role {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin (Vikash) can do this"})
+			if !slices.Contains(roles, staffFrom(r).Role) {
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": msg})
 				return
 			}
 			next.ServeHTTP(w, r)

@@ -8,6 +8,8 @@ export const isPreview = !API_URL
 export interface OrderRequest {
   customer_name: string
   customer_phone: string
+  customer_email?: string
+  customer_city?: string
   fulfilment: 'delivery' | 'pickup'
   address?: string
   note?: string
@@ -96,6 +98,17 @@ export async function placeOrder(req: OrderRequest, cartTotal: number, lines: Ca
   const body = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(body.error ? sentence(body.error) : `The kitchen didn't get your order (error ${res.status}). Try again or call us.`)
   return { ...(body as Omit<PlacedOrder, 'fulfilment' | 'placed_at'>), fulfilment: req.fulfilment, placed_at, lines, payment_method: req.payment_method, customer_name: req.customer_name }
+}
+
+// uploadVoiceNote sends the kitchen voice note recorded at checkout. A failure doesn't undo the order.
+export async function uploadVoiceNote(o: PlacedOrder, note: Blob): Promise<void> {
+  if (!API_URL) return
+  const res = await fetch(`${API_URL}/v1/orders/${o.id}/voice?t=${o.track_token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': note.type || 'audio/webm' },
+    body: note,
+  })
+  if (!res.ok) throw new Error("Your order is placed, but the voice note didn't send. Type the note or call us.")
 }
 
 export async function trackOrder(o: PlacedOrder): Promise<Tracking> {

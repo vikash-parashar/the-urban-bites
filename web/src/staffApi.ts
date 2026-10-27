@@ -9,7 +9,7 @@ export interface Staff {
   id: string
   email: string
   name: string
-  role: 'admin' | 'owner'
+  role: 'admin' | 'owner' | 'delivery'
   /** Signed in with a temporary password: must choose their own before anything else. */
   must_change_password?: boolean
 }
@@ -19,6 +19,14 @@ export interface StaffOrder {
   number: number
   customer_name: string
   customer_phone: string
+  customer_email?: string
+  customer_city?: string
+  delivery_lat?: number
+  delivery_lng?: number
+  rider_id?: string
+  rider_name?: string
+  rider_picked_at?: string
+  has_voice_note?: boolean
   fulfilment: 'pickup' | 'delivery'
   address?: string
   note?: string
@@ -170,7 +178,22 @@ export async function resetPassword(token: string, password: string): Promise<St
   return r.user
 }
 
+/** Fetches the kitchen voice note as a blob URL (it needs the sign-in token, so a plain <audio src> can't load it). */
+export async function voiceNoteUrl(orderId: string): Promise<string> {
+  const session = loadSession()
+  const res = await fetch(`${API_URL}/v1/staff/orders/${orderId}/voice`, { headers: session ? { Authorization: `Bearer ${session.token}` } : {} })
+  if (!res.ok) throw new Error("Couldn't load the voice note.")
+  return URL.createObjectURL(await res.blob())
+}
+
+export type RiderAction = 'take' | 'leave' | 'start' | 'delivered'
+
 export const staffApi = {
+  riderOrders: () => call<{ orders: StaffOrder[] }>('GET', '/v1/delivery/orders'),
+  riderAction: (id: string, action: RiderAction, cash_collected = false) => call<StaffOrder>('POST', `/v1/delivery/orders/${id}`, { action, cash_collected }),
+  riders: () => call<{ riders: StaffAccount[] }>('GET', '/v1/owner/riders'),
+  createRider: (u: { email: string; name: string; password: string }) => call<StaffAccount>('POST', '/v1/owner/riders', u),
+  updateRider: (id: string, u: { active?: boolean; password?: string }) => call<StaffAccount>('PATCH', `/v1/owner/riders/${id}`, u),
   orders: (all: boolean) =>
     call<{ orders: StaffOrder[]; server_time: string }>('GET', `/v1/owner/orders?status=${all ? 'all' : 'active'}`),
   updateOrder: (id: string, u: { status?: string; prep_minutes?: number; payment_status?: string }) =>
