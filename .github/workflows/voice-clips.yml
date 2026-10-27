@@ -12,6 +12,10 @@ on:
         description: Record every line again
         type: boolean
         default: false
+      samples:
+        description: Only record the voice samples (voice-samples/)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,10 +31,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install edge-tts==7.3.1
+      - run: python scripts/voice_samples.py
+        if: ${{ inputs.samples }}
       - run: python scripts/voice_clips.py ${{ inputs.force && '--force' || '' }}
+        if: ${{ !inputs.samples }}
       - name: Commit clips
         run: |
-          git add web/public/voice/hr
+          git add web/public/voice/hr voice-samples 2>/dev/null || git add web/public/voice/hr
           if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Voice clips: record changed lines"
           git pull --rebase origin main
