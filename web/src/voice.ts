@@ -44,15 +44,40 @@ export function setVoiceOn(on: boolean) {
 const missing = new Set<VoiceKey>()
 let queue: Promise<void> = Promise.resolve()
 
+// Pick the most human-sounding Hindi voice the phone has. The newer "natural"/"neural"/online
+// voices (Google, Microsoft Edge, Android network voices) sound far less robotic than the
+// old offline ones, so they win; a female voice is preferred when the name tells us.
+function bestHindiVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const hindi = voices.filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith('hi'))
+  if (!hindi.length) return null
+  const score = (v: SpeechSynthesisVoice) => {
+    const n = v.name.toLowerCase()
+    let sc = 0
+    if (/natural|neural|online|network|wavenet|premium|enhanced/.test(n)) sc += 10
+    if (/google/.test(n)) sc += 6
+    if (/swara|kalpana|female|hia|hic/.test(n)) sc += 3
+    if (!v.localService) sc += 2
+    if (v.lang === 'hi-IN') sc += 1
+    return sc
+  }
+  return hindi.sort((a, b) => score(b) - score(a))[0]
+}
+
+// Voices load late on some browsers; ask once early so the first update already gets a good one.
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  window.speechSynthesis.getVoices()
+  window.speechSynthesis.addEventListener?.('voiceschanged', () => window.speechSynthesis.getVoices())
+}
+
 function speakText(text: string): Promise<void> {
   return new Promise((done) => {
     const synth = window.speechSynthesis
     if (!synth) return done()
     const u = new SpeechSynthesisUtterance(text)
-    const voices = synth.getVoices()
-    u.voice = voices.find((v) => v.lang === 'hi-IN') ?? voices.find((v) => v.lang.startsWith('hi')) ?? null
+    u.voice = bestHindiVoice(synth.getVoices())
     u.lang = 'hi-IN'
-    u.rate = 0.95
+    u.rate = 0.92
+    u.pitch = 1
     u.onend = () => done()
     u.onerror = () => done()
     synth.speak(u)

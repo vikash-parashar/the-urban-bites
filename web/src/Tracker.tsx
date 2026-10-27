@@ -11,6 +11,7 @@ import type { Shop } from './shop'
 import { social } from './social'
 import { MA } from './motion'
 import { OrderTag, PaymentTag } from './Tags'
+import Celebrate from './Celebrate'
 
 const pickupSteps: { key: OrderStatus; label: string }[] = [
   { key: 'placed', label: 'Order received' },
@@ -96,9 +97,18 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
   const showClock = cooking && !!data?.ready_at
   const R = 52
   const C = 2 * Math.PI * R
+  const paid = data?.payment_status === 'paid'
+  // Colour of the whole tracker: yellow while it's with the kitchen, blue once it's ready or on
+  // the way (or delivered but still unpaid), green when delivered and paid, red when cancelled.
+  const tone = status === 'cancelled' ? 'red'
+    : status === 'completed' && paid ? 'green'
+    : status === 'completed' || status === 'ready' || status === 'out_for_delivery' ? 'blue'
+    : 'yellow'
+  const success = status === 'completed' && paid
 
   return (
-    <div className="tracker">
+    <div className={`tracker tone-${tone}`}>
+      {success && <Celebrate id={order.id} />}
       <p className="tracker-no">
         Order #{order.number} · {rupees(data?.total ?? order.total)}
         {order.fulfilment === 'delivery' && (data?.delivery_fee ?? order.delivery_fee) === 0 && <span className="free"> · Free delivery</span>}
@@ -142,17 +152,25 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
         </div>
       </div>
 
-      {status !== 'cancelled' && (
+      {status !== 'cancelled' ? (
         <ol className="steps">
           {steps.map((s) => {
             const r = rank[s.key]
             const cur = rank[status]
+            // The last step counts as done once the order is finished, so the line runs top to bottom.
+            const done = r < cur || status === 'completed'
             return (
-              <li key={s.key} className={r < cur ? 'done' : r === cur ? 'now' : ''}>
+              <li key={s.key} className={done ? 'done' : r === cur ? 'now' : ''}>
                 {s.label}
+                {status === 'completed' && s.key === 'completed' && !paid && <small className="step-sub"> · payment pending</small>}
               </li>
             )
           })}
+        </ol>
+      ) : (
+        <ol className="steps">
+          <li className="done">Order received</li>
+          <li className="now">Cancelled</li>
         </ol>
       )}
 

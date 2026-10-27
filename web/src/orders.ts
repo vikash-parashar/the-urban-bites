@@ -58,7 +58,8 @@ export function useTracking(order: PlacedOrder | undefined) {
         setData(t)
         setError('')
         setClockOffset(Date.parse(t.server_time) - Date.now())
-        if (DONE.has(t.status)) return
+        // Stop when nothing more can change: cancelled, or finished and paid.
+        if (t.status === 'cancelled' || (DONE.has(t.status) && t.payment_status === 'paid')) return
       } catch (e) {
         if (!stop) setError(e instanceof Error ? e.message : 'Lost connection. Retrying…')
       }
