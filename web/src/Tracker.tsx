@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 import { cookingKey, say, setVoiceOn, voiceOn, type VoiceKey } from './voice'
 import type { OrderStatus, PlacedOrder } from './api'
 import { isPreview } from './api'
@@ -100,6 +101,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
   const paid = data?.payment_status === 'paid'
   // Colour of the whole tracker: yellow while it's with the kitchen, blue once it's ready or on
   // the way (or delivered but still unpaid), green when delivered and paid, red when cancelled.
+  const reduce = useReducedMotion()
   const tone = status === 'cancelled' ? 'red'
     : status === 'completed' && paid ? 'green'
     : status === 'completed' || status === 'ready' || status === 'out_for_delivery' ? 'blue'
@@ -135,7 +137,16 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
             strokeDasharray={C}
             strokeDashoffset={showClock ? C * (1 - Math.min(1, Math.max(0, progress))) : status === 'placed' ? C * 0.75 : 0}
           />
+          {tone === 'green' && !reduce && (
+            <motion.circle className="clock-sweep" cx="60" cy="60" r={R} strokeDasharray={`${C * 0.16} ${C}`}
+              initial={{ strokeDashoffset: 0 }} animate={{ strokeDashoffset: -C }} transition={{ duration: 2.4, ease: 'linear', repeat: Infinity }} />
+          )}
         </svg>
+        {tone === 'green' && !reduce && [0, 1].map((i) => (
+          <motion.span key={i} className="clock-pulse" aria-hidden="true"
+            initial={{ scale: 0.92, opacity: 0.55 }} animate={{ scale: 1.22, opacity: 0 }}
+            transition={{ duration: 2.2, ease: 'easeOut', repeat: Infinity, delay: i * 1.1 }} />
+        ))}
         <div className="clock-text">
           <span className="clock-label">{headline(status, delivery, showClock)}</span>
           {showClock && (

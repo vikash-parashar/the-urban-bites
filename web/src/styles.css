@@ -1951,3 +1951,11 @@ button.kpi-tile:hover { border-color: var(--gold); }
 :root[data-theme="glass"] .fav-card { background: color-mix(in srgb, var(--ink) 92%, transparent); border-color: var(--glass-line); }
 .footer-follow a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .social > .menu-sub { margin-inline: auto; text-align: center; }
+
+/* Clean ring, no glow (a glow got clipped into a square). Finished orders get a moving green ring. */
+.tracker .clock svg { overflow: visible; }
+.tracker .clock-fill, .tracker.clock-idle .clock-fill, .tracker .clock-idle .clock-fill,
+.tracker .status-ready .clock-fill, .tracker .status-completed .clock-fill, .tracker .status-out_for_delivery .clock-fill { filter: none; }
+.clock-sweep { fill: none; stroke: #bbf7d0; stroke-width: 8; stroke-linecap: round; opacity: 0.9; }
+.clock-pulse { position: absolute; inset: 3%; border-radius: 50%; border: 3px solid var(--tk); pointer-events: none; }
+.footer > .brand { margin-inline: auto; justify-self: center; }
