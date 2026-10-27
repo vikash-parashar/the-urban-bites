@@ -65,7 +65,7 @@ export const defaultShop: Shop = {
   min_order_delivery: 500,
   min_order_pickup: 0,
   free_delivery_min: 500,
-  free_delivery_km: 5,
+  free_delivery_km: 3,
   max_delivery_km: 5,
   delivery_fee: 40,
   cart_lat: 29.113493,

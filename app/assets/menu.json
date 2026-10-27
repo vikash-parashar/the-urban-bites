@@ -162,7 +162,7 @@
         {
           "id": "mushroom-special",
           "name": "Mushroom Special",
-          "name_hi": "मसरूम स्पेशल",
+          "name_hi": "मशरूम स्पेशल",
           "full": 260,
           "half": 170,
           "image": "kadhai-paneer"
@@ -184,16 +184,16 @@
         {
           "id": "manchurian",
           "name": "Manchurian",
-          "name_hi": "मनच्यूरियन",
+          "name_hi": "मंचूरियन",
           "full": 140,
-          "image": "chilli-paneer"
+          "image": ""
         },
         {
           "id": "fried-rice",
           "name": "Fried Rice",
-          "name_hi": "फ्राई राईस",
+          "name_hi": "फ्राइड राइस",
           "full": 140,
-          "image": "chilli-paneer"
+          "image": ""
         }
       ]
     },
@@ -219,7 +219,7 @@
         {
           "id": "finger-peri-peri",
           "name": "Finger Peri-Peri",
-          "name_hi": "फिंगर परी-परी",
+          "name_hi": "फिंगर पेरी-पेरी",
           "full": 110,
           "image": "fries"
         },
@@ -233,9 +233,9 @@
         {
           "id": "sweet-corn-masala",
           "name": "Sweet Corn Masala",
-          "name_hi": "स्वीट कोर्न मसाला",
+          "name_hi": "स्वीट कॉर्न मसाला",
           "full": 100,
-          "image": "peanut-masala"
+          "image": ""
         },
         {
           "id": "chana-masala",
@@ -247,7 +247,7 @@
         {
           "id": "peanut-masala",
           "name": "Peanut Masala",
-          "name_hi": "पिनट मसाला",
+          "name_hi": "पीनट मसाला",
           "full": 110,
           "image": "peanut-masala"
         }
@@ -261,88 +261,99 @@
         {
           "id": "garlic-naan",
           "name": "Garlic Naan",
-          "name_hi": "गारलीक नान",
+          "name_hi": "गार्लिक नान",
           "full": 70,
-          "image": "naan"
+          "image": "naan",
+          "description": "1 piece"
         },
         {
           "id": "ginger-naan",
           "name": "Ginger Naan",
-          "name_hi": "जनजर नान",
+          "name_hi": "जिंजर नान",
           "full": 70,
           "image": "naan",
-          "_check": "board reads 'जनजर नान'; confirm name with owner"
+          "_check": "board reads 'जनजर नान'; confirm name with owner",
+          "description": "1 piece"
         },
         {
           "id": "omiya-naan",
-          "name": "Omiya Naan",
-          "name_hi": "ओमिया नान",
+          "name": "Onion Naan",
+          "name_hi": "अनियन नान",
           "full": 60,
           "image": "naan",
-          "_check": "board reads 'ओमिया नान'; confirm name with owner"
+          "description": "1 piece"
         },
         {
           "id": "plain-naan",
           "name": "Plain Naan",
           "name_hi": "प्लेन नान",
           "full": 50,
-          "image": "naan"
+          "image": "naan",
+          "description": "1 piece"
         },
         {
           "id": "tandoori-roti",
           "name": "Tandoori Roti",
           "name_hi": "तन्दूरी रोटी",
           "full": 20,
-          "image": "naan"
+          "image": "naan",
+          "description": "1 piece"
         },
         {
           "id": "missi-roti",
           "name": "Missi Roti",
-          "name_hi": "मेसी रोटी",
+          "name_hi": "मिस्सी रोटी",
           "full": 35,
-          "image": "naan"
+          "image": "naan",
+          "description": "1 piece"
         },
         {
           "id": "tandoori-paratha",
           "name": "Tandoori Paratha",
           "name_hi": "तन्दूरी परांठा",
           "full": 60,
-          "image": "paratha"
+          "image": "paratha",
+          "description": "1 piece"
         },
         {
           "id": "lachha-paratha",
           "name": "Lachha Paratha",
           "name_hi": "लच्छा परांठा",
           "full": 80,
-          "image": "paratha"
+          "image": "paratha",
+          "description": "1 piece"
         },
         {
           "id": "paneer-paratha",
           "name": "Paneer Paratha",
           "name_hi": "पनीर परांठा",
           "full": 80,
-          "image": "paratha"
+          "image": "paratha",
+          "description": "1 piece"
         },
         {
           "id": "aloo-paratha",
           "name": "Aloo Paratha",
-          "name_hi": "आलु परांठा",
+          "name_hi": "आलू परांठा",
           "full": 60,
-          "image": "paratha"
+          "image": "paratha",
+          "description": "1 piece"
         },
         {
           "id": "pyaz-paratha",
           "name": "Pyaz Paratha",
           "name_hi": "प्याज परांठा",
           "full": 60,
-          "image": "paratha"
+          "image": "paratha",
+          "description": "1 piece"
         },
         {
           "id": "mix-paratha",
           "name": "Mix Paratha",
           "name_hi": "मिक्स परांठा",
           "full": 80,
-          "image": "paratha"
+          "image": "paratha",
+          "description": "1 piece"
         }
       ]
     },
@@ -370,7 +381,7 @@
           "name": "Lassi",
           "name_hi": "लस्सी",
           "full": null,
-          "image": "raita"
+          "image": ""
         },
         {
           "id": "dahi",
