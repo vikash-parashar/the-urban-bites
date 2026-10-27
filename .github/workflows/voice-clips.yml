@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install edge-tts==7.2.8
+      - run: pip install edge-tts==7.3.1
       - run: python scripts/voice_clips.py ${{ inputs.force && '--force' || '' }}
       - name: Commit clips
         run: |
