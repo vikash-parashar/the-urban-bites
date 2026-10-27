@@ -9,10 +9,12 @@ import { ChangePassword, Login, ResetPassword } from './Account'
 import { billText, itemKind, whatsappBill, type Bill } from './kit'
 import { MA, MButton } from './motion'
 import { brand } from './brand'
+import Wordmark from './Wordmark'
 import { OrderTag, PaymentTag } from './Tags'
 import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
 import { say } from './voice'
 import { voiceNoteUrl } from './staffApi'
+import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
 
 const PREP = [5, 10, 15, 20, 30, 45]
 
@@ -23,6 +25,8 @@ export default function StaffApp({ hash }: { hash: string }) {
   const [user, setUser] = useState<Staff | null>(() => loadSession()?.user ?? null)
   const [tab, setTab] = useState<Tab>('orders')
   const [changing, setChanging] = useState(false)
+  const [acctOpen, setAcctOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   // Signed out, or told to change a temporary password: re-read the saved session.
   const onSignedOut = useCallback(() => setUser(loadSession()?.user ?? null), [])
   const [all, setAll] = useState(false)
@@ -46,13 +50,17 @@ export default function StaffApp({ hash }: { hash: string }) {
     ? [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['offers', 'Offers', '🏷️'], ['menu', 'Menu', '🍽️'], ['expenses', 'Expenses', '💸'], ['shop', 'Shop', '🏪'], ['riders', 'Riders', '🛵'], ['staff', 'Staff', '👥']]
     : [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['menu', 'Sold out', '🍽️'], ['shop', 'Shop', '🏪'], ['riders', 'Riders', '🛵']]
   const shown: Tab = isRider ? 'deliveries' : tab
+  // Phones get a bottom tab bar: up to 5 slots, the rest behind "More".
+  const primary = tabs.length > 5 ? tabs.slice(0, 4) : tabs
+  const more = tabs.length > 5 ? tabs.slice(4) : []
+  const inMore = more.some(([id]) => id === shown)
+  const go = (id: Tab) => { setTab(id); setMoreOpen(false); window.scrollTo({ top: 0 }) }
 
   return (
     <div className="staff">
       <header className="staff-bar">
         <a className="brand" href="#top" aria-label="Back to the website">
-          <span className="brand-urban">The Urban</span>
-          <span className="brand-bites">Bites</span>
+          <Wordmark />
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
           {tabs.map(([id, label, emoji]) => (
@@ -66,6 +74,22 @@ export default function StaffApp({ hash }: { hash: string }) {
           <MButton className="btn btn-ghost btn-sm" onClick={() => setChanging(true)}>Password</MButton>
           <MButton className="btn btn-ghost btn-sm" onClick={() => { signOut(); setUser(null) }}>Sign out</MButton>
         </div>
+        {/* Phones: one round account button instead of the name and two big buttons */}
+        <div className="staff-acct">
+          <button className="acct-btn" aria-haspopup="menu" aria-expanded={acctOpen} aria-label={`Account: ${user.name}`} onClick={() => setAcctOpen((v) => !v)}>
+            {user.name.trim().charAt(0).toUpperCase() || '?'}
+          </button>
+          {acctOpen && (
+            <>
+              <div className="acct-scrim" onClick={() => setAcctOpen(false)} />
+              <div className="acct-menu" role="menu">
+                <p className="acct-who"><b>{user.name}</b><span>{roleName(user.role)}</span></p>
+                <button role="menuitem" onClick={() => { setAcctOpen(false); setChanging(true) }}>🔑 Change password</button>
+                <button role="menuitem" className="acct-out" onClick={() => { signOut(); setUser(null) }}>↩ Sign out</button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
       <main className="staff-main">
         {!isRider && tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
@@ -76,7 +100,7 @@ export default function StaffApp({ hash }: { hash: string }) {
             🔔 {feed.newCount === 1 ? '1 new order' : `${feed.newCount} new orders`} waiting · open Orders
           </MButton>
         )}
-        {!isRider && tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} name={user.name} goTo={setTab} />}
         {!isRider && tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
         {!isRider && tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
         {!isRider && tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} canEdit={isAdmin} />}
@@ -84,6 +108,35 @@ export default function StaffApp({ hash }: { hash: string }) {
         {!isRider && tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={isAdmin} />}
         {!isRider && tab === 'staff' && isAdmin && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
       </main>
+      {tabs.length > 1 && (
+        <nav className="bottom-nav" aria-label="Staff sections">
+          {primary.map(([id, label, emoji]) => (
+            <button key={id} className="bn-item" aria-current={shown === id ? 'page' : undefined} onClick={() => go(id)}>
+              <i aria-hidden="true">{emoji}</i>
+              <span>{label}</span>
+              {id === 'orders' && feed.newCount > 0 && <b className="bn-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}
+            </button>
+          ))}
+          {more.length > 0 && (
+            <button className="bn-item" aria-current={inMore ? 'page' : undefined} aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)}>
+              <i aria-hidden="true">{inMore ? more.find(([id]) => id === shown)![2] : '☰'}</i>
+              <span>{inMore ? more.find(([id]) => id === shown)![1] : 'More'}</span>
+            </button>
+          )}
+        </nav>
+      )}
+      {moreOpen && (
+        <>
+          <div className="acct-scrim more-scrim" onClick={() => setMoreOpen(false)} />
+          <div className="more-sheet" role="menu" aria-label="More sections">
+            {more.map(([id, label, emoji]) => (
+              <button key={id} role="menuitem" aria-current={shown === id ? 'page' : undefined} onClick={() => go(id)}>
+                <i aria-hidden="true">{emoji}</i><span>{label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -152,7 +205,7 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
   return { orders, offset, error, load, newCount, sound, setSound }
 }
 
-function Orders({ feed, all, setAll, onSignedOut }: { feed: Feed; all: boolean; setAll: (v: boolean) => void; onSignedOut: () => void }) {
+function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; all: boolean; setAll: (v: boolean) => void; onSignedOut: () => void; name: string; goTo: (t: Tab) => void }) {
   const { orders, offset, error, load, newCount, sound, setSound } = feed
   const [selected, setSelected] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('open')
@@ -177,6 +230,8 @@ function Orders({ feed, all, setAll, onSignedOut }: { feed: Feed; all: boolean; 
   }
 
   return (
+    <>
+    <TodayStrip name={name} orders={orders} goTo={goTo} />
     <div className={`board ${current ? 'has-sel' : ''}`}>
       <div className="board-list">
         <div className="board-head">
@@ -203,7 +258,7 @@ function Orders({ feed, all, setAll, onSignedOut }: { feed: Feed; all: boolean; 
           })}
         </div>
         {(error || updErr) && <p className="error" role="alert">{updErr || error}</p>}
-        {orders.length === 0 && !error && <p className="menu-sub">No open orders. New ones from the website and the app appear here within 10 seconds.</p>}
+        {orders.length === 0 && !error && <EmptyOrders goTo={goTo} />}
         {shown.length === 0 && orders.length > 0 && <p className="menu-sub">No orders here right now.</p>}
         {shown.map((o) => (
           <MButton layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }} key={o.id} className={`order-card ${o.status === 'placed' ? 'is-new' : ''} ${o.id === selected ? 'is-on' : ''}`} onClick={() => setSelected(o.id)}>
@@ -225,12 +280,13 @@ function Orders({ feed, all, setAll, onSignedOut }: { feed: Feed; all: boolean; 
       <div className="board-detail" role={current ? 'dialog' : undefined} aria-label={current ? `Order #${current.number}` : undefined}>
         {current && <MButton className="sheet-close" onClick={() => setSelected(null)} aria-label="Close order">Back to orders</MButton>}
         {!current ? (
-          <p className="menu-sub">Pick an order to set its time and move it along.</p>
+          <PickHint />
         ) : (
           <OrderPanel key={current.id} o={current} offset={offset} onUpdate={(u) => update(current, u)} />
         )}
       </div>
     </div>
+    </>
   )
 }
 

@@ -10,7 +10,7 @@ import { MButton } from './motion'
 // Bars grow from the left when their row scrolls into view (driven by the parent, since a 0-width bar never "intersects").
 const growX = { hidden: { scaleX: 0 }, show: { scaleX: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const } } }
 
-const PERIODS: [Period, string][] = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['year', 'This year']]
+const PERIODS: [Period, string, string][] = [['day', 'Today', 'Today'], ['week', 'This week', 'Week'], ['month', 'This month', 'Month'], ['year', 'This year', 'Year']]
 const PREV_NAME: Record<Period, string> = { day: 'yesterday', week: 'last week', month: 'the month before', year: 'last year' }
 const SOURCE: Record<string, string> = { web: 'Website', counter: 'Counter', app: 'App' }
 const PAY: Record<string, string> = { cash: 'Cash', online: 'UPI' }
@@ -290,8 +290,8 @@ export default function DashboardView({ onSignedOut, goTo, isAdmin = true }: { o
         </div>
         <div className="dash-controls">
           <div className="sizes" role="radiogroup" aria-label="Period">
-            {PERIODS.map(([id, label]) => (
-              <MButton key={id} className="size" role="radio" aria-checked={period === id} onClick={() => { setPeriod(id); setDate(istToday()) }}>{label}</MButton>
+            {PERIODS.map(([id, label, short]) => (
+              <MButton key={id} className="size" role="radio" aria-checked={period === id} onClick={() => { setPeriod(id); setDate(istToday()) }} aria-label={label}><span className="lbl-long">{label}</span><span className="lbl-short">{short}</span></MButton>
             ))}
           </div>
           <div className="dash-step">

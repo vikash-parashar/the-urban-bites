@@ -17,6 +17,7 @@ import MyOrders from './MyOrders'
 import type { PlacedOrder } from './api'
 import PopHero from './PopHero'
 import { brand } from './brand'
+import Wordmark from './Wordmark'
 import { developer } from './social'
 
 // The opening waits for the intro card on the first visit of the session.
@@ -88,8 +89,7 @@ export default function App() {
       <header className="topbar">
         <a className="brand" href="#top" aria-label={`${brand.name}, back to top`}>
           <img className="brand-mark" src={brand.logoUrl} alt="" width={72} height={33} />
-          <span className="brand-urban">{brand.lead} {brand.main}</span>
-          <span className="brand-bites">{brand.accent}</span>
+          <Wordmark />
         </a>
         <nav className="topnav" aria-label="Sections">
           <a href="#menu"><span aria-hidden="true">🍽️</span>Menu</a>
@@ -151,7 +151,6 @@ export default function App() {
           </motion.div>
         </motion.div>
         <p className="hero-where">Julana Bypass · near Brahmanwas</p>
-        <HeroSound video={heroVideo} />
       </section>
 
       <div className="marquees" aria-hidden="true">
@@ -244,11 +243,11 @@ export default function App() {
 
       <Social lat={business.lat} lng={business.lng} />
 
+      <HeroSound />
       <footer className="footer">
         <span className="brand">
           <img className="brand-mark" src={brand.logoUrl} alt="" width={96} height={43} />
-          <span className="brand-urban">{brand.lead} {brand.main}</span>
-          <span className="brand-bites">{brand.accent}</span>
+          <Wordmark />
         </span>
         <span>Momos · Chaap · Paneer · Paratha · Chai</span>
         <span>© {new Date().getFullYear()} {brand.name} · <a href="#staff">Staff sign in</a></span>

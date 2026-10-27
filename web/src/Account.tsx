@@ -1,8 +1,9 @@
+import Wordmark from './Wordmark'
 import { useState, type FormEvent } from 'react'
 import { changePassword, forgotPassword, resetPassword, signIn, signOut, type Staff } from './staffApi'
 import { MA, MButton } from './motion'
 
-const Brand = () => <a className="brand" href="#top"><span className="brand-urban">The Urban</span><span className="brand-bites">Bites</span></a>
+const Brand = () => <a className="brand" href="#top"><Wordmark /></a>
 
 function PasswordField({ id, name, label, auto }: { id: string; name: string; label: string; auto: string }) {
   const [show, setShow] = useState(false)

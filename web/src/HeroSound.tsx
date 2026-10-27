@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { media } from './menu'
 
 const MUSIC_VOL = 0.55 // 55%, as asked
@@ -6,92 +6,84 @@ const OFF_KEY = 'ub-music-off'
 
 const musicOff = () => { try { return localStorage.getItem(OFF_KEY) === '1' } catch { return false } }
 
-// Background music plus the kitchen sizzle behind the hero video.
-// Browsers block sound until the visitor taps, so the music starts on the first tap anywhere,
-// plays the 30-second clip (public/media/good-times-30s.mp3) at 55% and fades out. The button mutes or replays it.
-export default function HeroSound({ video }: { video: RefObject<HTMLVideoElement | null> }) {
-  const [on, setOn] = useState(false)
-  const [visible, setVisible] = useState(true)
-  const fade = useRef(0)
+// Background music for every visitor: the 30-second clip (public/media/good-times-30s.mp3) at 55%.
+// The videos stay silent; this track is the only sound.
+// It tries to start as soon as the page opens. Most browsers block sound until the visitor
+// touches the page, so if that happens it starts on the first tap, key press or scroll.
+// The floating button mutes it, and the choice is remembered.
+export default function HeroSound() {
+  const [on, setOn] = useState(!musicOff())
   const music = useRef<HTMLAudioElement | null>(null)
-  const musicFade = useRef(0)
+  const fade = useRef(0)
+  const playing = useRef(false)
 
-  function rampEl(el: HTMLMediaElement, to: number, ms: number, ref: { current: number }, after?: () => void) {
-    cancelAnimationFrame(ref.current)
-    const from = el.muted ? 0 : el.volume
+  function rampTo(el: HTMLMediaElement, to: number, ms: number, after?: () => void) {
+    cancelAnimationFrame(fade.current)
+    const from = el.volume
     const start = performance.now()
     const step = (t: number) => {
       const k = Math.max(0, Math.min(1, (t - start) / ms))
       el.volume = Math.max(0, Math.min(1, from + (to - from) * k))
-      if (k < 1) ref.current = requestAnimationFrame(step)
+      if (k < 1) fade.current = requestAnimationFrame(step)
       else after?.()
     }
-    ref.current = requestAnimationFrame(step)
+    fade.current = requestAnimationFrame(step)
   }
 
-  function ramp(to: number) {
-    const v = video.current
-    if (!v) return
-    if (to > 0) {
-      v.muted = false
-      v.play().catch(() => {})
-    }
-    rampEl(v, to, 600, fade, () => { if (to === 0) v.muted = true })
-  }
-
-  function startMusic() {
-    let a = music.current
-    if (!a) {
-      a = new Audio(media('good-times-30s.mp3'))
+  function audio() {
+    if (!music.current) {
+      const a = new Audio(media('good-times-30s.mp3'))
       a.preload = 'auto'
-      a.onended = () => setOn(false)
+      a.onended = () => { playing.current = false; setOn(false) }
       music.current = a
     }
-    a.currentTime = 0
+    return music.current
+  }
+
+  // Resolves true when the browser let the music play.
+  function startMusic(fromStart = true): Promise<boolean> {
+    const a = audio()
+    if (fromStart) a.currentTime = 0
     a.volume = 0
-    a.play().then(() => rampEl(a!, MUSIC_VOL, 1200, musicFade)).catch(() => setOn(false))
+    return a.play().then(() => {
+      playing.current = true
+      rampTo(a, MUSIC_VOL, 1200)
+      return true
+    }).catch(() => false)
   }
 
   function stopMusic() {
     const a = music.current
-    if (a && !a.paused) rampEl(a, 0, 500, musicFade, () => a.pause())
+    playing.current = false
+    if (a && !a.paused) rampTo(a, 0, 400, () => a.pause())
   }
 
-  // First tap anywhere on the page starts the music (once), unless the visitor muted it before.
+  // Play by default: try straight away, else on the first interaction anywhere.
   useEffect(() => {
     if (musicOff()) return
-    const first = (e: Event) => {
+    const events = ['pointerdown', 'touchstart', 'keydown', 'wheel', 'scroll'] as const
+    let trying = false
+    const off = () => events.forEach((e) => window.removeEventListener(e, kick))
+    const kick = (e: Event) => {
       if ((e.target as HTMLElement)?.closest?.('.hero-sound')) return // the button handles itself
-      setOn(true)
-      startMusic()
+      if (playing.current || musicOff()) return off()
+      if (trying) return
+      trying = true
+      startMusic().then((ok) => { trying = false; if (ok) off() })
     }
-    window.addEventListener('pointerdown', first, { once: true })
-    window.addEventListener('keydown', first, { once: true })
-    return () => { window.removeEventListener('pointerdown', first); window.removeEventListener('keydown', first) }
+    startMusic().then((ok) => {
+      if (!ok) events.forEach((e) => window.addEventListener(e, kick, { passive: true }))
+    })
+    return () => { off(); music.current?.pause() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    const v = video.current
-    if (!v) return
-    const io = new IntersectionObserver(([e]) => setVisible(e.intersectionRatio > 0.35), { threshold: [0, 0.35, 1] })
-    io.observe(v.closest('section') ?? v)
-    return () => io.disconnect()
-  }, [video])
-
-  // The sizzle plays under the music while the hero is on screen.
-  useEffect(() => {
-    ramp(on && visible ? 0.35 : 0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [on, visible])
-
-  useEffect(() => () => { music.current?.pause() }, [])
-
   function toggle() {
-    const next = !on
+    // On but blocked by the browser (not playing yet): a tap on the button starts it.
+    const next = !(on && playing.current)
     setOn(next)
     try { localStorage.setItem(OFF_KEY, next ? '0' : '1') } catch { /* private mode */ }
-    if (next) startMusic()
+    if (next) startMusic(!music.current || music.current.ended)
     else stopMusic()
   }
 
@@ -100,10 +92,11 @@ export default function HeroSound({ video }: { video: RefObject<HTMLVideoElement
       className={`hero-sound ${on ? 'is-on' : ''}`}
       onClick={toggle}
       aria-pressed={on}
-      aria-label={on ? 'Mute the music and kitchen sound' : 'Play the music and kitchen sound'}
+      aria-label={on ? 'Mute the music' : 'Play the music'}
     >
+      <span className="hero-sound-ico" aria-hidden="true">{on ? "🔊" : "🔇"}</span>
       <span className="eq" aria-hidden="true"><i /><i /><i /><i /></span>
-      <span className="hero-sound-label">{on ? 'Sound on · tap to mute' : 'Play music'}</span>
+      <span className="hero-sound-label">{on ? 'Mute music' : 'Play music'}</span>
     </button>
   )
 }
