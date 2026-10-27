@@ -98,6 +98,8 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
 
   // The website asks for the microphone (voice note to the kitchen) or the camera.
   Future<void> _onWebPermission(WebViewPermissionRequest req) async {
+    // iPhone: WKWebView shows the system prompt itself (texts are in Info.plist).
+    if (Platform.isIOS) return req.grant();
     var ok = true;
     for (final t in req.types) {
       if (t == WebViewPermissionResourceType.microphone) ok = ok && await _ask(Permission.microphone);
