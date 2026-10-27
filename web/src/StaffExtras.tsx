@@ -1,3 +1,5 @@
+import InstallApp from './InstallApp'
+import { EVENTS, SOUNDS, loadPrefs, play, savePrefs, type SoundId, type SoundPrefs } from './sounds'
 import { cleanMobile } from './kit'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { MustChangePassword, SignedOut, staffApi, type OfferInput, type StaffOrder } from './staffApi'
@@ -324,6 +326,9 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
         </MButton>
       </div>
 
+      <InstallApp />
+      <AlertSounds />
+
       {!isAdmin && (
         <div className="me-row">
           <span className="me-name"><strong>Order rules</strong><br /><small className="menu-sub">
@@ -388,5 +393,46 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
         <MButton className="btn btn-ghost" onClick={setHere}>Use this device's location</MButton>
       </div>}
     </div>
+  )
+}
+
+// AlertSounds: Manjeet picks the sound for a new order, an order still waiting and a customer cancel,
+// how loud, and how often the "still waiting" sound repeats. Saved on this tablet.
+function AlertSounds() {
+  const [p, setP] = useState<SoundPrefs>(loadPrefs)
+  const set = (u: Partial<SoundPrefs>) => { const n = { ...p, ...u }; setP(n); savePrefs(n) }
+  return (
+    <section className="panel sound-set" id="alert-sounds" aria-labelledby="sound-set-h">
+      <h3 className="panel-h" id="sound-set-h">🔔 Order alert sounds</h3>
+      <p className="menu-sub">Choose what rings on this tablet. Tap ▶ to hear it. Turn the tablet volume up too.</p>
+      {EVENTS.map((ev) => (
+        <div key={ev.id} className="sound-row">
+          <label htmlFor={`snd-${ev.id}`}><strong>{ev.label}</strong><small>{ev.hint}</small></label>
+          <select id={`snd-${ev.id}`} value={p[ev.id]} onChange={(e) => { const v = e.target.value as SoundId; set({ [ev.id]: v } as Partial<SoundPrefs>); play(v, p.loudness) }}>
+            {SOUNDS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+          <button type="button" className="sound-test" onClick={() => play(p[ev.id], p.loudness)} aria-label={`Play the ${ev.label} sound`} disabled={p[ev.id] === 'off'}>▶</button>
+        </div>
+      ))}
+      <div className="sound-row">
+        <span className="sound-l"><strong>Loudness</strong><small>Max is for a noisy road</small></span>
+        <div className="seg-mini" role="radiogroup" aria-label="Loudness">
+          {(['normal', 'loud', 'max'] as const).map((l) => (
+            <button key={l} type="button" role="radio" aria-checked={p.loudness === l} className={p.loudness === l ? 'on' : ''} onClick={() => { set({ loudness: l }); play(p.new, l) }}>
+              {l === 'normal' ? 'Normal' : l === 'loud' ? 'Loud' : 'Max'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="sound-row">
+        <label htmlFor="snd-every"><strong>Repeat "still waiting"</strong><small>Until you set the time on the order</small></label>
+        <select id="snd-every" value={p.every} onChange={(e) => set({ every: Number(e.target.value) })}>
+          <option value={15}>Every 15 seconds</option>
+          <option value={30}>Every 30 seconds</option>
+          <option value={60}>Every minute</option>
+          <option value={120}>Every 2 minutes</option>
+        </select>
+      </div>
+    </section>
   )
 }

@@ -1,3 +1,4 @@
+import InstallApp from './InstallApp'
 import Wordmark from './Wordmark'
 import { useState, type FormEvent } from 'react'
 import { changePassword, forgotPassword, resetPassword, signIn, signOut, type Staff } from './staffApi'
@@ -64,6 +65,7 @@ export function Login({ onIn }: { onIn: (s: Staff) => void }) {
           </>
         )}
       </form>
+      <InstallApp />
     </div>
   )
 }

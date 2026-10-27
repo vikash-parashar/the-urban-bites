@@ -13,6 +13,7 @@ import Wordmark from './Wordmark'
 import { OrderTag, PaymentTag } from './Tags'
 import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
 import { greetOnce, say, sayFun } from './voice'
+import { audio, loadPrefs, ring } from './sounds'
 import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
 import Tour, { ownerSteps } from './Tour'
@@ -190,14 +191,14 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
     setOrders(r.orders)
     const arrived = r.orders.filter((o) => o.status === 'placed' && seen.current && !seen.current.has(o.id))
     if (arrived.length && soundRef.current) {
-      chime(); setTimeout(() => say('staff_new_order', true), 900)
+      ring('new'); setTimeout(() => say('staff_new_order', true), 1600)
       // A busy rush (4+ orders open): a cheeky "have a sip of chai" every 20 minutes at most.
       const open = r.orders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length
       if (open >= 4) setTimeout(() => sayFun('rush', ['staff_rush'], 20 * 60_000), 1200)
     }
     // A customer cancelled an order Manjeet already saw: tell him so he doesn't start making it.
     const dropped = r.orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer' && lastStatus.current.has(o.id) && lastStatus.current.get(o.id) !== 'cancelled')
-    if (dropped.length && soundRef.current) { chime(); setTimeout(() => say('staff_cancelled', true), 900) }
+    if (dropped.length && soundRef.current) { ring('cancelled'); setTimeout(() => say('staff_cancelled', true), 1400) }
     lastStatus.current = new Map(r.orders.map((o) => [o.id, o.status]))
     const waiting = r.orders.filter((o) => o.status === 'placed').length
     document.title = waiting ? `(${waiting}) New order${waiting > 1 ? 's' : ''} · ${brand.name}` : `Orders · ${brand.name}`
@@ -212,12 +213,18 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
   }, [load, enabled])
 
   const newCount = orders.filter((o) => o.status === 'placed').length
-  // Keep ringing every 30 seconds while an order is still waiting to be accepted.
+  // Keep ringing while an order is still waiting to be accepted (every 30 s by default; Manjeet can change it).
+  const [every, setEvery] = useState(() => loadPrefs().every)
+  useEffect(() => {
+    const on = () => setEvery(loadPrefs().every)
+    window.addEventListener('ub-sound-prefs', on)
+    return () => window.removeEventListener('ub-sound-prefs', on)
+  }, [])
   useEffect(() => {
     if (!enabled || newCount === 0 || !sound) return
-    const id = window.setInterval(chime, 30_000)
+    const id = window.setInterval(() => ring('pending'), every * 1000)
     return () => clearInterval(id)
-  }, [enabled, newCount, sound])
+  }, [enabled, newCount, sound, every])
 
   useEffect(() => () => { document.title = brand.name }, [])
   // Browsers only play sound after a tap; unlock the bell on the first tap anywhere.
@@ -231,7 +238,7 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
     soundRef.current = on
     setSoundState(on)
     try { localStorage.setItem('ub-sound', on ? 'on' : 'off') } catch { /* private mode */ }
-    if (on) chime()
+    if (on) ring('new')
   }
   return { orders, offset, error, load, newCount, sound, setSound }
 }
@@ -273,6 +280,7 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
             <MButton className={`btn btn-ghost btn-sm sound-btn ${sound ? '' : 'is-off'}`} onClick={() => setSound(!sound)} aria-pressed={sound}>
               {sound ? '🔔 Sound on' : '🔕 Sound off'}
             </MButton>
+            <button type="button" className="link-btn" onClick={() => goTo('shop')}>Change sound</button>
           </div>
         </div>
         {orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer').slice(0, 3).map((o) => (
@@ -327,38 +335,6 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
     </div>
     </>
   )
-}
-
-// One shared audio context, resumed by the first tap (browsers block sound before that).
-let ctxRef: AudioContext | null = null
-function audio(): AudioContext | null {
-  try {
-    if (!ctxRef) {
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      ctxRef = new Ctx()
-    }
-    return ctxRef
-  } catch { return null }
-}
-
-// chime rings a short three-note bell for a new order.
-function chime() {
-  const ctx = audio()
-  if (!ctx) return
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-  const t0 = ctx.currentTime + 0.02
-  ;[880, 1175, 1568].forEach((f, i) => {
-    const o = ctx.createOscillator(), g = ctx.createGain()
-    o.frequency.value = f
-    o.type = 'triangle'
-    const t = t0 + i * 0.16
-    g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.35, t + 0.02)
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6)
-    o.connect(g).connect(ctx.destination)
-    o.start(t)
-    o.stop(t + 0.65)
-  })
 }
 
 const STEPS: [string, string][] = [['placed', 'New'], ['preparing', 'Cooking'], ['ready', 'Ready'], ['completed', 'Done']]

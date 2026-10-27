@@ -2140,3 +2140,38 @@ button.kpi-tile:hover { border-color: var(--gold); }
 }
 .acct-menu button:active, .more-sheet button:active { background: color-mix(in srgb, var(--cream) 8%, transparent); }
 .rider-add .panel-h { margin-top: 0; }
+
+/* Shop tab: order alert sounds */
+.sound-set { display: grid; gap: 10px; }
+.sound-set .panel-h { margin-top: 0; }
+.sound-set .menu-sub { margin: 0 0 4px; }
+.sound-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, 240px) 44px; align-items: center; gap: 10px 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+.sound-row > label, .sound-l { display: grid; gap: 2px; min-width: 0; }
+.sound-row small { color: var(--muted); font-size: 0.82rem; font-weight: 500; }
+.sound-row select { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--night); color: var(--cream); font: inherit; font-weight: 700; }
+.sound-test { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--cream); font-size: 1rem; cursor: pointer; }
+.sound-test:disabled { opacity: 0.4; cursor: not-allowed; }
+.seg-mini { grid-column: 2 / 4; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg-mini button { min-height: 44px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--night); color: var(--cream); font: inherit; font-weight: 800; cursor: pointer; }
+.seg-mini button.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 18%, var(--night)); }
+.sound-row:last-child select { grid-column: 2 / 4; }
+@media (max-width: 560px) {
+  .sound-row { grid-template-columns: minmax(0, 1fr) 44px; }
+  .sound-row > label, .sound-l { grid-column: 1 / -1; }
+  .seg-mini, .sound-row:last-child select { grid-column: 1 / -1; }
+}
+:root[data-theme="pop"] .sound-row select, :root[data-theme="pop"] .seg-mini button { background: #fff; color: #111; border: 2px solid #111; }
+:root[data-theme="pop"] .seg-mini button.on { background: #ffe9a8; }
+.board-tools .link-btn { font-size: 0.85rem; }
+
+/* Install as app (staff login + Shop tab) */
+.install { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; padding: 14px 16px; border-radius: 14px; border: 1px dashed color-mix(in srgb, var(--gold) 60%, transparent); background: color-mix(in srgb, var(--gold) 7%, var(--ink)); }
+.install-ico { font-size: 1.6rem; }
+.install-txt { display: grid; gap: 2px; }
+.install-txt small { color: var(--muted); font-size: 0.85rem; }
+.install-steps { grid-column: 1 / -1; margin: 4px 0 0; padding-left: 22px; display: grid; gap: 4px; color: var(--cream); font-size: 0.92rem; }
+.install-ok { margin: 0; color: var(--good, #22c55e); font-weight: 700; }
+.staff-login { gap: 16px; align-content: center; }
+.staff-login > .install, .staff-login > .install-ok { width: min(420px, 100%); justify-self: center; }
+:root[data-theme="pop"] .install { background: #fff8e1; border: 2px dashed #111; }
+:root[data-theme="pop"] .install-steps { color: #111; }
