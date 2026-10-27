@@ -1957,3 +1957,13 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .tracker .clock-fill, .tracker.clock-idle .clock-fill, .tracker .clock-idle .clock-fill,
 .tracker .status-ready .clock-fill, .tracker .status-completed .clock-fill, .tracker .status-out_for_delivery .clock-fill { filter: none; }
 .footer > .brand { margin-inline: auto; justify-self: center; }
+
+/* My orders: in progress / completed counts */
+.my-orders-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.mo-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--ink); color: var(--cream); font-weight: 700; font-size: 0.92rem; }
+.mo-chip b { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mo-chip.is-on { border-color: var(--gold); background: var(--gold); color: var(--on-gold); }
+.mo-chip.is-on b { background: var(--on-gold); color: var(--gold); }
+.my-order { cursor: pointer; }
+.my-order.is-live { border-color: var(--gold); }
+.nav-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--neon, #ff3d8b); color: #fff; font-size: 0.72rem; font-weight: 800; }

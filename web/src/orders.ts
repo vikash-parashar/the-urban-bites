@@ -13,7 +13,7 @@ function read(): PlacedOrder[] {
 
 function write(list: PlacedOrder[]) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(list.slice(0, 5)))
+    localStorage.setItem(KEY, JSON.stringify(list.slice(0, 20)))
   } catch {
     /* storage blocked: tracking lasts for this visit */
   }
@@ -87,38 +87,32 @@ export function useNow(active: boolean) {
   return now
 }
 
-const DONE_KEY = 'ub-done-orders'
-function doneIds(): string[] {
-  try { return JSON.parse(localStorage.getItem(DONE_KEY) || '[]') as string[] } catch { return [] }
-}
-
-// useStillOpen says whether an order is still on its way (so the "Track it" bar is worth showing).
-// It checks every 30 s and remembers finished orders, so a delivered or cancelled one never comes back.
-export function useStillOpen(order: PlacedOrder | undefined) {
-  const [open, setOpen] = useState<boolean | null>(null)
+// useOrderStatuses keeps the live status of every saved order: orders still in progress are
+// re-checked every 30 s, finished ones (completed or cancelled, and paid) are checked once and left alone.
+export function useOrderStatuses(orders: PlacedOrder[]) {
+  const [info, setInfo] = useState<Record<string, Tracking>>({})
+  const ids = orders.map((o) => o.id).join(',')
   useEffect(() => {
-    setOpen(null)
-    if (!order) return
-    if (doneIds().includes(order.id)) { setOpen(false); return }
     let stop = false
     let timer = 0
+    const finished = new Set<string>()
     const tick = async () => {
-      try {
-        const t = await trackOrder(order)
-        if (stop) return
-        if (DONE.has(t.status)) {
-          setOpen(false)
-          try { localStorage.setItem(DONE_KEY, JSON.stringify([order.id, ...doneIds()].slice(0, 20))) } catch { /* blocked */ }
-          return
-        }
-        setOpen(true)
-      } catch {
-        if (!stop) setOpen((o) => o ?? true) // offline: keep the bar so they can still open the tracker
-      }
-      timer = window.setTimeout(tick, 30_000)
+      await Promise.all(orders.filter((o) => !finished.has(o.id)).map((o) =>
+        trackOrder(o).then((t) => {
+          if (stop) return
+          setInfo((m) => ({ ...m, [o.id]: t }))
+          if (t.status === 'cancelled' || (DONE.has(t.status) && t.payment_status === 'paid')) finished.add(o.id)
+        }).catch(() => {}),
+      ))
+      if (!stop && finished.size < orders.length) timer = window.setTimeout(tick, document.hidden ? 90_000 : 30_000)
     }
     tick()
     return () => { stop = true; clearTimeout(timer) }
-  }, [order?.id])
-  return open === true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids])
+  const known = orders.filter((o) => info[o.id])
+  const open = known.filter((o) => !DONE.has(info[o.id].status))
+  const completed = known.filter((o) => info[o.id].status === 'completed')
+  const cancelled = known.filter((o) => info[o.id].status === 'cancelled')
+  return { info, open, completed, cancelled }
 }

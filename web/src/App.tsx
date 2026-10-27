@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform, type Variants } from 'motion/react'
 import { alive, ease, MA, MButton, Reveal, spring, stagger } from './motion'
 import { business, media } from './menu'
 import { registerOffers, useCart } from './cart'
-import { useMyOrders, useStillOpen } from './orders'
+import { useMyOrders, useOrderStatuses } from './orders'
 import { useShop } from './shop'
 import Embers from './Embers'
 import Menu from './Menu'
@@ -67,7 +67,8 @@ export default function App() {
     setView('track')
     setCartOpen(true)
   }
-  const latestOpen = useStillOpen(myOrders.latest)
+  const statuses = useOrderStatuses(myOrders.orders)
+  const openOrders = statuses.open
   const tracked = myOrders.orders.find((o) => o.id === trackId) ?? myOrders.latest
   const heroVideo = useRef<HTMLVideoElement>(null)
   // Some phones ignore autoPlay unless muted is set on the element itself; nudge it once.
@@ -117,7 +118,7 @@ export default function App() {
         </a>
         <nav className="topnav" aria-label="Sections">
           <a href="#menu"><span aria-hidden="true">🍽️</span>Menu</a>
-          {myOrders.orders.length > 0 && <a href="#my-orders"><span aria-hidden="true">🧾</span>My orders</a>}
+          {myOrders.orders.length > 0 && <a href="#my-orders"><span aria-hidden="true">🧾</span>My orders{openOrders.length > 0 && <b className="nav-count" aria-label={`${openOrders.length} in progress`}>{openOrders.length}</b>}</a>}
           {offers.length > 0 && <a href="#offers"><span aria-hidden="true">🔥</span>Offers</a>}
           <a href="#regulars"><span aria-hidden="true">👑</span>Regulars</a>
           <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
@@ -199,7 +200,7 @@ export default function App() {
       <OurPromise />
 
 
-      <MyOrders orders={myOrders.orders} onOpen={openTracker} />
+      <MyOrders orders={myOrders.orders} status={statuses} onOpen={openTracker} />
 
       <Offers offers={offers} cart={cart} onOpenCart={openCart} />
 
@@ -280,11 +281,13 @@ export default function App() {
         </div>
       </footer>
 
-      {cart.count === 0 && !cartOpen && myOrders.latest && latestOpen && (
-        <motion.button className="cart-bar track-bar" onClick={() => openTracker()} style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
+      {cart.count === 0 && !cartOpen && openOrders.length > 0 && (
+        <motion.button className="cart-bar track-bar"
+          onClick={() => (openOrders.length === 1 ? openTracker(openOrders[0]) : document.getElementById('my-orders')?.scrollIntoView({ behavior: 'smooth' }))}
+          style={{ x: '-50%' }} initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }} transition={spring}>
           <span className="live-dot" aria-hidden="true" />
-          <span>Order #{myOrders.latest.number}</span>
-          <span className="cart-bar-go">Track it →</span>
+          <span>{openOrders.length === 1 ? `Order #${openOrders[0].number}` : `${openOrders.length} orders in progress`}</span>
+          <span className="cart-bar-go">{openOrders.length === 1 ? 'Track it →' : 'See all →'}</span>
         </motion.button>
       )}
       {cart.count > 0 && !cartOpen && (
