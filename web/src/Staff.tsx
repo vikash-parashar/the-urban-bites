@@ -15,6 +15,7 @@ import { CustomerMap, NavView, RiderBoard, Riders } from './Delivery'
 import { say } from './voice'
 import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
+import Tour, { ownerSteps } from './Tour'
 
 const PREP = [5, 10, 15, 20, 30, 45]
 
@@ -30,7 +31,16 @@ export default function StaffApp({ hash }: { hash: string }) {
   // Signed out, or told to change a temporary password: re-read the saved session.
   const onSignedOut = useCallback(() => setUser(loadSession()?.user ?? null), [])
   const [all, setAll] = useState(false)
+  const [touring, setTouring] = useState(false)
   const feed = useOrderFeed(onSignedOut, all, !!user && !user.must_change_password && user.role !== 'delivery')
+  // The owner gets the guided tour the first time they sign in on this device.
+  const ownerReady = !!user && user.role === 'owner' && !user.must_change_password && !changing
+  useEffect(() => {
+    if (!ownerReady || !user) return
+    let seen = false
+    try { seen = localStorage.getItem(`ub-tour-${user.id}`) === '1' } catch { /* private mode */ }
+    if (!seen) setTouring(true)
+  }, [ownerReady, user])
 
   if (hash.startsWith('#staff/reset')) {
     const token = new URLSearchParams(hash.split('?')[1] ?? '').get('token') ?? ''
@@ -54,6 +64,8 @@ export default function StaffApp({ hash }: { hash: string }) {
   const primary = tabs.length > 5 ? tabs.slice(0, 4) : tabs
   const more = tabs.length > 5 ? tabs.slice(4) : []
   const inMore = more.some(([id]) => id === shown)
+  const tourKey = `ub-tour-${user.id}`
+  const endTour = () => { setTouring(false); try { localStorage.setItem(tourKey, '1') } catch { /* private mode */ } }
   const go = (id: Tab) => { setTab(id); setMoreOpen(false); window.scrollTo({ top: 0 }) }
 
   return (
@@ -64,11 +76,16 @@ export default function StaffApp({ hash }: { hash: string }) {
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
           {tabs.map(([id, label, emoji]) => (
-            <MButton key={id} role="tab" aria-selected={shown === id} className="tab" onClick={() => setTab(id)}>
+            <MButton key={id} role="tab" aria-selected={shown === id} className="tab" data-tour={id} onClick={() => setTab(id)}>
               <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}{id === 'orders' && feed.newCount > 0 && <b className="tab-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}</span>
             </MButton>
           ))}
         </nav>
+        {!isRider && (
+          <button className="help-btn" data-tour="help" onClick={() => setTouring(true)} aria-label="How to use this screen">
+            <span aria-hidden="true">❓</span><span className="help-txt">How to use</span>
+          </button>
+        )}
         <div className="staff-who">
           <span>{user.name} · {roleName(user.role)}</span>
           <MButton className="btn btn-ghost btn-sm" onClick={() => setChanging(true)}>Password</MButton>
@@ -111,20 +128,21 @@ export default function StaffApp({ hash }: { hash: string }) {
       {tabs.length > 1 && (
         <nav className="bottom-nav" aria-label="Staff sections">
           {primary.map(([id, label, emoji]) => (
-            <button key={id} className="bn-item" aria-current={shown === id ? 'page' : undefined} onClick={() => go(id)}>
+            <button key={id} className="bn-item" data-tour={id} aria-current={shown === id ? 'page' : undefined} onClick={() => go(id)}>
               <i aria-hidden="true">{emoji}</i>
               <span>{label}</span>
               {id === 'orders' && feed.newCount > 0 && <b className="bn-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}
             </button>
           ))}
           {more.length > 0 && (
-            <button className="bn-item" aria-current={inMore ? 'page' : undefined} aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)}>
+            <button className="bn-item" data-tour="more" aria-current={inMore ? 'page' : undefined} aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)}>
               <i aria-hidden="true">{inMore ? more.find(([id]) => id === shown)![2] : '☰'}</i>
               <span>{inMore ? more.find(([id]) => id === shown)![1] : 'More'}</span>
             </button>
           )}
         </nav>
       )}
+      {touring && <Tour steps={ownerSteps(isAdmin)} onClose={endTour} setTab={setTab} />}
       {moreOpen && (
         <>
           <div className="acct-scrim more-scrim" onClick={() => setMoreOpen(false)} />

@@ -1807,3 +1807,57 @@ button.kpi-tile:hover { border-color: var(--gold); }
 @media (max-width: 760px) { .staff-bar .wordmark { --wm: 0.85rem; } }
 @media (max-width: 480px) { .topbar .wordmark { --wm: 0.82rem; } }
 @media (max-width: 360px) { .topbar .wordmark { --wm: 0.74rem; } }
+
+/* ---------- Owner tour ---------- */
+.help-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--cream);
+  font: inherit; font-weight: 800; font-size: 0.9rem; cursor: pointer;
+}
+.help-btn:hover { background: color-mix(in srgb, var(--gold) 26%, transparent); }
+.staff-bar .help-btn { margin-left: auto; }
+.staff-bar .help-btn + .staff-who { margin-left: 0; }
+@media (max-width: 760px) {
+  .help-btn { width: 40px; padding: 0; justify-content: center; }
+  .help-btn .help-txt { display: none; }
+  .staff-bar { gap: 8px; }
+}
+.tour { position: fixed; inset: 0; z-index: 4000; }
+.tour-dim { position: fixed; inset: 0; background: rgba(3, 5, 15, 0.72); }
+.tour-hole {
+  position: fixed; border-radius: 16px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(3, 5, 15, 0.72), 0 0 0 3px #fbbf24, 0 0 24px 4px rgba(251, 191, 36, 0.6);
+  animation: tour-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tour-pulse { 50% { box-shadow: 0 0 0 9999px rgba(3, 5, 15, 0.72), 0 0 0 5px #fbbf24, 0 0 34px 8px rgba(251, 191, 36, 0.45); } }
+@media (prefers-reduced-motion: reduce) { .tour-hole { animation: none; } }
+.tour-card {
+  position: fixed; width: min(380px, calc(100vw - 24px)); padding: 16px 18px 14px; border-radius: 20px;
+  background: #fffaf0; color: #1b1405; box-shadow: 0 24px 60px -16px rgba(0, 0, 0, 0.8); border: 2px solid #fbbf24;
+}
+.tour-card.is-centre { left: 50%; top: 50%; translate: -50% -50%; width: min(420px, calc(100vw - 24px)); }
+@media (max-width: 640px) { .tour-card.is-pinned { left: 12px; right: 12px; width: auto; } }
+.tour-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.tour-count { font-size: 0.78rem; font-weight: 800; color: #8a6a1c; letter-spacing: 0.06em; }
+.tour-x { border: 0; background: transparent; font-size: 1.1rem; color: #6b5a33; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; }
+.tour-card h3 { margin: 2px 0 6px; font-family: 'Mukta', 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.35rem; color: #111; }
+.tour-hi { margin: 0 0 6px; font-family: 'Mukta', sans-serif; font-size: 1.08rem; line-height: 1.5; font-weight: 600; color: #231a07; }
+.tour-en { margin: 0; font-size: 0.85rem; color: #6b5a33; }
+.tour-dots { display: flex; gap: 5px; margin: 12px 0 10px; flex-wrap: wrap; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: #e7d6ad; }
+.tour-dots i.on { background: #e0531b; width: 20px; border-radius: 4px; }
+.tour-actions { display: flex; justify-content: space-between; gap: 10px; }
+.tour-card .btn-ghost { color: #3b2c0c; border-color: #d9c18a; background: transparent; box-shadow: none; }
+.tour-card .btn { min-height: 44px; font-size: 1rem; }
+.tour-art { display: flex; justify-content: center; gap: 10px; font-size: 2.2rem; padding: 8px 0 4px; }
+.tour-demo { margin: 6px 0 10px; padding: 12px; border-radius: 16px; background: #14121c; }
+.td-card { position: relative; padding: 12px; border-radius: 12px; background: #1f1c2b; color: #f4ecff; border: 1.5px solid #3a3550; }
+.td-card.is-tap { border-color: #fbbf24; }
+.td-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.td-row .tag { font-size: 0.75rem; }
+.td-items { margin: 6px 0 10px; font-size: 0.85rem; color: #b9b2cc; }
+.td-btns { display: flex; gap: 6px; }
+.td-btn { flex: 1; text-align: center; padding: 8px 4px; border-radius: 10px; border: 1.5px solid #3a3550; font-size: 0.8rem; font-weight: 800; transition: transform 0.2s, box-shadow 0.2s; }
+.td-btn.gold { background: #fbbf24; color: #1a1200; border-color: #fbbf24; }
+.td-btn.is-tap { transform: scale(1.08); box-shadow: 0 0 0 3px #fbbf24, 0 0 18px rgba(251, 191, 36, 0.7); }
+.td-hint { margin: 10px 0 0; text-align: center; color: #fde68a; font-family: 'Mukta', sans-serif; font-weight: 700; font-size: 1rem; }
