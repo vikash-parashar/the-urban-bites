@@ -13,6 +13,7 @@ import Gallery from './Gallery'
 import { greetOnce, sayFun } from './voice'
 import HeroSound from './HeroSound'
 import FavouritesPopup from './Favourites'
+import RopeNav from './RopeNav'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
 import Intro from './Intro'
 import MyOrders from './MyOrders'
@@ -116,14 +117,13 @@ export default function App() {
           <img className="brand-mark" src={brand.logoUrl} alt="" width={72} height={33} />
           <Wordmark />
         </a>
-        <nav className="topnav" aria-label="Sections">
-          <a href="#menu"><span aria-hidden="true">🍽️</span>Menu</a>
-          {myOrders.orders.length > 0 && <a href="#my-orders"><span aria-hidden="true">🧾</span>My orders{openOrders.length > 0 && <b className="nav-count" aria-label={`${openOrders.length} in progress`}>{openOrders.length}</b>}</a>}
-          {offers.length > 0 && <a href="#offers"><span aria-hidden="true">🔥</span>Offers</a>}
-          <a href="#regulars"><span aria-hidden="true">👑</span>Regulars</a>
-          <a href="#visit"><span aria-hidden="true">📍</span>Visit</a>
-          <a href="#staff" className="topnav-staff"><span aria-hidden="true">👤</span>Staff login</a>
-        </nav>
+        <RopeNav links={[
+          { id: 'menu', label: 'Menu', icon: '🍽️' },
+          ...(myOrders.orders.length ? [{ id: 'my-orders', label: 'My orders', icon: '🧾', count: openOrders.length }] : []),
+          ...(offers.length ? [{ id: 'offers', label: 'Offers', icon: '🔥' }] : []),
+          { id: 'regulars', label: 'Wall of Fame', icon: '👑' },
+          { id: 'visit', label: 'Visit us', icon: '📍' },
+        ]} />
         <div className="top-actions">
           <a className="staff-pill" href="#staff" aria-label="Staff login: owner and delivery partners">
             <span aria-hidden="true">👤</span><span className="staff-pill-text">Staff login</span>
