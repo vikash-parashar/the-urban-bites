@@ -109,7 +109,8 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
     if (status === 'ready') events.push(['ready', delivery0 ? 'ready_delivery' : 'ready_pickup'])
     if (status === 'out_for_delivery') events.push(['out', 'on_the_way'])
     if (status === 'completed') events.push(['done', delivery0 ? 'delivered' : 'collected'])
-    if (status === 'cancelled') events.push(['cancelled', 'cancelled'])
+    // The customer cancelled it themselves: "koi baat na ji, man badalna thara haq sai". The cart cancelled it: "maaf kariyo ji".
+    if (status === 'cancelled') events.push(['cancelled', data.cancelled_by === 'customer' ? 'cart_empty' : 'cancelled'])
     if (data.payment_rejected_ref && !data.payment_ref && data.payment_status !== 'paid' && status !== 'cancelled') events.push([`norecv-${data.payment_rejected_ref}`, 'payment_rejected'])
     if (data.payment_status === 'paid' && status !== 'cancelled') events.push(['paid', 'paid'])
     const first = said.length === 0 && !fresh

@@ -90,7 +90,9 @@ export default function App() {
     if (cart.count > p.count) {
       if (p.total < shop.free_delivery_min && cart.total >= shop.free_delivery_min) sayFun('free', ['free_delivery'], 10 * 60_000)
       else if (cart.count - p.count === 1) sayFun('add', ['add_1', 'add_2', 'add_3', 'add_4'], 2 * 60_000)
-    } else if (cart.count === 0 && p.count > 0) sayFun('empty', ['cart_empty'], 5 * 60_000)
+    }
+    // No line when the cart empties: that also happens right after an order is placed. The "koi baat
+    // na ji, man badalna thara haq sai" line plays when the customer cancels an order (Tracker).
   }, [cart.count, cart.total, shop.free_delivery_min])
   useEffect(() => { const v = heroVideo.current; if (v) { v.muted = true; v.play().catch(() => {}) } }, [])
   const look = useTheme()
