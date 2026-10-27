@@ -24,14 +24,15 @@ type User struct {
 	// MustChangePassword is set for a temporary password; the person picks their own before anything else.
 	MustChangePassword bool      `json:"must_change_password"`
 	PasswordChangedAt  time.Time `json:"-"`
+	SignedOutAt        time.Time `json:"-"`
 	PasswordHash       string    `json:"-"`
 }
 
-const userCols = `id, email, name, role, active, created_at, last_login_at, must_change_password, password_changed_at, password_hash`
+const userCols = `id, email, name, role, active, created_at, last_login_at, must_change_password, password_changed_at, signed_out_at, password_hash`
 
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Active, &u.CreatedAt, &u.LastLoginAt, &u.MustChangePassword, &u.PasswordChangedAt, &u.PasswordHash)
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Active, &u.CreatedAt, &u.LastLoginAt, &u.MustChangePassword, &u.PasswordChangedAt, &u.SignedOutAt, &u.PasswordHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -187,4 +188,32 @@ func (s *Store) UsePasswordReset(ctx context.Context, tokenHash, passwordHash st
 		return err
 	})
 	return u, err
+}
+
+// RevokeSession ends one signed-in device (its token id) until the token would have expired anyway.
+func (s *Store) RevokeSession(ctx context.Context, jti string, expires time.Time) error {
+	if jti == "" {
+		return nil
+	}
+	_, err := s.db.Exec(ctx, `INSERT INTO revoked_sessions (jti, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING`, jti, expires)
+	if err == nil {
+		_, _ = s.db.Exec(ctx, `DELETE FROM revoked_sessions WHERE expires_at < now()`)
+	}
+	return err
+}
+
+// SessionRevoked reports whether that device was signed out.
+func (s *Store) SessionRevoked(ctx context.Context, jti string) (bool, error) {
+	if jti == "" {
+		return false, nil
+	}
+	var n int
+	err := s.db.QueryRow(ctx, `SELECT count(*) FROM revoked_sessions WHERE jti = $1`, jti).Scan(&n)
+	return n > 0, err
+}
+
+// SignOutEverywhere ends every session of this account, for a lost phone.
+func (s *Store) SignOutEverywhere(ctx context.Context, id string) error {
+	_, err := s.db.Exec(ctx, `UPDATE users SET signed_out_at = date_trunc('second', now()) WHERE id = $1`, id)
+	return err
 }

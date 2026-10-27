@@ -54,7 +54,7 @@ export function Login({ onIn }: { onIn: (s: Staff) => void }) {
         ) : (
           <>
             <h1 className="staff-h">{mode === 'in' ? 'Staff sign in' : 'Forgot your password?'}</h1>
-            <p className="menu-sub">{mode === 'in' ? 'For the owner and the admin: orders, menu, offers and sales.' : 'Enter your staff email and we’ll send you a link to choose a new one.'}</p>
+            <p className="menu-sub">{mode === 'in' ? 'For The Urban Bites team: orders, sales and the menu.' : 'Enter your staff email and we’ll send you a link to choose a new one.'}</p>
             <label className="field" htmlFor="st-email">Email<input id="st-email" name="email" type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
             {mode === 'in' && <PasswordField id="st-pass" name="password-login" label="Password" auto="current-password" />}
             {error && <p className="error" role="alert">{error}</p>}

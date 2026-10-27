@@ -5,6 +5,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"sync"
 	"time"
@@ -50,7 +52,39 @@ type Claims struct {
 type Service struct {
 	Store  *store.Store
 	Secret []byte
-	TTL    time.Duration
+	TTL    time.Duration // fallback; each role has its own below
+}
+
+// TTLFor is how long a session lasts without being used. Every use renews it (see RenewAfter), so the
+// owner's tablet and the riders' phones stay signed in while they work, and the admin is signed out
+// after half a day away.
+func (a *Service) TTLFor(role string) time.Duration {
+	switch role {
+	case "admin":
+		return 12 * time.Hour
+	case "owner":
+		return 60 * 24 * time.Hour
+	case "delivery":
+		return 30 * 24 * time.Hour
+	}
+	if a.TTL > 0 {
+		return a.TTL
+	}
+	return 24 * time.Hour
+}
+
+// RenewAfter: a token older than this gets a fresh one on the next request.
+func RenewAfter(role string) time.Duration {
+	if role == "admin" {
+		return 30 * time.Minute
+	}
+	return 24 * time.Hour
+}
+
+func newID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 func HashPassword(pw string) (string, error) {
@@ -84,10 +118,11 @@ func (a *Service) Login(ctx context.Context, email, password string) (string, *S
 func (a *Service) Issue(u *store.User) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        newID(),
 			Subject:   u.ID,
 			Audience:  jwt.ClaimStrings{"staff"},
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(a.TTL)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(a.TTLFor(u.Role))),
 		},
 		Name: u.Name,
 		Role: u.Role,
@@ -109,22 +144,41 @@ func (a *Service) CheckPassword(ctx context.Context, id, password string) (*stor
 
 // Verify checks the token and that the account is still active, so deactivating someone signs them out.
 func (a *Service) Verify(ctx context.Context, token string) (*Staff, error) {
+	st, _, _, err := a.VerifySession(ctx, token)
+	return st, err
+}
+
+// VerifySession is Verify plus the session details, so the caller can renew or revoke it.
+// It returns a fresh token when this one is due for renewal ("" otherwise).
+func (a *Service) VerifySession(ctx context.Context, token string) (*Staff, *Claims, string, error) {
 	var c Claims
 	_, err := jwt.ParseWithClaims(token, &c, func(*jwt.Token) (any, error) { return a.Secret, nil },
 		jwt.WithValidMethods([]string{"HS256"}), jwt.WithAudience("staff"))
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 	u, err := a.Store.UserByID(ctx, c.Subject)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 	if !u.Active {
-		return nil, errors.New("account disabled")
+		return nil, nil, "", errors.New("account disabled")
 	}
-	// Tokens from before the last password change no longer work.
-	if c.IssuedAt == nil || c.IssuedAt.Time.Before(u.PasswordChangedAt) {
-		return nil, errors.New("signed out after a password change")
+	// Tokens from before the last password change or "sign out everywhere" no longer work.
+	if c.IssuedAt == nil || c.IssuedAt.Time.Before(u.PasswordChangedAt) || c.IssuedAt.Time.Before(u.SignedOutAt) {
+		return nil, nil, "", errors.New("signed out")
 	}
-	return staffOf(u), nil
+	if revoked, err := a.Store.SessionRevoked(ctx, c.ID); err != nil {
+		return nil, nil, "", err
+	} else if revoked {
+		return nil, nil, "", errors.New("signed out on this device")
+	}
+	// The role always comes from the database, never from the token, so a changed role applies at once.
+	fresh := ""
+	if time.Since(c.IssuedAt.Time) > RenewAfter(u.Role) {
+		if t, err := a.Issue(u); err == nil {
+			fresh = t
+		}
+	}
+	return staffOf(u), &c, fresh, nil
 }

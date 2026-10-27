@@ -29,7 +29,7 @@ export function ownerSteps(isAdmin: boolean): TourStep[] {
     { target: '[data-tour="shop"]', tab: 'shop', title: 'दुकान बंद/चालू', hi: 'बहुत भीड़ हो या दुकान बंद हो, तो "Pause orders" दबाएँ। फिर से चालू करने के लिए वही बटन।', en: 'Too busy or closed? Pause online orders here.' },
     { target: '[data-tour="riders"]', tab: 'riders', title: 'डिलीवरी वाले', hi: 'डिलीवरी करने वाले लड़कों के लॉगिन यहाँ बनाइए। उन्हें सिर्फ़ डिलीवरी और रास्ता दिखेगा।', en: 'Make logins for your delivery boys. They only see deliveries and the map.' },
     { target: '.staff-acct .acct-btn, .staff-who', tab: 'orders', title: 'पासवर्ड और बाहर निकलें', hi: 'पासवर्ड बदलना हो या लॉगआउट करना हो, तो यहाँ।', en: 'Change your password or sign out here.' },
-    { target: '[data-tour="help"]', tab: 'orders', title: 'बस इतना ही! 🎉', hi: 'कुछ भूल जाएँ तो यह ❓ बटन दबाकर यह टूर फिर से देखें। कोई दिक्कत हो तो विकास जी को फ़ोन करें।', en: 'Forgot something? Tap ❓ to see this tour again.' },
+    { target: '[data-tour="help"]', tab: 'orders', title: 'बस इतना ही! 🎉', hi: 'कुछ भूल जाएँ तो यह ❓ बटन दबाकर यह टूर फिर से देखें। कोई दिक्कत हो तो वेबसाइट सपोर्ट टीम को फ़ोन करें।', en: 'Forgot something? Tap ❓ to see this tour again.' },
   ]
   return steps
 }

@@ -52,7 +52,7 @@ export default function MenuAdmin({ onSignedOut, canEdit = true }: { onSignedOut
       <div className="board-head">
         <div>
           <h2 className="staff-h">{canEdit ? 'Menu' : 'Sold out today?'}</h2>
-          <p className="menu-sub">{canEdit ? 'Prices save when you leave the box or press Enter. The website updates within a minute.' : 'Switch a dish off when it runs out and back on when it is ready. Prices and dishes are set by the admin.'}</p>
+          <p className="menu-sub">{canEdit ? 'Prices save when you leave the box or press Enter. The website updates within a minute.' : 'Switch a dish off when it runs out and back on when it is ready. Dishes and prices are managed by your website support team.'}</p>
         </div>
         <input className="ma-search" type="search" placeholder="Find a dish" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a dish" />
       </div>

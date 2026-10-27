@@ -67,7 +67,7 @@ func (s *Server) updateShop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if staffFrom(r).Role != "admin" && !in.OwnerMay() {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin (Vikash) can change shop settings; you can pause orders and set the delivery range"})
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "these settings are managed by your website support team; you can pause orders and set the delivery range"})
 		return
 	}
 	sh, err := s.Store.UpdateShop(r.Context(), in)

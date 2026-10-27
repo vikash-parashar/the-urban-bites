@@ -332,7 +332,7 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
       {!isAdmin && (
         <div className="me-row">
           <span className="me-name"><strong>Order rules</strong><br /><small className="menu-sub">
-            Delivery minimum {rupees(shop.min_order_delivery)} · free delivery above {rupees(shop.free_delivery_min)} within {shop.free_delivery_km} km. Set by the admin.
+            Delivery minimum {rupees(shop.min_order_delivery)} · free delivery above {rupees(shop.free_delivery_min)} within {shop.free_delivery_km} km. Managed by your website support team.
           </small></span>
         </div>
       )}
@@ -381,7 +381,7 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
       ) : (
         <div className="me-row">
           <span className="me-name"><strong>💳 Payment options</strong><br /><small className="menu-sub">
-            {[shop.accept_cash && 'Cash', shop.accept_upi && shop.upi_id && `UPI to ${shop.upi_id}`].filter(Boolean).join(' · ') || 'Cash'}. Set by the admin; ask Vikash to change them.
+            {[shop.accept_cash && 'Cash', shop.accept_upi && shop.upi_id && `UPI to ${shop.upi_id}`].filter(Boolean).join(' · ') || 'Cash'}. Managed by your website support team; call them to change these.
           </small></span>
         </div>
       )}

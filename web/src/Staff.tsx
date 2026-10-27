@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { loadSession, signOut, staffApi, type Staff, type StaffAccount, type StaffOrder, type OrderChange } from './staffApi'
+import { loadSession, signOut, signOutEverywhere, staffApi, type Staff, type StaffAccount, type StaffOrder, type OrderChange } from './staffApi'
 import { rupees } from './menu'
 import { CustomerTag, OffersEditor, ShopSettings, sourceLabel, useGuard, WalkIn } from './StaffExtras'
 import DashboardView from './Dashboard'
@@ -107,6 +107,7 @@ export default function StaffApp({ hash }: { hash: string }) {
                 <p className="acct-who"><b>{user.name}</b><span>{roleName(user.role)}</span></p>
                 <button role="menuitem" onClick={() => { setAcctOpen(false); setChanging(true) }}>🔑 Change password</button>
                 <button role="menuitem" className="acct-out" onClick={() => { signOut(); setUser(null) }}>↩ Sign out</button>
+                <button role="menuitem" className="acct-out" onClick={() => { setAcctOpen(false); signOutEverywhere().catch(() => {}).finally(() => setUser(null)) }}>⛔ Sign out on all devices</button>
               </div>
             </>
           )}

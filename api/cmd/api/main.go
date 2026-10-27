@@ -38,7 +38,7 @@ func main() {
 		Auth: &auth.Service{
 			Store:  st,
 			Secret: []byte(mustEnv("JWT_SECRET")),
-			TTL:    30 * 24 * time.Hour, // the tablet stays signed in for a month
+			TTL:    30 * 24 * time.Hour, // fallback; see auth.TTLFor (admin 12 h, owner 60 days, riders 30 days, renewed on use)
 		},
 		Mail: &mail.Sender{
 			APIKey:   os.Getenv("BREVO_API_KEY"),

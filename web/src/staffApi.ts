@@ -139,6 +139,9 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
+  // The server renews a session that is in use; keep the fresh token so the tablet stays signed in.
+  const fresh = res.headers.get('X-Session-Token')
+  if (fresh && session && !path.startsWith('/v1/me/logout')) saveSession({ ...session, token: fresh })
   if (res.status === 401 && !PUBLIC.includes(path)) {
     saveSession(null)
     throw new SignedOut('Signed out. Sign in again with your staff email.')
@@ -160,7 +163,16 @@ export async function signIn(email: string, password: string): Promise<Staff> {
   return r.user
 }
 
+/** Sign out on this device: the server forgets this session too, so a copied token stops working. */
 export function signOut() {
+  if (loadSession()) call('POST', '/v1/me/logout').catch(() => {})
+  // Clear after the request has picked up the token.
+  setTimeout(() => saveSession(null), 0)
+}
+
+/** Sign out on every phone and tablet (for a lost or shared phone). */
+export async function signOutEverywhere() {
+  await call('POST', '/v1/me/logout-all')
   saveSession(null)
 }
 

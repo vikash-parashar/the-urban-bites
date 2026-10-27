@@ -53,6 +53,7 @@ func (s *Server) Routes() http.Handler {
 		AllowedOrigins: s.AllowedOrigins,
 		AllowedMethods: []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Client"},
+		ExposedHeaders: []string{"X-Session-Token"},
 		MaxAge:         600,
 	}))
 
@@ -82,6 +83,8 @@ func (s *Server) Routes() http.Handler {
 			r.Use(s.requireStaff)
 			r.Get("/me", s.me)
 			r.Post("/me/password", s.changePassword)
+			r.Post("/me/logout", s.logout)
+			r.Post("/me/logout-all", s.logoutAll)
 			r.Get("/staff/orders/{id}/voice", s.voiceNote)
 
 			// Delivery partners (the owner and admin can open these too).
@@ -196,22 +199,50 @@ func (s *Server) requireStaff(next http.Handler) http.Handler {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in with your staff email"})
 			return
 		}
-		staff, err := s.Auth.Verify(r.Context(), token)
+		staff, claims, fresh, err := s.Auth.VerifySession(r.Context(), token)
 		if err != nil {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in with your staff email"})
 			return
 		}
 		// With a temporary password, the only thing allowed is choosing a real one.
-		if staff.MustChangePassword && r.URL.Path != "/v1/me" && r.URL.Path != "/v1/me/password" {
+		if staff.MustChangePassword && r.URL.Path != "/v1/me" && r.URL.Path != "/v1/me/password" && r.URL.Path != "/v1/me/logout" {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "choose your own password first", "code": "password_change_required"})
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, staff)))
+		// A session in use is renewed, so the owner's tablet never signs itself out mid-shift.
+		if fresh != "" {
+			w.Header().Set("X-Session-Token", fresh)
+		}
+		ctx := context.WithValue(r.Context(), ctxKey{}, staff)
+		ctx = context.WithValue(ctx, claimsKey{}, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
+type claimsKey struct{}
+
+// logout ends this device's session on the server too, not only in the browser.
+func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
+	if c, _ := r.Context().Value(claimsKey{}).(*auth.Claims); c != nil && c.ExpiresAt != nil {
+		if err := s.Store.RevokeSession(r.Context(), c.ID, c.ExpiresAt.Time); err != nil {
+			writeErr(w, r, err)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// logoutAll signs this account out on every phone and tablet (a lost phone).
+func (s *Server) logoutAll(w http.ResponseWriter, r *http.Request) {
+	if err := s.Store.SignOutEverywhere(r.Context(), staffFrom(r).ID); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func requireRole(roles ...string) func(http.Handler) http.Handler {
-	msg := "only the admin (Vikash) can do this"
+	msg := "this is managed by your website support team"
 	if len(roles) > 1 {
 		msg = "your account can't open this"
 	}
@@ -482,7 +513,7 @@ func (s *Server) updateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if staffFrom(r).Role != "admin" && !in.OnlyAvailability() {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the admin can change dishes and prices; you can mark a dish sold out"})
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "dishes and prices are managed by your website support team; you can mark a dish sold out"})
 		return
 	}
 	if err := s.Store.UpdateItem(r.Context(), chi.URLParam(r, "id"), in); err != nil {
