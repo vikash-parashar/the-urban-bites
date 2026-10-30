@@ -15,6 +15,7 @@ import (
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
 	"github.com/vikash-parashar/urban-bites/api/internal/httpapi"
 	"github.com/vikash-parashar/urban-bites/api/internal/mail"
+	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
@@ -47,6 +48,11 @@ func main() {
 		},
 		SiteURL:        env("SITE_URL", "https://the-urban-bites.onrender.com"),
 		AllowedOrigins: strings.Split(env("ALLOWED_ORIGINS", "*"), ","),
+	}
+	if srv.Push, err = push.New(os.Getenv("FIREBASE_SERVICE_ACCOUNT")); err != nil {
+		slog.Error("push notifications off", "err", err) // a bad key must not take the shop down
+	} else if !srv.Push.Enabled() {
+		slog.Warn("FIREBASE_SERVICE_ACCOUNT not set: phone notifications are off")
 	}
 	if !srv.Mail.Configured() {
 		slog.Warn("BREVO_API_KEY or MAIL_FROM not set: password reset emails are written to the log instead")

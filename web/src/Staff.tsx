@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { onPushToken } from './push'
 import { loadSession, signOut, signOutEverywhere, staffApi, type Staff, type StaffAccount, type StaffOrder, type OrderChange } from './staffApi'
 import { rupees } from './menu'
 import { CustomerTag, OffersEditor, ShopSettings, sourceLabel, useGuard, WalkIn } from './StaffExtras'
@@ -45,6 +46,8 @@ export default function StaffApp({ hash }: { hash: string }) {
   // "Ram Ram ji" once a day when staff open the area.
   const signedIn = !!user && !user.must_change_password
   useEffect(() => (signedIn ? greetOnce('staff_welcome') : undefined), [signedIn])
+  // In the app: register this phone so orders ring it even when the app is closed.
+  useEffect(() => (signedIn ? onPushToken((t) => { staffApi.pushToken(t).catch(() => {}) }) : undefined), [signedIn, user?.id])
 
   if (hash.startsWith('#staff/reset')) {
     const token = new URLSearchParams(hash.split('?')[1] ?? '').get('token') ?? ''

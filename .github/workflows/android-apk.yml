@@ -34,9 +34,25 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
-      - name: Build APK
+      - name: Release signing key (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          flutter build apk --release --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://theurbanbites.in' }}
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::warning::ANDROID_KEYSTORE_B64 / ANDROID_KEY_PASSWORD not set: signed with a throwaway debug key, so this APK won't install over an older one."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/release.jks
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=urbanbites\nkeyPassword=%s\n' "$KEY_PASSWORD" "$KEY_PASSWORD" > android/key.properties
+      - name: Build APK
+        # Push notifications: the four FB_* repository variables come from the Firebase console
+        # (Project settings, Your apps, Android app com.theurbanbites.app). Not secret: they ship in every APK.
+        run: |
+          [ -n "${{ vars.FB_APP_ID }}" ] || echo "::warning::FB_* variables not set: this APK has no push notifications."
+          flutter build apk --release --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://theurbanbites.in' }} \
+            --dart-define=FB_API_KEY=${{ vars.FB_API_KEY }} --dart-define=FB_APP_ID=${{ vars.FB_APP_ID }} \
+            --dart-define=FB_SENDER_ID=${{ vars.FB_SENDER_ID }} --dart-define=FB_PROJECT_ID=${{ vars.FB_PROJECT_ID }}
           cp build/app/outputs/flutter-apk/app-release.apk ../urban-bites.apk
           cp ../urban-bites.apk ../urban-bites-live.apk
       - uses: actions/upload-artifact@v4

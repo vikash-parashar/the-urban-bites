@@ -20,6 +20,7 @@ import (
 
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
 	"github.com/vikash-parashar/urban-bites/api/internal/mail"
+	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/ratelimit"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
@@ -28,7 +29,8 @@ type Server struct {
 	Store          *store.Store
 	Auth           *auth.Service
 	Mail           *mail.Sender
-	SiteURL        string // the website, for links in emails
+	Push           *push.Sender // nil: phone notifications off
+	SiteURL        string       // the website, for links in emails
 	AllowedOrigins []string
 
 	loginLimit  ratelimit.Limiter
@@ -69,6 +71,7 @@ func (s *Server) Routes() http.Handler {
 		r.Post("/orders/{id}/pay-method", s.payMethod)
 		r.Post("/orders/{id}/cancel", s.customerCancel)
 		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
+		r.Post("/orders/{id}/push-token", s.orderPushToken)
 		r.Get("/shop", s.getShop)
 		r.Get("/offers", s.liveOffers)
 		r.Get("/badge", s.badge)
@@ -85,6 +88,8 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/me/password", s.changePassword)
 			r.Post("/me/logout", s.logout)
 			r.Post("/me/logout-all", s.logoutAll)
+			r.Post("/me/push-token", s.staffPushToken)
+			r.Delete("/me/push-token", s.staffPushToken)
 			r.Get("/staff/orders/{id}/voice", s.voiceNote)
 
 			// Delivery partners (the owner and admin can open these too).
@@ -299,6 +304,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	s.pushNewOrder(o)
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"id":           o.ID,
 		"number":       o.Number,
@@ -489,11 +495,17 @@ func (s *Server) updateOrder(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	o, err := s.Store.UpdateOrder(r.Context(), chi.URLParam(r, "id"), in)
+	before, err := s.Store.Order(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
+	o, err := s.Store.UpdateOrder(r.Context(), before.ID, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	s.pushOrderChange(before, o)
 	writeJSON(w, http.StatusOK, o)
 }
 
@@ -574,6 +586,7 @@ func (s *Server) customerCancel(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	s.pushCustomerCancelled(o)
 	w.WriteHeader(http.StatusNoContent)
 }
 

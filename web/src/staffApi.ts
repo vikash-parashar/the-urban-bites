@@ -1,5 +1,6 @@
 // Staff (owner/admin) calls to the Go API. The token is kept in this browser only.
 import { sentence } from './api'
+import { currentPushToken } from './push'
 import type { Offer, Shop } from './shop'
 
 const API_URL = import.meta.env.VITE_API_URL as string | undefined
@@ -165,7 +166,12 @@ export async function signIn(email: string, password: string): Promise<Staff> {
 
 /** Sign out on this device: the server forgets this session too, so a copied token stops working. */
 export function signOut() {
-  if (loadSession()) call('POST', '/v1/me/logout').catch(() => {})
+  if (loadSession()) {
+    // This phone stops getting order alerts for this account.
+    const token = currentPushToken()
+    if (token) call('DELETE', '/v1/me/push-token', { token }).catch(() => {})
+    call('POST', '/v1/me/logout').catch(() => {})
+  }
   // Clear after the request has picked up the token.
   setTimeout(() => saveSession(null), 0)
 }
@@ -205,6 +211,8 @@ export type RiderAction = 'take' | 'leave' | 'start' | 'delivered'
 export type OrderChange = { status?: string; prep_minutes?: number; payment_status?: string; payment_not_received?: boolean }
 
 export const staffApi = {
+  /** In the app: ring this phone for new orders (owner/admin) or ready deliveries (riders), even when closed. */
+  pushToken: (token: string) => call<null>('POST', '/v1/me/push-token', { token }),
   riderOrders: () => call<{ orders: StaffOrder[] }>('GET', '/v1/delivery/orders'),
   riderAction: (id: string, action: RiderAction, cash_collected = false) => call<StaffOrder>('POST', `/v1/delivery/orders/${id}`, { action, cash_collected }),
   riders: () => call<{ riders: StaffAccount[] }>('GET', '/v1/owner/riders'),

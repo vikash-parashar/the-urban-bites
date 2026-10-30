@@ -11,6 +11,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+import 'push.dart';
+
 const lastAreaStaffKey = 'ub-last-area-staff';
 
 /// WebShell shows the live website full screen and handles everything around it.
@@ -31,6 +33,8 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   bool _offline = false;
   bool _onStaff = false;
   DateTime? _lastBack;
+  String? _pushToken;
+  final _subs = <StreamSubscription<String>>[];
 
   String get _start => widget.startOnStaff ? '${widget.site}/?app=staff#staff' : '${widget.site}/';
 
@@ -50,6 +54,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       ..setNavigationDelegate(NavigationDelegate(
         onProgress: (p) => setState(() => _progress = p),
         onPageStarted: (_) => setState(() => _offline = false),
+        onPageFinished: (_) => _sendPushToken(),
         onUrlChange: (c) => _onUrl(c.url),
         onNavigationRequest: _onNavigate,
         onWebResourceError: (e) {
@@ -74,11 +79,35 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
     }
 
     _web.loadRequest(Uri.parse(_start));
+    _setupPush();
+  }
+
+  // Push: get this phone's token, hand it to the website, and open the right screen when a
+  // notification is tapped while the app is in the background.
+  Future<void> _setupPush() async {
+    _subs.add(Push.tokenRefresh.listen((t) {
+      _pushToken = t;
+      _sendPushToken();
+    }));
+    _subs.add(Push.taps.listen((open) {
+      _web.loadRequest(Uri.parse(open == '#staff' ? '${widget.site}/?app=staff#staff' : '${widget.site}/'));
+    }));
+    _pushToken = await Push.token();
+    _sendPushToken();
+  }
+
+  void _sendPushToken() {
+    final t = _pushToken;
+    if (t == null || !RegExp(r'^[A-Za-z0-9_:\-]+$').hasMatch(t)) return;
+    _web.runJavaScript("window.ubPushToken='$t';window.dispatchEvent(new Event('ub-push-token'));").catchError((_) {});
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    for (final s in _subs) {
+      s.cancel();
+    }
     WakelockPlus.disable();
     super.dispose();
   }
