@@ -20,16 +20,15 @@ export function ownerSteps(isAdmin: boolean): TourStep[] {
     { demo: 'welcome', title: 'नमस्ते! 🙏', hi: 'एक मिनट में सीखिए कि वेबसाइट के ऑर्डर कैसे संभालने हैं। "आगे" दबाते रहिए।', en: 'A one-minute tour of your shop screen. Keep tapping Next.' },
     { target: '[data-tour="orders"]', tab: 'orders', title: 'ऑर्डर', hi: 'नए ऑर्डर यहाँ आते हैं। घंटी बजेगी, फ़ोन बोलेगा "नया ऑर्डर आया सै" और लाल गिनती दिखेगी।', en: 'New orders land here, with a bell, a voice and a red count.' },
     { demo: 'order', tab: 'orders', title: 'ऑर्डर कैसे संभालें', hi: '1. ऑर्डर पर टैप करें  2. कितने मिनट में बनेगा, चुनें  3. बनने पर "Ready" या "Send out" दबाएँ  4. पैसे मिलें तो "Mark paid"।', en: 'Tap the order, pick the minutes, mark it ready, mark it paid.' },
-    { target: '.order-filters', tab: 'orders', title: 'छाँटिए', hi: 'New = नए, Cooking = बन रहे, Ready = तैयार, Not paid = पैसे बाकी। गिनती हर बटन पर दिखती है।', en: 'Filter by New, Cooking, Ready or Not paid.' },
-    { target: '.sound-btn', tab: 'orders', title: 'घंटी चालू रखें', hi: 'यह हमेशा "Sound on" रखें, और यह पेज खुला रखें, ताकि कोई ऑर्डर छूटे नहीं।', en: 'Keep the sound on and this page open so no order is missed.' },
+    { target: '.order-filters', tab: 'orders', title: 'छाँटिए', hi: 'New = नए, Cooking = बन रहे, Ready = तैयार, Not paid = पैसे बाकी, Done = आज के पूरे हुए।', en: 'Filter by New, Cooking, Ready, Not paid or Done.' },
+    { target: '.sound-btn', tab: 'orders', title: 'घंटी चालू रखें', hi: 'यह घंटी हमेशा चालू रखें। घंटी की आवाज़ बदलनी हो तो Settings में जाएँ।', en: 'Keep the sound on and this page open so no order is missed.' },
     { target: '.today-kpis', tab: 'orders', title: 'आज का हिसाब', hi: 'आज की बिक्री, किचन में कितने ऑर्डर, और कितने पैसे बाकी हैं, सब यहाँ एक नज़र में।', en: "Today's sales, kitchen and pending payments at a glance." },
     { target: '[data-tour="walkin"]', tab: 'walkin', title: 'काउंटर की बिक्री', hi: 'जो ग्राहक ठेले पर आकर खाए, उसका बिल यहाँ डालें। फ़ोन नंबर डालेंगे तो उसे बैज मिलेगा।', en: 'Record sales made at the cart. Add the phone number for badges.' },
     { target: '[data-tour="dashboard"]', tab: 'dashboard', title: 'बिक्री', hi: 'आज, हफ़्ते, महीने और साल की कमाई और मुनाफ़ा यहाँ देखें।', en: 'Sales and profit for the day, week, month and year.' },
     { target: '[data-tour="menu"]', tab: 'menu', title: isAdmin ? 'मेनू' : 'माल खत्म?', hi: 'कोई चीज़ खत्म हो जाए तो उसका बटन बंद करें, वह वेबसाइट पर "Sold out" दिखेगी। वापस आए तो चालू करें।', en: 'Switch a dish off when it runs out; switch it on again later.' },
-    { target: '[data-tour="shop"]', tab: 'shop', title: 'दुकान बंद/चालू', hi: 'बहुत भीड़ हो या दुकान बंद हो, तो "Pause orders" दबाएँ। फिर से चालू करने के लिए वही बटन।', en: 'Too busy or closed? Pause online orders here.' },
-    { target: '[data-tour="riders"]', tab: 'riders', title: 'डिलीवरी वाले', hi: 'डिलीवरी करने वाले लड़कों के लॉगिन यहाँ बनाइए। उन्हें सिर्फ़ डिलीवरी और रास्ता दिखेगा।', en: 'Make logins for your delivery boys. They only see deliveries and the map.' },
+    { target: '[data-tour="shop"]', tab: 'shop', title: 'Settings', hi: 'भीड़ हो या दुकान बंद हो तो "Pause orders"। यहीं घंटी की आवाज़ और डिलीवरी वाले लड़कों के लॉगिन भी।', en: 'Pause orders, alert sounds and delivery boy logins.' },
     { target: '.staff-acct .acct-btn, .staff-who', tab: 'orders', title: 'पासवर्ड और बाहर निकलें', hi: 'पासवर्ड बदलना हो या लॉगआउट करना हो, तो यहाँ।', en: 'Change your password or sign out here.' },
-    { target: '[data-tour="help"]', tab: 'orders', title: 'बस इतना ही! 🎉', hi: 'कुछ भूल जाएँ तो यह ❓ बटन दबाकर यह टूर फिर से देखें। कोई दिक्कत हो तो वेबसाइट सपोर्ट टीम को फ़ोन करें।', en: 'Forgot something? Tap ❓ to see this tour again.' },
+    { target: '[data-tour="help"]', tab: 'orders', title: 'बस इतना ही! 🎉', hi: 'कुछ भूल जाएँ तो यह (?) बटन दबाकर यह टूर फिर से देखें। कोई दिक्कत हो तो वेबसाइट सपोर्ट टीम को फ़ोन करें।', en: 'Forgot something? Tap (?) to see this tour again.' },
   ]
   return steps
 }

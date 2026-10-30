@@ -2175,3 +2175,61 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .staff-login > .install, .staff-login > .install-ok { width: min(420px, 100%); justify-self: center; }
 :root[data-theme="pop"] .install { background: #fff8e1; border: 2px dashed #111; }
 :root[data-theme="pop"] .install-steps { color: #111; }
+
+/* ---- Calm, simple staff screens (2026-10-30): line icons instead of emoji, no neon glow ---- */
+.btn-ghost { box-shadow: none; border-color: color-mix(in srgb, var(--cream) 28%, transparent); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--cream) 8%, transparent); }
+.size[aria-checked='true'] { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); box-shadow: none; }
+.tab-ico { flex: 0 0 auto; margin-right: 6px; vertical-align: -3px; }
+.staff-tabs .tab > span { display: inline-flex; align-items: center; }
+.help-btn svg { flex: 0 0 auto; }
+.bn-item i { display: grid; place-items: center; filter: none; opacity: 0.75; }
+.bn-item[aria-current="page"] i { opacity: 1; }
+.acct-menu button svg, .more-sheet button svg { flex: 0 0 auto; opacity: 0.85; }
+.pill-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--cream) 22%, transparent); background: transparent; color: var(--cream);
+  font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+}
+.pill-btn:hover { background: color-mix(in srgb, var(--cream) 8%, transparent); }
+.sound-btn:not(.is-off) { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
+.sound-btn.is-off { text-decoration: none; opacity: 0.85; color: #f87171; border-color: color-mix(in srgb, #f87171 55%, transparent); }
+.board-head { align-items: center; }
+/* Six filters: two tidy rows of three on phones, one row on wider screens */
+.order-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 761px) { .order-filters { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.order-filters .size { justify-content: center; gap: 6px; width: 100%; min-width: 0; }
+.kpi-tile i { color: var(--gold); }
+/* Rider screen: a count strip on top, then distance, ride time and cooking time on each card */
+.rider-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 14px; }
+.rider-sum span { display: grid; gap: 2px; padding: 10px 6px; border-radius: 12px; text-align: center; font-size: 0.78rem; color: var(--muted, #a4abd0);
+  background: color-mix(in srgb, var(--cream) 6%, transparent); border: 1px solid color-mix(in srgb, var(--cream) 12%, transparent); }
+.rider-sum b { font-size: 1.4rem; color: var(--cream); line-height: 1.1; }
+.rider-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0; font-weight: 700; font-size: 0.92rem; }
+.rider-facts span { display: inline-flex; align-items: center; gap: 5px; }
+.rider-facts svg { color: var(--gold); }
+.btn > svg, .rider-actions .btn svg { flex: 0 0 auto; }
+.rider-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+/* Phone app, customer side: a short welcome strip instead of the big video hero */
+.app-hero { display: grid; gap: 12px; padding: 18px max(16px, env(safe-area-inset-left, 0px)) 20px; border-bottom: 1px solid color-mix(in srgb, var(--cream) 10%, transparent); }
+.app-hero-motto { margin: 0; font-family: 'Kalam', cursive; font-size: 1.05rem; line-height: 1.4; color: var(--gold); }
+.app-hero-deal { margin: 0; font-weight: 700; }
+.app-hero-deal span { color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.85rem; margin-right: 4px; }
+.app-hero-cta { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.app-hero-cta .btn { justify-content: center; }
+.in-app .topbar .brand-mark { display: none; }
+/* Phone app: room under the fixed top bar, a visible staff sign-in, and compact menu rows (photo left) */
+.in-app .app-hero { padding-top: calc(env(safe-area-inset-top, 0px) + 84px); }
+.in-app .top-actions .staff-pill { display: inline-flex; width: 40px; padding: 0; justify-content: center; }
+.in-app .staff-pill-text { display: none; }
+.in-app .menu-head .eyebrow, .in-app .menu-head .menu-sub { display: none; }
+@media (max-width: 640px) {
+  .in-app .dishes { gap: 10px; }
+  .in-app .dish { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: stretch; }
+  .in-app .dish-img { aspect-ratio: auto; height: 100%; min-height: 104px; }
+  .in-app .dish-img img { height: 100%; object-fit: cover; }
+  .in-app .dish-body { padding: 10px 12px; min-width: 0; }
+  .in-app .dish-desc { display: none; }
+  .in-app .dish-badge, .in-app .dish-tile span:last-child { display: none; }
+}
+.in-app .menu { padding-top: 24px; }

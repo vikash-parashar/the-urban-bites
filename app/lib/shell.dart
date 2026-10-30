@@ -68,11 +68,13 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         },
       ));
 
-    _web.getUserAgent().then((ua) {
-      _web.setUserAgent('${ua ?? ''} UrbanBitesApp/2.0');
+    // The website shows its simpler app layout when it sees "UrbanBitesApp" in the user agent, so set it
+    // before the first page loads.
+    _web.getUserAgent().then((ua) async {
+      await _web.setUserAgent('${ua ?? ''} UrbanBitesApp/2.0');
       final chrome = int.tryParse(RegExp(r'Chrome/(\d+)').firstMatch(ua ?? '')?.group(1) ?? '');
       if (Platform.isAndroid && chrome != null && chrome < _minChrome && mounted) setState(() => _oldWebView = chrome);
-    });
+    }).catchError((_) {}).whenComplete(() => _web.loadRequest(Uri.parse(_start)));
 
     final p = _web.platform;
     if (p is AndroidWebViewController) {
@@ -89,7 +91,6 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       p.setAllowsBackForwardNavigationGestures(true);
     }
 
-    _web.loadRequest(Uri.parse(_start));
     _setupPush();
   }
 
