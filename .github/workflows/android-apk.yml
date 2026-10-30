@@ -55,6 +55,15 @@ jobs:
             --dart-define=FB_SENDER_ID=${{ vars.FB_SENDER_ID }} --dart-define=FB_PROJECT_ID=${{ vars.FB_PROJECT_ID }}
           cp build/app/outputs/flutter-apk/app-release.apk ../urban-bites.apk
           cp ../urban-bites.apk ../urban-bites-live.apk
+      - name: Build smaller APKs per phone type
+        # Same app, about a third of the size: arm64 for most phones since 2017, arm32 for older
+        # and low-cost phones and tablets. urban-bites.apk (universal) works on all of them.
+        run: |
+          flutter build apk --release --split-per-abi --dart-define=SITE_URL=${{ vars.SITE_URL || 'https://theurbanbites.in' }} \
+            --dart-define=FB_API_KEY=${{ vars.FB_API_KEY }} --dart-define=FB_APP_ID=${{ vars.FB_APP_ID }} \
+            --dart-define=FB_SENDER_ID=${{ vars.FB_SENDER_ID }} --dart-define=FB_PROJECT_ID=${{ vars.FB_PROJECT_ID }}
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ../urban-bites-arm64.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ../urban-bites-arm32.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android
@@ -66,7 +75,7 @@ jobs:
         run: |
           gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Latest APK" --notes "Built from main."
           gh release delete-asset apk-latest urban-bites-demo.apk -y 2>/dev/null || true
-          gh release upload apk-latest urban-bites.apk urban-bites-live.apk --clobber
+          gh release upload apk-latest urban-bites.apk urban-bites-live.apk urban-bites-arm64.apk urban-bites-arm32.apk --clobber
 
   ios:
     runs-on: macos-latest

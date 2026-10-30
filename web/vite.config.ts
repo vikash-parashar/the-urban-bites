@@ -37,6 +37,8 @@ function brandPlugin(): Plugin {
 // Relative base so the build can be served from S3/CloudFront at any path.
 export default defineConfig({
   base: './',
+  // Older phones: keep the JavaScript readable by Chrome/WebView 87+ (Android 7 phones that got updates).
+  build: { target: ['es2020', 'chrome87', 'safari14'] },
   plugins: [react(), brandPlugin()],
   server: { fs: { allow: ['..'] } },
 })
