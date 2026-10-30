@@ -17,6 +17,7 @@ import { audio, loadPrefs, ring } from './sounds'
 import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
 import Tour, { ownerSteps } from './Tour'
+import { usePushAlerts } from './pushAlerts'
 
 const PREP = [5, 10, 15, 20, 30, 45]
 
@@ -254,6 +255,7 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
   const [selected, setSelected] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('open')
   const { error: updErr, guard } = useGuard(onSignedOut)
+  const alerts = usePushAlerts(true)
 
   const current = orders.find((o) => o.id === selected) ?? null
   const groups: [string, string, (o: StaffOrder) => boolean][] = [
@@ -289,6 +291,7 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
             <button type="button" className="link-btn" onClick={() => goTo('shop')}>Change sound</button>
           </div>
         </div>
+        <AlertsBar alerts={alerts} />
         {orders.filter((o) => o.status === 'cancelled' && o.cancelled_by === 'customer').slice(0, 3).map((o) => (
           <MButton key={o.id} className="cancel-alert" onClick={() => setSelected(o.id)}>
             ❌ Customer cancelled order #{o.number} ({o.customer_name}) · don't make it
@@ -340,6 +343,32 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
       </div>
     </div>
     </>
+  )
+}
+
+// AlertsBar: order alerts on this phone/tablet even when the site or app is closed (Web Push).
+// Off: a nudge with a "Turn on" button. On: one quiet line. Elsewhere: how to get there.
+type Alerts = ReturnType<typeof usePushAlerts>
+
+function AlertsBar({ alerts: { state, busy, error, toggle } }: { alerts: Alerts }) {
+  const site = `${location.origin}${location.pathname}`.replace(/\/$/, '')
+  const msg = state === 'on' ? '📲 This device rings for new orders even when the app is closed.'
+    : state === 'off' ? '📲 Get new orders on this phone even when the app is closed.'
+    : state === 'in-app' ? `📲 This app can only ring while it is open. For alerts with it closed, open ${site}/#staff in Chrome, tap Install ("UB Orders") and turn alerts on there.`
+    : state === 'ios-install' ? '📲 iPhone: tap Share → Add to Home Screen, open "UB Orders" from the Home Screen, then turn alerts on.'
+    : state === 'denied' ? '📲 Notifications are blocked for this site. Allow them in the browser\'s site settings (🔒 next to the address), then reload.'
+    : ''
+  if (!msg) return null
+  return (
+    <div className={`push-bar ${state === 'on' ? 'is-on' : ''}`}>
+      <p>{msg}</p>
+      {(state === 'on' || state === 'off') && (
+        <MButton className={`btn btn-sm ${state === 'on' ? 'btn-ghost' : ''}`} onClick={toggle} disabled={busy} aria-pressed={state === 'on'}>
+          {busy ? 'Wait…' : state === 'on' ? 'Turn off' : 'Turn on alerts'}
+        </MButton>
+      )}
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
   )
 }
 

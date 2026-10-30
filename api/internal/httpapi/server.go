@@ -20,6 +20,7 @@ import (
 
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
 	"github.com/vikash-parashar/urban-bites/api/internal/mail"
+	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/ratelimit"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
@@ -28,7 +29,8 @@ type Server struct {
 	Store          *store.Store
 	Auth           *auth.Service
 	Mail           *mail.Sender
-	SiteURL        string // the website, for links in emails
+	Push           *push.Sender // Web Push to staff devices; nil or unconfigured = off
+	SiteURL        string       // the website, for links in emails
 	AllowedOrigins []string
 
 	loginLimit  ratelimit.Limiter
@@ -73,6 +75,7 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/offers", s.liveOffers)
 		r.Get("/badge", s.badge)
 		r.Get("/regulars", s.regulars)
+		r.Get("/push/key", s.pushKey)
 
 		// Staff side. The owner (Manjeet) runs the day: orders, walk-ins, the sales dashboard, pausing orders and
 		// marking dishes sold out. Everything else (menu, prices, offers, expenses, shop rules, payments, staff) is the admin's.
@@ -85,6 +88,8 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/me/password", s.changePassword)
 			r.Post("/me/logout", s.logout)
 			r.Post("/me/logout-all", s.logoutAll)
+			r.Post("/me/push", s.pushSubscribe)
+			r.Post("/me/push/off", s.pushUnsubscribe)
 			r.Get("/staff/orders/{id}/voice", s.voiceNote)
 
 			// Delivery partners (the owner and admin can open these too).
@@ -238,6 +243,11 @@ func (s *Server) logoutAll(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	// A lost phone shouldn't keep showing new orders on its lock screen.
+	if err := s.Store.DeleteUserPushSubs(r.Context(), staffFrom(r).ID); err != nil {
+		writeErr(w, r, err)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -309,6 +319,7 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		"total":        o.Total,
 		"status":       o.Status,
 	})
+	s.notifyStaff(w, r, newOrderMessage(o))
 }
 
 // trackOrder is what the website polls. The token stops anyone from reading orders by guessing ids.
@@ -575,6 +586,7 @@ func (s *Server) customerCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+	s.notifyStaff(w, r, cancelledMessage(o))
 }
 
 // paymentRef saves the UPI reference number a customer enters after paying from a UPI app.

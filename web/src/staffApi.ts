@@ -165,6 +165,7 @@ export async function signIn(email: string, password: string): Promise<Staff> {
 
 /** Sign out on this device: the server forgets this session too, so a copied token stops working. */
 export function signOut() {
+  dropPushHere()
   if (loadSession()) call('POST', '/v1/me/logout').catch(() => {})
   // Clear after the request has picked up the token.
   setTimeout(() => saveSession(null), 0)
@@ -173,7 +174,14 @@ export function signOut() {
 /** Sign out on every phone and tablet (for a lost or shared phone). */
 export async function signOutEverywhere() {
   await call('POST', '/v1/me/logout-all')
+  dropPushHere()
   saveSession(null)
+}
+
+/** Stop order alerts on this device when signing out. The server drops its row on the next 410. */
+function dropPushHere() {
+  if (!('serviceWorker' in navigator)) return
+  navigator.serviceWorker.getRegistration().then((r) => r?.pushManager?.getSubscription()).then((s) => s?.unsubscribe()).catch(() => {})
 }
 
 /** Change your own password. The server signs out older sessions and returns a fresh one. */
@@ -205,6 +213,9 @@ export type RiderAction = 'take' | 'leave' | 'start' | 'delivered'
 export type OrderChange = { status?: string; prep_minutes?: number; payment_status?: string; payment_not_received?: boolean }
 
 export const staffApi = {
+  pushKey: () => call<{ public_key: string }>('GET', '/v1/push/key'),
+  pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string }; test: boolean }) => call<null>('POST', '/v1/me/push', sub),
+  pushUnsubscribe: (endpoint: string) => call<null>('POST', '/v1/me/push/off', { endpoint }),
   riderOrders: () => call<{ orders: StaffOrder[] }>('GET', '/v1/delivery/orders'),
   riderAction: (id: string, action: RiderAction, cash_collected = false) => call<StaffOrder>('POST', `/v1/delivery/orders/${id}`, { action, cash_collected }),
   riders: () => call<{ riders: StaffAccount[] }>('GET', '/v1/owner/riders'),

@@ -2,6 +2,7 @@
 //
 //	go run ./cmd/seed -menu ../seed/menu.json
 //	STAFF_PASSWORD='...' go run ./cmd/seed -add-staff -email you@example.com -name Vikash -role admin
+//	go run ./cmd/seed -vapid   (prints a new VAPID key pair for order alerts; needs no database)
 package main
 
 import (
@@ -14,6 +15,7 @@ import (
 	"os"
 
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
+	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
@@ -26,7 +28,17 @@ func main() {
 	name := flag.String("name", "", "staff display name")
 	role := flag.String("role", "owner", "admin or owner")
 	temporary = flag.Bool("temporary", false, "with -add-staff: the password is temporary and must be changed at first sign-in")
+	vapid := flag.Bool("vapid", false, "print a new VAPID key pair for VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY and exit")
 	flag.Parse()
+
+	if *vapid {
+		pub, priv, err := push.GenerateKeys()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\n", pub, priv)
+		return
+	}
 
 	ctx := context.Background()
 	st, err := store.Open(ctx, os.Getenv("DATABASE_URL"))
