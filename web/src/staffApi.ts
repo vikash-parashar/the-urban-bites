@@ -1,5 +1,6 @@
 // Staff (owner/admin) calls to the Go API. The token is kept in this browser only.
 import { sentence } from './api'
+import { currentPushToken } from './push'
 import type { Offer, Shop } from './shop'
 
 const API_URL = import.meta.env.VITE_API_URL as string | undefined
@@ -165,8 +166,13 @@ export async function signIn(email: string, password: string): Promise<Staff> {
 
 /** Sign out on this device: the server forgets this session too, so a copied token stops working. */
 export function signOut() {
-  dropPushHere()
-  if (loadSession()) call('POST', '/v1/me/logout').catch(() => {})
+  if (loadSession()) {
+    // This phone stops getting order alerts for this account.
+    const token = currentPushToken()
+    if (token) call('DELETE', '/v1/me/push-token', { token }).catch(() => {})
+    call('POST', '/v1/me/logout').catch(() => {})
+  }
+  dropWebPushHere()
   // Clear after the request has picked up the token.
   setTimeout(() => saveSession(null), 0)
 }
@@ -174,12 +180,12 @@ export function signOut() {
 /** Sign out on every phone and tablet (for a lost or shared phone). */
 export async function signOutEverywhere() {
   await call('POST', '/v1/me/logout-all')
-  dropPushHere()
+  dropWebPushHere()
   saveSession(null)
 }
 
-/** Stop order alerts on this device when signing out. The server drops its row on the next 410. */
-function dropPushHere() {
+/** Stop browser order alerts on this device when signing out. The server drops its row on the next 410. */
+function dropWebPushHere() {
   if (!('serviceWorker' in navigator)) return
   navigator.serviceWorker.getRegistration().then((r) => r?.pushManager?.getSubscription()).then((s) => s?.unsubscribe()).catch(() => {})
 }
@@ -213,9 +219,12 @@ export type RiderAction = 'take' | 'leave' | 'start' | 'delivered'
 export type OrderChange = { status?: string; prep_minutes?: number; payment_status?: string; payment_not_received?: boolean }
 
 export const staffApi = {
-  pushKey: () => call<{ public_key: string }>('GET', '/v1/push/key'),
-  pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string }; test: boolean }) => call<null>('POST', '/v1/me/push', sub),
-  pushUnsubscribe: (endpoint: string) => call<null>('POST', '/v1/me/push/off', { endpoint }),
+  /** In the app: ring this phone for new orders (owner/admin) or ready deliveries (riders), even when closed. */
+  pushToken: (token: string) => call<null>('POST', '/v1/me/push-token', { token }),
+  // Browser alerts (Web Push), for staff using Chrome or the installed web app instead of the Android app.
+  webPushKey: () => call<{ public_key: string }>('GET', '/v1/push/key'),
+  webPushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string }; test: boolean }) => call<null>('POST', '/v1/me/push', sub),
+  webPushUnsubscribe: (endpoint: string) => call<null>('POST', '/v1/me/push/off', { endpoint }),
   riderOrders: () => call<{ orders: StaffOrder[] }>('GET', '/v1/delivery/orders'),
   riderAction: (id: string, action: RiderAction, cash_collected = false) => call<StaffOrder>('POST', `/v1/delivery/orders/${id}`, { action, cash_collected }),
   riders: () => call<{ riders: StaffAccount[] }>('GET', '/v1/owner/riders'),

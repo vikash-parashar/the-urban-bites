@@ -15,8 +15,8 @@ import (
 	"os"
 
 	"github.com/vikash-parashar/urban-bites/api/internal/auth"
-	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
+	"github.com/vikash-parashar/urban-bites/api/internal/webpush"
 )
 
 var temporary *bool
@@ -32,7 +32,7 @@ func main() {
 	flag.Parse()
 
 	if *vapid {
-		pub, priv, err := push.GenerateKeys()
+		pub, priv, err := webpush.GenerateKeys()
 		if err != nil {
 			log.Fatal(err)
 		}

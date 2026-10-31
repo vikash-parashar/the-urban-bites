@@ -22,6 +22,8 @@ import PopHero from './PopHero'
 import { brand } from './brand'
 import Wordmark from './Wordmark'
 import { developer, social } from './social'
+import { inApp } from './install'
+import { UserRound } from 'lucide-react'
 
 // The opening waits for the intro card on the first visit of the session.
 function introDelay() {
@@ -111,26 +113,30 @@ export default function App() {
   const reelScale = useTransform(reelP, [0, 1], [0.72, 1])
   const reelRadius = useTransform(reelP, [0, 1], [40, 12])
 
+  // Inside the phone app the customer only needs: menu, order, track. The website's showpiece parts
+  // (intro, rope menu, big video hero, marquees, wall of fame, reel, gallery, music) stay on the website.
+  const app = inApp()
+
   return (
-    <div>
-      <Intro />
+    <div className={app ? 'in-app' : undefined}>
+      {!app && <Intro />}
       <header className="topbar">
         <a className="brand" href="#top" aria-label={`${brand.name}, back to top`}>
           <img className="brand-mark" src={brand.logoUrl} alt="" width={72} height={33} />
           <Wordmark />
         </a>
-        <RopeNav links={[
+        {!app && <RopeNav links={[
           { id: 'menu', label: 'Menu', icon: '🍽️' },
           ...(myOrders.orders.length ? [{ id: 'my-orders', label: 'My orders', icon: '🧾', count: openOrders.length }] : []),
           ...(offers.length ? [{ id: 'offers', label: 'Offers', icon: '🔥' }] : []),
           { id: 'regulars', label: 'Wall of Fame', icon: '👑' },
           { id: 'visit', label: 'Visit us', icon: '📍' },
-        ]} />
+        ]} />}
         <div className="top-actions">
           <a className="staff-pill" href="#staff" aria-label="Staff login: owner and delivery partners">
-            <span aria-hidden="true">👤</span><span className="staff-pill-text">Staff login</span>
+            <UserRound size={18} aria-hidden="true" /><span className="staff-pill-text">Staff login</span>
           </a>
-          <LookSwitch />
+          {!app && <LookSwitch />}
           <MButton className="cart-pill" onClick={openCart} aria-label={`Open your order, ${cart.count} items`}>
             <span aria-hidden="true">🛒</span><span className="cart-label">Order</span>
             {/* The count pops each time something is added. */}
@@ -140,6 +146,16 @@ export default function App() {
       </header>
       <ShopNotice shop={shop} />
 
+      {app ? (
+        <section className="app-hero" id="top">
+          <p className="app-hero-motto" lang="hi">{brand.motto}</p>
+          <p className="app-hero-deal"><span>Free delivery</span> within {shop.free_delivery_km} km over ₹{shop.free_delivery_min}</p>
+          <div className="app-hero-cta">
+            <a className="btn btn-gold" href="#menu">Order now</a>
+            <a className="btn btn-ghost" href={`tel:${business.phone}`}>Call</a>
+          </div>
+        </section>
+      ) : (<>
       <section className="hero" id="top" ref={hero}>
         <motion.video ref={heroVideo} className="hero-video" style={{ y: videoY, scale: videoScale }} src={media('hero-mix.mp4')} poster={media('hero-mix-poster.jpg')} autoPlay muted loop playsInline />
         <div className="hero-shade" />
@@ -197,9 +213,11 @@ export default function App() {
         </div>
       </div>
 
-      <DeliveryBanner shop={shop} />
+      </>)}
 
-      <OurPromise />
+      {!app && <DeliveryBanner shop={shop} />}
+
+      {!app && <OurPromise />}
 
 
       <MyOrders orders={myOrders.orders} status={statuses} onOpen={openTracker} />
@@ -208,9 +226,9 @@ export default function App() {
 
       <Menu cart={cart} offersVersion={offersVersion} />
 
-      <Regulars localOrders={myOrders.orders.length} />
+ {!app && <Regulars localOrders={myOrders.orders.length} />}
 
-      <section className="reel" aria-labelledby="reel-title" ref={reel}>
+      {!app && <section className="reel" aria-labelledby="reel-title" ref={reel}>
         <motion.div className="reel-copy" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.6 }} variants={stagger(0.12)}>
           <h2 id="reel-title">
             <span className="reel-mask"><motion.span className="reel-line" variants={letter}>Park the bike.</motion.span></span>
@@ -221,7 +239,7 @@ export default function App() {
         <motion.div className="reel-frame" style={{ scale: reelScale, borderRadius: reelRadius }}>
           <video src={media('walkthrough.mp4')} poster={media('walkthrough-poster.jpg')} autoPlay muted loop playsInline />
         </motion.div>
-      </section>
+      </section>}
 
       <section className="visit" id="visit" aria-labelledby="visit-title">
         <motion.div className="visit-media" initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease }}>
@@ -266,21 +284,21 @@ export default function App() {
         </Reveal>
       </section>
 
-      <Gallery />
+      {!app && <Gallery />}
 
-      <Social lat={business.lat} lng={business.lng} />
+      {!app && <Social lat={business.lat} lng={business.lng} />}
 
-      <HeroSound />
+      {!app && <HeroSound />}
       <FavouritesPopup orders={myOrders.orders} cart={cart} accepting={shop.accepting_orders} onOpenCart={openCart} />
       <footer className="footer">
         <span className="brand">
           <img className="brand-mark" src={brand.logoUrl} alt="" width={96} height={43} />
           <Wordmark />
         </span>
-        <div className="dev-credit">
+        {!app && <div className="dev-credit">
           <span>Website & app designed and developed by <strong>{developer.name}</strong>, founder of <strong>{developer.company}</strong></span>
           <MA className="btn btn-ghost btn-sm" href={developer.contact} target="_blank" rel="noopener">💻 Want a website like this? Contact the developer</MA>
-        </div>
+        </div>}
       </footer>
 
       {cart.count === 0 && !cartOpen && openOrders.length > 0 && (

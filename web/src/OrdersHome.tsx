@@ -1,3 +1,4 @@
+import { ChefHat, Hourglass, IndianRupee, PauseCircle, Store } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { staffApi, type StaffOrder, type Totals } from './staffApi'
@@ -48,25 +49,25 @@ export function TodayStrip({ name, orders, goTo }: { name: string; orders: Staff
       </div>
       <div className="today-kpis">
         <MButton className={`kpi-tile ${shop && !shop.accepting_orders ? 'is-bad' : 'is-good'}`} onClick={() => goTo('shop')}>
-          <i aria-hidden="true">{shop && !shop.accepting_orders ? '⏸️' : '🟢'}</i>
+          <i aria-hidden="true">{shop && !shop.accepting_orders ? <PauseCircle size={22} /> : <Store size={22} />}</i>
           <span>Website orders</span>
           <b>{!shop ? '…' : shop.accepting_orders ? 'Open' : 'Paused'}</b>
           <small>{!shop ? '' : shop.accepting_orders ? 'taking orders' : 'tap to open again'}</small>
         </MButton>
         <MButton className="kpi-tile" onClick={() => goTo('dashboard')}>
-          <i aria-hidden="true">💰</i>
+          <i aria-hidden="true"><IndianRupee size={22} /></i>
           <span>Sales today</span>
           <b>{today ? rupees(today.revenue) : '…'}</b>
           <small>{today ? `${today.orders} ${today.orders === 1 ? 'order' : 'orders'}` : ''}</small>
         </MButton>
         <div className="kpi-tile">
-          <i aria-hidden="true">🔥</i>
+          <i aria-hidden="true"><ChefHat size={22} /></i>
           <span>In the kitchen</span>
           <b>{kitchen}</b>
           <small>{ready ? `${ready} ready or out` : 'none ready yet'}</small>
         </div>
         <div className={`kpi-tile ${unpaid.length ? 'is-warn' : ''}`}>
-          <i aria-hidden="true">🧾</i>
+          <i aria-hidden="true"><Hourglass size={22} /></i>
           <span>Payment pending</span>
           <b>{rupees(unpaidSum)}</b>
           <small>{unpaid.length ? `${unpaid.length} ${unpaid.length === 1 ? 'order' : 'orders'}` : 'all collected'}</small>

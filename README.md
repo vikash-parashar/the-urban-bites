@@ -51,7 +51,7 @@ Staff (`Authorization: Bearer <jwt>` from `POST /v1/owner/login {email, password
 - `POST /v1/owner/counter-sales` `{customer_name?, customer_phone?, payment_method, items? | amount}`: a walk-in sale, saved as completed and paid.
 - Owner order lists include `customer_orders` and `customer_badge` for each order's phone number.
 
-Order alerts with the screen closed (Web Push): `GET /v1/push/key` → `{public_key}` (empty when the server has no VAPID keys), `POST /v1/me/push` `{endpoint, keys: {p256dh, auth}, test?}`, `POST /v1/me/push/off` `{endpoint}`. New orders and customer cancels are pushed to every owner/admin device that turned alerts on; `web/public/sw.js` shows them. Works in Chrome/Edge/Firefox (Android, desktop) and on iPhone 16.4+ from the Home Screen app, not inside the Flutter app's WebView.
+Order alerts with the screen closed (Web Push): `GET /v1/push/key` → `{public_key}` (empty when the server has no VAPID keys), `POST /v1/me/push` `{endpoint, keys: {p256dh, auth}, test?}`, `POST /v1/me/push/off` `{endpoint}`. New orders and customer cancels are pushed to every owner/admin device that turned alerts on; `web/public/sw.js` shows them. For staff using Chrome/Edge/Firefox (Android, desktop) or iPhone 16.4+ from the Home Screen; the Android app gets the same alerts through Firebase (`FIREBASE_SERVICE_ACCOUNT`), and every staff alert goes to both.
 
 Customers can cancel (`POST /v1/orders/{id}/cancel {t}`) until the owner sets the cooking time; after that only the owner can.
 

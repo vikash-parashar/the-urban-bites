@@ -144,6 +144,16 @@ export async function uploadVoiceNote(o: PlacedOrder, note: Blob): Promise<void>
   if (!res.ok) throw new Error("Your order is placed, but the voice note didn't send. Type the note or call us.")
 }
 
+/** In the app: this phone gets a notification when the order is being made, ready or on its way. */
+export async function registerOrderPush(o: Pick<PlacedOrder, 'id' | 'track_token'>, token: string) {
+  if (!API_URL || !o.track_token) return
+  await fetch(`${API_URL}/v1/orders/${o.id}/push-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ t: o.track_token, token }),
+  })
+}
+
 export async function trackOrder(o: PlacedOrder): Promise<Tracking> {
   if (!API_URL) return previewTracking(o)
   const res = await fetch(`${API_URL}/v1/orders/${o.id}?t=${o.track_token}`, { cache: 'no-store' })

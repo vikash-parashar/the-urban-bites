@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { cookingKey, firstName, say, sayText, setVoiceOn, spokenNumber, voiceOn, type VoiceKey } from './voice'
 import { play } from './sounds'
 import type { OrderStatus, PlacedOrder } from './api'
-import { isPreview, cancelOrder } from './api'
+import { isPreview, cancelOrder, registerOrderPush } from './api'
+import { onPushToken } from './push'
 import { useNow, useTracking } from './orders'
 import { rupees } from './menu'
 import { fetchBadge, type Badge } from './shop'
@@ -89,6 +90,8 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
   const { data, error, clockOffset, refresh } = useTracking(order)
   const [badge, setBadge] = useState<Badge | null>(null)
   const finished = data?.status === 'completed'
+  const { id: orderId, track_token: trackToken } = order
+  useEffect(() => onPushToken((t) => { registerOrderPush({ id: orderId, track_token: trackToken }, t).catch(() => {}) }), [orderId, trackToken])
   useEffect(() => {
     if (!phone) return
     fetchBadge(phone, finished ? 1 : 0).then(setBadge).catch(() => {})

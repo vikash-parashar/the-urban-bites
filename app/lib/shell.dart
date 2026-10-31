@@ -11,7 +11,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+import 'push.dart';
+
 const lastAreaStaffKey = 'ub-last-area-staff';
+
+// The website's colours need Chrome 111+ (CSS color-mix). Android System WebView updates from the Play Store.
+const _minChrome = 111;
 
 /// WebShell shows the live website full screen and handles everything around it.
 class WebShell extends StatefulWidget {
@@ -30,7 +35,11 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
   int _progress = 0;
   bool _offline = false;
   bool _onStaff = false;
+  // Android System WebView too old for the website (no updates on some old phones): ask to update it.
+  int? _oldWebView;
   DateTime? _lastBack;
+  String? _pushToken;
+  final _subs = <StreamSubscription<String>>[];
 
   String get _start => widget.startOnStaff ? '${widget.site}/?app=staff#staff' : '${widget.site}/';
 
@@ -50,6 +59,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       ..setNavigationDelegate(NavigationDelegate(
         onProgress: (p) => setState(() => _progress = p),
         onPageStarted: (_) => setState(() => _offline = false),
+        onPageFinished: (_) => _sendPushToken(),
         onUrlChange: (c) => _onUrl(c.url),
         onNavigationRequest: _onNavigate,
         onWebResourceError: (e) {
@@ -58,12 +68,20 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
         },
       ));
 
-    _web.getUserAgent().then((ua) => _web.setUserAgent('${ua ?? ''} UrbanBitesApp/2.0'));
+    // The website shows its simpler app layout when it sees "UrbanBitesApp" in the user agent, so set it
+    // before the first page loads.
+    _web.getUserAgent().then((ua) async {
+      await _web.setUserAgent('${ua ?? ''} UrbanBitesApp/2.0');
+      final chrome = int.tryParse(RegExp(r'Chrome/(\d+)').firstMatch(ua ?? '')?.group(1) ?? '');
+      if (Platform.isAndroid && chrome != null && chrome < _minChrome && mounted) setState(() => _oldWebView = chrome);
+    }).catchError((_) {}).whenComplete(() => _web.loadRequest(Uri.parse(_start)));
 
     final p = _web.platform;
     if (p is AndroidWebViewController) {
       // Android: the order bell and voice can ring without a first tap.
       p.setMediaPlaybackRequiresUserGesture(false);
+      // The phone's "font size" setting would otherwise blow up the layout on some phones.
+      p.setTextZoom(100);
       p.setGeolocationPermissionsPromptCallbacks(onShowPrompt: (req) async {
         final ok = await _ask(Permission.locationWhenInUse);
         return GeolocationPermissionsResponse(allow: ok, retain: ok);
@@ -73,12 +91,35 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
       p.setAllowsBackForwardNavigationGestures(true);
     }
 
-    _web.loadRequest(Uri.parse(_start));
+    _setupPush();
+  }
+
+  // Push: get this phone's token, hand it to the website, and open the right screen when a
+  // notification is tapped while the app is in the background.
+  Future<void> _setupPush() async {
+    _subs.add(Push.tokenRefresh.listen((t) {
+      _pushToken = t;
+      _sendPushToken();
+    }));
+    _subs.add(Push.taps.listen((open) {
+      _web.loadRequest(Uri.parse(open == '#staff' ? '${widget.site}/?app=staff#staff' : '${widget.site}/'));
+    }));
+    _pushToken = await Push.token();
+    _sendPushToken();
+  }
+
+  void _sendPushToken() {
+    final t = _pushToken;
+    if (t == null || !RegExp(r'^[A-Za-z0-9_:\-]+$').hasMatch(t)) return;
+    _web.runJavaScript("window.ubPushToken='$t';window.dispatchEvent(new Event('ub-push-token'));").catchError((_) {});
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    for (final s in _subs) {
+      s.cancel();
+    }
     WakelockPlus.disable();
     super.dispose();
   }
@@ -163,6 +204,7 @@ class _WebShellState extends State<WebShell> with WidgetsBindingObserver {
             if (_progress < 100 && !_offline)
               Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator(value: _progress / 100, minHeight: 3, color: const Color(0xFFF6B445), backgroundColor: Colors.transparent)),
             if (_offline) _Offline(onRetry: () { setState(() => _offline = false); _web.reload(); }),
+            if (_oldWebView != null) _OldWebView(version: _oldWebView!, onSkip: () => setState(() => _oldWebView = null)),
           ]),
         ),
       ),
@@ -197,6 +239,47 @@ class _Offline extends StatelessWidget {
           child: const Text('Try again', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
         ),
       ]),
+    );
+  }
+}
+
+class _OldWebView extends StatelessWidget {
+  const _OldWebView({required this.version, required this.onSkip});
+  final int version;
+  final VoidCallback onSkip;
+
+  Future<void> _update() async {
+    const id = 'com.google.android.webview';
+    final ok = await launchUrl(Uri.parse('market://details?id=$id'), mode: LaunchMode.externalApplication).catchError((_) => false);
+    if (!ok) await launchUrl(Uri.parse('https://play.google.com/store/apps/details?id=$id'), mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0A0A10),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(28),
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('🔄', style: TextStyle(fontSize: 52)),
+          const SizedBox(height: 12),
+          const Text('One quick update', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Anton', fontSize: 28, color: Color(0xFFF7F0E1), letterSpacing: 1)),
+          const SizedBox(height: 8),
+          Text(
+            'This phone has an old "Android System WebView" (version $version). Update it from the Play Store, then open the app again.\n\nफ़ोन में "Android System WebView" पुराना है। Play Store से अपडेट करो जी।',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, color: Color(0xFFA4ABD0), height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _update,
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF6B445), foregroundColor: const Color(0xFF0B1033), padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14)),
+            child: const Text('Update in Play Store', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          ),
+          TextButton(onPressed: onSkip, child: const Text('Try anyway', style: TextStyle(color: Color(0xFFA4ABD0)))),
+        ]),
+      ),
     );
   }
 }

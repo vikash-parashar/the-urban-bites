@@ -1,8 +1,8 @@
 // Order alerts while the staff screen is closed (Web Push). The browser keeps a push subscription
 // even with every tab closed; the API sends new orders and customer cancels to it, and public/sw.js
 // shows them as notifications. Works in Chrome/Edge/Firefox on Android and desktop, and on iPhone
-// (iOS 16.4+) once "UB Orders" is added to the Home Screen. It does not work inside the Flutter
-// app's WebView, so there we point the owner to Chrome.
+// (iOS 16.4+) once "UB Orders" is added to the Home Screen. Inside the Android app none of this
+// is needed: the app rings through Firebase (see push.ts).
 import { useCallback, useEffect, useState } from 'react'
 import { inApp, isIOS, isStandalone } from './install'
 import { staffApi } from './staffApi'
@@ -10,7 +10,7 @@ import { staffApi } from './staffApi'
 export type PushState = 'loading' | 'unsupported' | 'in-app' | 'ios-install' | 'server-off' | 'denied' | 'off' | 'on'
 
 let keyCache: Promise<string> | null = null
-const serverKey = () => (keyCache ??= staffApi.pushKey().then((r) => r.public_key).catch(() => { keyCache = null; return '' }))
+const serverKey = () => (keyCache ??= staffApi.webPushKey().then((r) => r.public_key).catch(() => { keyCache = null; return '' }))
 
 const supported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 
@@ -32,7 +32,7 @@ async function current(): Promise<PushSubscription | null> {
 
 async function send(sub: PushSubscription, test: boolean) {
   const j = sub.toJSON()
-  await staffApi.pushSubscribe({ endpoint: j.endpoint!, keys: { p256dh: j.keys!.p256dh, auth: j.keys!.auth }, test })
+  await staffApi.webPushSubscribe({ endpoint: j.endpoint!, keys: { p256dh: j.keys!.p256dh, auth: j.keys!.auth }, test })
 }
 
 export async function pushState(): Promise<PushState> {
@@ -68,7 +68,7 @@ export async function enablePush(): Promise<PushState> {
 export async function disablePush(): Promise<PushState> {
   const sub = await current().catch(() => null)
   if (sub) {
-    await staffApi.pushUnsubscribe(sub.endpoint).catch(() => {})
+    await staffApi.webPushUnsubscribe(sub.endpoint).catch(() => {})
     await sub.unsubscribe().catch(() => {})
   }
   return 'off'

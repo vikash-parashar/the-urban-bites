@@ -2,136 +2,161 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
-// pushKey hands the browser the VAPID public key it needs to subscribe. Empty when push isn't set up,
-// so the staff screen can hide the "alerts when closed" switch.
-func (s *Server) pushKey(w http.ResponseWriter, _ *http.Request) {
-	key := ""
-	if s.Push.Configured() {
-		key = s.Push.PublicKey
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"public_key": key})
-}
+// ---- saving tokens ----
 
-// pushSubscribe saves this browser's subscription for the signed-in staff member. The staff screen
-// also re-sends it quietly on every visit, so a subscription the browser rotated is picked up.
-func (s *Server) pushSubscribe(w http.ResponseWriter, r *http.Request) {
+// staffPushToken: the app on a staff phone registers itself after sign-in, so new orders ring it while closed.
+func (s *Server) staffPushToken(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		// Test: send a "alerts are on" ping, when the owner has just pressed the switch.
-		Test     bool   `json:"test"`
-		Endpoint string `json:"endpoint"`
-		Keys     struct {
-			P256dh string `json:"p256dh"`
-			Auth   string `json:"auth"`
-		} `json:"keys"`
+		Token string `json:"token"`
 	}
 	if err := decode(r, &in); err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	if !s.Push.Configured() {
-		writeErr(w, r, errInvalid("order alerts aren't set up on the server yet"))
-		return
+	var err error
+	if r.Method == http.MethodDelete {
+		err = s.Store.DeleteStaffPushToken(r.Context(), staffFrom(r).ID, in.Token)
+	} else {
+		err = s.Store.SaveStaffPushToken(r.Context(), staffFrom(r).ID, in.Token)
 	}
-	sub := store.PushSub{Endpoint: in.Endpoint, P256dh: in.Keys.P256dh, Auth: in.Keys.Auth}
-	if err := s.Store.SavePushSub(r.Context(), staffFrom(r).ID, sub, r.UserAgent()); err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	if !in.Test {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	// A test ping, so the owner sees straight away that it works on this phone.
-	s.Push.Notify(context.WithoutCancel(r.Context()), []store.PushSub{sub}, push.Message{
-		Title: "Order alerts are on ✅",
-		Body:  "New orders will ring here even when the app is closed.",
-		URL:   "./?app=staff#staff",
-		Tag:   "alerts-on",
-		TTL:   5 * time.Minute,
-	})
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// pushUnsubscribe drops this browser's subscription (alerts turned off, or signing out).
-func (s *Server) pushUnsubscribe(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		Endpoint string `json:"endpoint"`
-	}
-	if err := decode(r, &in); err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	if err := s.Store.DeletePushSub(r.Context(), in.Endpoint); err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// notifyStaff pushes m to the owner's and admin's devices. Call it after the response is written:
-// the response is flushed first where the server allows it, and the send waits at most a few
-// seconds so it still completes on Lambda. Failures are logged; the order itself is already saved.
-func (s *Server) notifyStaff(w http.ResponseWriter, r *http.Request, m push.Message) {
-	if !s.Push.Configured() {
-		return
-	}
-	if f, ok := w.(http.Flusher); ok {
-		f.Flush()
-	}
-	ctx := context.WithoutCancel(r.Context())
-	subs, err := s.Store.PushSubsForRoles(ctx, "owner", "admin")
 	if err != nil {
-		slog.ErrorContext(ctx, "push subscriptions", "err", err)
+		writeErr(w, r, err)
 		return
 	}
-	for _, e := range s.Push.Notify(ctx, subs, m) {
-		if err := s.Store.DeletePushSub(ctx, e); err != nil {
-			slog.WarnContext(ctx, "delete expired push subscription", "err", err)
-		}
-	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// newOrderMessage: "🔔 New order #42 · ₹480" / "Rahul · Pickup · 2× Paneer Tikka, Naan".
-func newOrderMessage(o *store.Order) push.Message {
-	var items []string
-	for i, l := range o.Items {
-		if i == 3 {
-			items = append(items, fmt.Sprintf("+%d more", len(o.Items)-3))
-			break
-		}
-		items = append(items, fmt.Sprintf("%d× %s", l.Qty, l.Name))
+// orderPushToken: a customer's app asks to hear about this order (needs the order's tracking token).
+func (s *Server) orderPushToken(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		T     string `json:"t"`
+		Token string `json:"token"`
 	}
-	how := "Pickup"
+	if err := decode(r, &in); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	o, err := s.Store.Order(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(in.T), []byte(o.TrackToken)) != 1 {
+		writeErr(w, r, store.ErrNotFound)
+		return
+	}
+	if err := s.Store.SaveOrderPushToken(r.Context(), o.ID, in.Token); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---- sending ----
+
+// pushTo sends in the background, so a slow Firebase never holds up an order. Dead tokens are forgotten.
+func (s *Server) pushTo(tokens func(context.Context) ([]string, error), m push.Message) {
+	if !s.Push.Enabled() {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		list, err := tokens(ctx)
+		if err != nil {
+			slog.Error("push tokens", "err", err)
+			return
+		}
+		for _, t := range list {
+			err := s.Push.Send(ctx, t, m)
+			if errors.Is(err, push.ErrDeadToken) {
+				_ = s.Store.ForgetPushToken(ctx, t)
+			} else if err != nil {
+				slog.Warn("push send", "err", err)
+			}
+		}
+	}()
+}
+
+func (s *Server) pushStaff(m push.Message, roles ...string) {
+	s.webPushStaff(m, roles...)
+	s.pushTo(func(ctx context.Context) ([]string, error) { return s.Store.StaffPushTokens(ctx, roles...) }, m)
+}
+
+func (s *Server) pushCustomer(orderID string, m push.Message) {
+	s.pushTo(func(ctx context.Context) ([]string, error) { return s.Store.OrderPushTokens(ctx, orderID) }, m)
+}
+
+func modeHi(o *store.Order) string {
 	if o.Fulfilment == "delivery" {
-		how = "Delivery"
+		return "डिलीवरी"
 	}
-	return push.Message{
-		Title: fmt.Sprintf("🔔 New order #%d · ₹%d", o.Number, o.Total),
-		Body:  fmt.Sprintf("%s · %s · %s\nTap to set the cooking time.", o.CustomerName, how, strings.Join(items, ", ")),
-		URL:   "./?app=staff#staff",
-		Tag:   "order-" + o.ID,
-		Kind:  "new_order",
-		TTL:   2 * time.Hour,
-	}
+	return "पिकअप"
 }
 
-func cancelledMessage(o *store.Order) push.Message {
-	return push.Message{
-		Title: fmt.Sprintf("❌ Order #%d cancelled by customer", o.Number),
-		Body:  fmt.Sprintf("%s cancelled. Don't make it.", o.CustomerName),
-		URL:   "./?app=staff#staff",
-		Tag:   "order-" + o.ID,
-		Kind:  "cancelled",
-		TTL:   time.Hour,
+func (s *Server) pushNewOrder(o *store.Order) {
+	s.pushStaff(push.Message{
+		Title:   fmt.Sprintf("🛎️ नया ऑर्डर #%d", o.Number),
+		Body:    fmt.Sprintf("%s जी · %s · ₹%d", o.CustomerName, modeHi(o), o.Total),
+		Channel: push.ChannelOrders, Open: "#staff", Tag: fmt.Sprintf("order-%d", o.Number),
+	}, "owner", "admin")
+}
+
+func (s *Server) pushCustomerCancelled(o *store.Order) {
+	s.pushStaff(push.Message{
+		Title:   fmt.Sprintf("❌ ऑर्डर #%d कैंसल", o.Number),
+		Body:    fmt.Sprintf("%s जी ने ऑर्डर कैंसल कर दिया", o.CustomerName),
+		Channel: push.ChannelOrders, Open: "#staff", Tag: fmt.Sprintf("order-%d", o.Number),
+	}, "owner", "admin")
+}
+
+// pushOrderChange tells the customer (and riders, for a delivery that is ready) what changed.
+func (s *Server) pushOrderChange(before, after *store.Order) {
+	tag := fmt.Sprintf("order-%d", after.Number)
+	msg := func(title, body string) push.Message {
+		return push.Message{Title: title, Body: body, Channel: push.ChannelUpdates, Open: "#", Tag: tag}
+	}
+	if after.Status == before.Status {
+		// The cooking time was set or changed.
+		if after.PrepMinutes != nil && (before.PrepMinutes == nil || *before.PrepMinutes != *after.PrepMinutes) &&
+			after.Status != "ready" && after.Status != "out_for_delivery" && after.Status != "completed" && after.Status != "cancelled" {
+			s.pushCustomer(after.ID, msg(fmt.Sprintf("👨‍🍳 ऑर्डर #%d बन रहा है", after.Number),
+				fmt.Sprintf("लगभग %d मिनट में तैयार हो जायेगा जी", *after.PrepMinutes)))
+		}
+		return
+	}
+	switch after.Status {
+	case "ready":
+		body := "काउंटर पे आ के ले लो जी"
+		if after.Fulfilment == "delivery" {
+			body = "जल्दी ही डिलीवरी के लिए निकलेगा"
+			if after.RiderID == nil {
+				s.pushStaff(push.Message{
+					Title:   fmt.Sprintf("🛵 डिलीवरी तैयार #%d", after.Number),
+					Body:    fmt.Sprintf("%s जी · ₹%d · खोल के ऑर्डर ले लो", after.CustomerName, after.Total),
+					Channel: push.ChannelOrders, Open: "#staff", Tag: tag,
+				}, "delivery")
+			}
+		}
+		s.pushCustomer(after.ID, msg(fmt.Sprintf("✅ थारा ऑर्डर #%d तैयार सै!", after.Number), body))
+	case "out_for_delivery":
+		s.pushCustomer(after.ID, msg(fmt.Sprintf("🛵 ऑर्डर #%d रास्ते में सै", after.Number), "डिलीवरी पार्टनर निकल गया जी"))
+	case "cancelled":
+		if after.CancelledBy != nil && *after.CancelledBy == "owner" {
+			s.pushCustomer(after.ID, msg(fmt.Sprintf("ऑर्डर #%d कैंसल हो गया", after.Number), "कोई सवाल हो तो दुकान पे फ़ोन करो जी"))
+		}
 	}
 }
