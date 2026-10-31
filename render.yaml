@@ -20,6 +20,12 @@ services:
       # Link in "forgot password" emails.
       - key: SITE_URL
         value: https://theurbanbites.in
+      # Order alerts with the staff screen closed (Web Push). Make a pair once with
+      # `cd api && go run ./cmd/seed -vapid`, paste both in the Render dashboard, and keep them.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
       # Password reset emails go through Brevo (free, 300 a day). Fill these in the Render dashboard.
       - key: BREVO_API_KEY
         sync: false

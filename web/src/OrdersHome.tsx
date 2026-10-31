@@ -112,7 +112,7 @@ export function PickHint() {
           </motion.li>
         ))}
       </ol>
-      <p className="pick-tip">🔔 Keep this page open. The bell rings and the tab shows a count for every new order.</p>
+      <p className="pick-tip">🔔 With this page open, the bell rings and the tab shows a count for every new order. Turn on 📲 alerts to get them with it closed too.</p>
     </div>
   )
 }

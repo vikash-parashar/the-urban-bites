@@ -92,6 +92,7 @@ func (s *Server) pushTo(tokens func(context.Context) ([]string, error), m push.M
 }
 
 func (s *Server) pushStaff(m push.Message, roles ...string) {
+	s.webPushStaff(m, roles...)
 	s.pushTo(func(ctx context.Context) ([]string, error) { return s.Store.StaffPushTokens(ctx, roles...) }, m)
 }
 

@@ -23,14 +23,16 @@ import (
 	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/ratelimit"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
+	"github.com/vikash-parashar/urban-bites/api/internal/webpush"
 )
 
 type Server struct {
 	Store          *store.Store
 	Auth           *auth.Service
 	Mail           *mail.Sender
-	Push           *push.Sender // nil: phone notifications off
-	SiteURL        string       // the website, for links in emails
+	Push           *push.Sender    // nil: phone notifications off
+	WebPush        *webpush.Sender // browser alerts for staff outside the app; unconfigured = off
+	SiteURL        string          // the website, for links in emails
 	AllowedOrigins []string
 
 	loginLimit  ratelimit.Limiter
@@ -72,6 +74,7 @@ func (s *Server) Routes() http.Handler {
 		r.Post("/orders/{id}/cancel", s.customerCancel)
 		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
 		r.Post("/orders/{id}/push-token", s.orderPushToken)
+		r.Get("/push/key", s.webPushKey)
 		r.Get("/shop", s.getShop)
 		r.Get("/offers", s.liveOffers)
 		r.Get("/badge", s.badge)
@@ -90,6 +93,8 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/me/logout-all", s.logoutAll)
 			r.Post("/me/push-token", s.staffPushToken)
 			r.Delete("/me/push-token", s.staffPushToken)
+			r.Post("/me/push", s.webPushSubscribe)
+			r.Post("/me/push/off", s.webPushUnsubscribe)
 			r.Get("/staff/orders/{id}/voice", s.voiceNote)
 
 			// Delivery partners (the owner and admin can open these too).
@@ -240,6 +245,11 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 // logoutAll signs this account out on every phone and tablet (a lost phone).
 func (s *Server) logoutAll(w http.ResponseWriter, r *http.Request) {
 	if err := s.Store.SignOutEverywhere(r.Context(), staffFrom(r).ID); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	// A lost phone shouldn't keep showing new orders on its lock screen.
+	if err := s.Store.DeleteUserWebPushSubs(r.Context(), staffFrom(r).ID); err != nil {
 		writeErr(w, r, err)
 		return
 	}

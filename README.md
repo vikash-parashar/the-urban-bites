@@ -51,6 +51,10 @@ Staff (`Authorization: Bearer <jwt>` from `POST /v1/owner/login {email, password
 - `POST /v1/owner/counter-sales` `{customer_name?, customer_phone?, payment_method, items? | amount}`: a walk-in sale, saved as completed and paid.
 - Owner order lists include `customer_orders` and `customer_badge` for each order's phone number.
 
+Order alerts with the screen closed (Web Push): `GET /v1/push/key` → `{public_key}` (empty when the server has no VAPID keys), `POST /v1/me/push` `{endpoint, keys: {p256dh, auth}, test?}`, `POST /v1/me/push/off` `{endpoint}`. New orders and customer cancels are pushed to every owner/admin device that turned alerts on; `web/public/sw.js` shows them. For staff using Chrome/Edge/Firefox (Android, desktop) or iPhone 16.4+ from the Home Screen; the Android app gets the same alerts through Firebase (`FIREBASE_SERVICE_ACCOUNT`), and every staff alert goes to both.
+
+Customers can cancel (`POST /v1/orders/{id}/cancel {t}`) until the owner sets the cooking time; after that only the owner can.
+
 Admin only: `GET /v1/admin/users`, `POST /v1/admin/users {email, name, role, password}`, `PATCH /v1/admin/users/{id} {active?, password?, role?, name?}`.
 
 Statuses: `placed → preparing → ready | out_for_delivery → completed`, or `cancelled`.
@@ -59,7 +63,7 @@ Statuses: `placed → preparing → ready | out_for_delivery → completed`, or 
 
 - Domain `theurbanbites.in`; nameservers on Cloudflare (free).
 - Website: Cloudflare Pages, build command `npm run build`, output `web/dist`, env `VITE_API_URL=https://api.theurbanbites.in`.
-- API: `./deploy/aws-api.sh` does all of this (needs `DATABASE_URL`, `JWT_SECRET`). By hand: `GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap ./cmd/api`, zip, Lambda runtime `provided.al2023`, API Gateway HTTP API with custom domain `api.theurbanbites.in` (ACM cert). Env: `DATABASE_URL`, `JWT_SECRET` (long random), `ALLOWED_ORIGINS=https://theurbanbites.in`.
+- API: `./deploy/aws-api.sh` does all of this (needs `DATABASE_URL`, `JWT_SECRET`). By hand: `GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap ./cmd/api`, zip, Lambda runtime `provided.al2023`, API Gateway HTTP API with custom domain `api.theurbanbites.in` (ACM cert). Env: `DATABASE_URL`, `JWT_SECRET` (long random), `ALLOWED_ORIGINS=https://theurbanbites.in`, and for closed-screen order alerts `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` from `go run ./cmd/seed -vapid` (make once, keep).
 - Database: Neon free Postgres (`DATABASE_URL` with `sslmode=require`). Migrations run on startup.
 
 Colours follow Indian time: Cream Day 6:00–18:30 IST, Charcoal Gold at night (`web/src/theme.ts`). Add `?pick=1` to compare all six themes.

@@ -2233,3 +2233,9 @@ button.kpi-tile:hover { border-color: var(--gold); }
   .in-app .dish-badge, .in-app .dish-tile span:last-child { display: none; }
 }
 .in-app .menu { padding-top: 24px; }
+
+/* Browser order alerts (Web Push) under the orders board tools */
+.push-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin: 0.25rem 0 0.75rem; padding: 0.6rem 0.8rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; background: color-mix(in srgb, currentColor 7%, transparent); }
+.push-bar p { margin: 0; flex: 1 1 14rem; }
+.push-bar.is-on { background: none; padding: 0 0.1rem; opacity: 0.8; font-size: 0.85rem; }
+.push-bar .error { flex-basis: 100%; }

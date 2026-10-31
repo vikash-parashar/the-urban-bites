@@ -17,6 +17,7 @@ import (
 	"github.com/vikash-parashar/urban-bites/api/internal/mail"
 	"github.com/vikash-parashar/urban-bites/api/internal/push"
 	"github.com/vikash-parashar/urban-bites/api/internal/store"
+	"github.com/vikash-parashar/urban-bites/api/internal/webpush"
 )
 
 func main() {
@@ -46,6 +47,11 @@ func main() {
 			From:     os.Getenv("MAIL_FROM"),
 			FromName: env("MAIL_FROM_NAME", "The Urban Bites"),
 		},
+		WebPush: &webpush.Sender{
+			PublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
+			PrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
+			Subject:    env("VAPID_SUBJECT", env("SITE_URL", "https://the-urban-bites.onrender.com")),
+		},
 		SiteURL:        env("SITE_URL", "https://the-urban-bites.onrender.com"),
 		AllowedOrigins: strings.Split(env("ALLOWED_ORIGINS", "*"), ","),
 	}
@@ -56,6 +62,9 @@ func main() {
 	}
 	if !srv.Mail.Configured() {
 		slog.Warn("BREVO_API_KEY or MAIL_FROM not set: password reset emails are written to the log instead")
+	}
+	if !srv.WebPush.Configured() {
+		slog.Warn("VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY not set: browser order alerts (outside the app) are off")
 	}
 	handler := srv.Routes()
 
