@@ -33,11 +33,17 @@ func (s *Server) riderAction(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	o, err := s.Store.RiderUpdate(r.Context(), chi.URLParam(r, "id"), staffFrom(r).ID, in.Action, in.CashCollected)
+	before, err := s.Store.Order(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
+	o, err := s.Store.RiderUpdate(r.Context(), before.ID, staffFrom(r).ID, in.Action, in.CashCollected)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	s.pushOrderChange(before, o)
 	writeJSON(w, http.StatusOK, o)
 }
 

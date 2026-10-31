@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'push.dart';
 import 'shell.dart';
 import 'splash.dart';
 
@@ -21,8 +22,11 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
   final prefs = await SharedPreferences.getInstance();
+  await Push.init();
   // Staff who used the orders screen last time land back on it; customers land on the menu.
-  final staff = prefs.getBool(lastAreaStaffKey) ?? false;
+  // A tapped "new order" notification always opens the orders screen.
+  final opened = await Push.openedFrom();
+  final staff = opened == '#staff' || (opened == null && (prefs.getBool(lastAreaStaffKey) ?? false));
   final shell = WebShell(site: siteUrl, startOnStaff: staff, prefs: prefs);
   runApp(UrbanBitesApp(home: SplashScreen(next: shell)));
 }

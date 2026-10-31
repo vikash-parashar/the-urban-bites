@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { onPushToken } from './push'
+import { Bell, BellOff, Bike, CircleHelp, KeyRound, LogOut, ReceiptText, Settings, ShieldOff, ShoppingBag, Tag, TrendingUp, Users, UtensilsCrossed, Wallet, type LucideIcon } from 'lucide-react'
 import { loadSession, signOut, signOutEverywhere, staffApi, type Staff, type StaffAccount, type StaffOrder, type OrderChange } from './staffApi'
 import { rupees } from './menu'
 import { CustomerTag, OffersEditor, ShopSettings, sourceLabel, useGuard, WalkIn } from './StaffExtras'
@@ -46,6 +48,8 @@ export default function StaffApp({ hash }: { hash: string }) {
   // "Ram Ram ji" once a day when staff open the area.
   const signedIn = !!user && !user.must_change_password
   useEffect(() => (signedIn ? greetOnce('staff_welcome') : undefined), [signedIn])
+  // In the app: register this phone so orders ring it even when the app is closed.
+  useEffect(() => (signedIn ? onPushToken((t) => { staffApi.pushToken(t).catch(() => {}) }) : undefined), [signedIn, user?.id])
 
   if (hash.startsWith('#staff/reset')) {
     const token = new URLSearchParams(hash.split('?')[1] ?? '').get('token') ?? ''
@@ -59,11 +63,13 @@ export default function StaffApp({ hash }: { hash: string }) {
   // The owner runs the day (orders, walk-ins, sales, sold-out dishes, pausing orders); the admin sets everything else.
   const isAdmin = user.role === 'admin'
   const isRider = user.role === 'delivery'
-  const tabs: [Tab, string, string][] = isRider
-    ? [['deliveries', 'Deliveries', '🛵']]
+  // Five plain tabs for the owner, no "More" menu: take orders, bill walk-ins, see sales, mark dishes
+  // sold out, and settings (pause orders, alert sounds, rider logins).
+  const tabs: [Tab, string, LucideIcon][] = isRider
+    ? [['deliveries', 'Deliveries', Bike]]
     : isAdmin
-    ? [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['offers', 'Offers', '🏷️'], ['menu', 'Menu', '🍽️'], ['expenses', 'Expenses', '💸'], ['shop', 'Shop', '🏪'], ['riders', 'Riders', '🛵'], ['staff', 'Staff', '👥']]
-    : [['orders', 'Orders', '🧾'], ['dashboard', 'Sales', '📈'], ['walkin', 'Walk-in', '🚶'], ['menu', 'Sold out', '🍽️'], ['shop', 'Shop', '🏪'], ['riders', 'Riders', '🛵']]
+    ? [['orders', 'Orders', ReceiptText], ['walkin', 'Walk-in', ShoppingBag], ['dashboard', 'Sales', TrendingUp], ['menu', 'Menu', UtensilsCrossed], ['offers', 'Offers', Tag], ['expenses', 'Expenses', Wallet], ['shop', 'Settings', Settings], ['riders', 'Riders', Bike], ['staff', 'Staff', Users]]
+    : [['orders', 'Orders', ReceiptText], ['walkin', 'Walk-in', ShoppingBag], ['dashboard', 'Sales', TrendingUp], ['menu', 'Sold out', UtensilsCrossed], ['shop', 'Settings', Settings]]
   const shown: Tab = isRider ? 'deliveries' : tab
   // Phones get a bottom tab bar: up to 5 slots, the rest behind "More".
   const primary = tabs.length > 5 ? tabs.slice(0, 4) : tabs
@@ -80,15 +86,15 @@ export default function StaffApp({ hash }: { hash: string }) {
           <Wordmark />
         </a>
         <nav className="staff-tabs" role="tablist" aria-label="Staff sections">
-          {tabs.map(([id, label, emoji]) => (
+          {tabs.map(([id, label, Icon]) => (
             <MButton key={id} role="tab" aria-selected={shown === id} className="tab" data-tour={id} onClick={() => setTab(id)} whileHover={{ y: 0, scale: 1 }}>
-              <span><i className="tab-emoji" aria-hidden="true">{emoji}</i>{label}{id === 'orders' && feed.newCount > 0 && <b className="tab-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}</span>
+              <span><Icon className="tab-ico" size={18} strokeWidth={2.2} aria-hidden="true" />{label}{id === 'orders' && feed.newCount > 0 && <b className="tab-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}</span>
             </MButton>
           ))}
         </nav>
         {!isRider && (
           <button className="help-btn" data-tour="help" onClick={() => setTouring(true)} aria-label="How to use this screen">
-            <span aria-hidden="true">❓</span><span className="help-txt">How to use</span>
+            <CircleHelp size={20} strokeWidth={2.2} aria-hidden="true" /><span className="help-txt">How to use</span>
           </button>
         )}
         <div className="staff-who">
@@ -106,9 +112,9 @@ export default function StaffApp({ hash }: { hash: string }) {
               <div className="acct-scrim" onClick={() => setAcctOpen(false)} />
               <div className="acct-menu" role="menu">
                 <p className="acct-who"><b>{user.name}</b><span>{roleName(user.role)}</span></p>
-                <button role="menuitem" onClick={() => { setAcctOpen(false); setChanging(true) }}>🔑 Change password</button>
-                <button role="menuitem" className="acct-out" onClick={() => { signOut(); setUser(null) }}>↩ Sign out</button>
-                <button role="menuitem" className="acct-out" onClick={() => { setAcctOpen(false); signOutEverywhere().catch(() => {}).finally(() => setUser(null)) }}>⛔ Sign out on all devices</button>
+                <button role="menuitem" onClick={() => { setAcctOpen(false); setChanging(true) }}><KeyRound size={18} aria-hidden="true" /> Change password</button>
+                <button role="menuitem" className="acct-out" onClick={() => { signOut(); setUser(null) }}><LogOut size={18} aria-hidden="true" /> Sign out</button>
+                <button role="menuitem" className="acct-out" onClick={() => { setAcctOpen(false); signOutEverywhere().catch(() => {}).finally(() => setUser(null)) }}><ShieldOff size={18} aria-hidden="true" /> Sign out on all devices</button>
               </div>
             </>
           )}
@@ -123,26 +129,27 @@ export default function StaffApp({ hash }: { hash: string }) {
         {!isRider && tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
         {shown === 'deliveries' && <RiderBoard onSignedOut={onSignedOut} meId={user.id} />}
         {!isRider && shown === 'riders' && <Riders onSignedOut={onSignedOut} />}
-        {!isRider && tab === 'orders' && <Orders feed={feed} all={all} setAll={setAll} onSignedOut={onSignedOut} name={user.name} goTo={setTab} />}
+        {!isRider && tab === 'orders' && <Orders feed={feed} setAll={setAll} onSignedOut={onSignedOut} name={user.name} goTo={setTab} />}
         {!isRider && tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
         {!isRider && tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
         {!isRider && tab === 'menu' && <MenuAdmin onSignedOut={onSignedOut} canEdit={isAdmin} />}
         {!isRider && tab === 'expenses' && isAdmin && <Expenses onSignedOut={onSignedOut} />}
         {!isRider && tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={isAdmin} />}
+        {!isRider && !isAdmin && tab === 'shop' && <Riders onSignedOut={onSignedOut} />}
         {!isRider && tab === 'staff' && isAdmin && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
       </main>
       {tabs.length > 1 && (
         <nav className="bottom-nav" aria-label="Staff sections">
-          {primary.map(([id, label, emoji]) => (
+          {primary.map(([id, label, Icon]) => (
             <button key={id} className="bn-item" data-tour={id} aria-current={shown === id ? 'page' : undefined} onClick={() => go(id)}>
-              <i aria-hidden="true">{emoji}</i>
+              <i aria-hidden="true"><Icon size={22} strokeWidth={2.2} /></i>
               <span>{label}</span>
               {id === 'orders' && feed.newCount > 0 && <b className="bn-badge" aria-label={`${feed.newCount} new`}>{feed.newCount}</b>}
             </button>
           ))}
           {more.length > 0 && (
             <button className="bn-item" data-tour="more" aria-current={inMore ? 'page' : undefined} aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)}>
-              <i aria-hidden="true">{inMore ? more.find(([id]) => id === shown)![2] : '☰'}</i>
+              <i aria-hidden="true">{(() => { const M = inMore ? more.find(([id]) => id === shown)![2] : Settings; return <M size={22} strokeWidth={2.2} /> })()}</i>
               <span>{inMore ? more.find(([id]) => id === shown)![1] : 'More'}</span>
             </button>
           )}
@@ -153,9 +160,9 @@ export default function StaffApp({ hash }: { hash: string }) {
         <>
           <div className="acct-scrim more-scrim" onClick={() => setMoreOpen(false)} />
           <div className="more-sheet" role="menu" aria-label="More sections">
-            {more.map(([id, label, emoji]) => (
+            {more.map(([id, label, Icon]) => (
               <button key={id} role="menuitem" aria-current={shown === id ? 'page' : undefined} onClick={() => go(id)}>
-                <i aria-hidden="true">{emoji}</i><span>{label}</span>
+                <i aria-hidden="true"><Icon size={22} strokeWidth={2.2} /></i><span>{label}</span>
               </button>
             ))}
           </div>
@@ -250,7 +257,7 @@ function useOrderFeed(onSignedOut: () => void, all: boolean, enabled: boolean) {
   return { orders, offset, error, load, newCount, sound, setSound }
 }
 
-function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; all: boolean; setAll: (v: boolean) => void; onSignedOut: () => void; name: string; goTo: (t: Tab) => void }) {
+function Orders({ feed, setAll, onSignedOut, name, goTo }: { feed: Feed; setAll: (v: boolean) => void; onSignedOut: () => void; name: string; goTo: (t: Tab) => void }) {
   const { orders, offset, error, load, newCount, sound, setSound } = feed
   const [selected, setSelected] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('open')
@@ -258,16 +265,18 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
   const alerts = usePushAlerts(true)
 
   const current = orders.find((o) => o.id === selected) ?? null
+  // Six plain filters. "Ready" includes orders out for delivery; "Not paid" includes UPI payments to check;
+  // "Done" loads today's finished and cancelled orders too.
+  const isOpen = (o: StaffOrder) => o.status !== 'completed' && o.status !== 'cancelled'
   const groups: [string, string, (o: StaffOrder) => boolean][] = [
-    ['open', 'All open', (o) => o.status !== 'completed' && o.status !== 'cancelled'],
+    ['open', 'All', isOpen],
     ['placed', 'New', (o) => o.status === 'placed'],
     ['cooking', 'Cooking', (o) => o.status === 'accepted' || o.status === 'preparing'],
-    ['ready', 'Ready', (o) => o.status === 'ready'],
-    ['out', 'On the way', (o) => o.status === 'out_for_delivery'],
+    ['ready', 'Ready', (o) => o.status === 'ready' || o.status === 'out_for_delivery'],
     ['unpaid', 'Not paid', (o) => o.payment_status !== 'paid' && o.status !== 'cancelled'],
-    ['upi', 'Check UPI', (o) => o.payment_method === 'online' && !!o.payment_ref && o.payment_status !== 'paid' && o.status !== 'cancelled'],
+    ['done', 'Done', (o) => !isOpen(o)],
   ]
-  if (all) groups.push(['done', 'Done', (o) => o.status === 'completed'], ['cancelled', 'Cancelled', (o) => o.status === 'cancelled'])
+  const pick = (id: string) => { setFilter(id); setAll(id === 'done') }
   const test = groups.find((g) => g[0] === filter)?.[2] ?? (() => true)
   const shown = orders.filter(test)
 
@@ -282,13 +291,12 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
     <div className={`board ${current ? 'has-sel' : ''}`}>
       <div className="board-list">
         <div className="board-head">
-          <h2 className="staff-h">{all ? 'All orders' : 'Open orders'}</h2>
+          <h2 className="staff-h">{filter === 'done' ? 'Finished today' : 'Orders'}</h2>
           <div className="board-tools">
-            <label className="check"><input id="show-all" type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show done</label>
-            <MButton className={`btn btn-ghost btn-sm sound-btn ${sound ? '' : 'is-off'}`} onClick={() => setSound(!sound)} aria-pressed={sound}>
-              {sound ? '🔔 Sound on' : '🔕 Sound off'}
+            <MButton className={`pill-btn sound-btn ${sound ? '' : 'is-off'}`} onClick={() => setSound(!sound)} aria-pressed={sound}
+              aria-label={sound ? 'Order sound is on. Tap to mute' : 'Order sound is off. Tap to turn on'} title={sound ? 'Sound on' : 'Sound off'}>
+              {sound ? <Bell size={20} strokeWidth={2.2} /> : <BellOff size={20} strokeWidth={2.2} />}<span>{sound ? 'Sound on' : 'Muted'}</span>
             </MButton>
-            <button type="button" className="link-btn" onClick={() => goTo('shop')}>Change sound</button>
           </div>
         </div>
         <AlertsBar alerts={alerts} />
@@ -302,15 +310,13 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
             <MButton className="new-alert" onClick={() => setFilter('placed')} animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 1.4, repeat: Infinity }}>
               🔔 {newCount === 1 ? '1 new order' : `${newCount} new orders`} · tap a card and set the time to accept
             </MButton>
-          ) : (
-            <span className="menu-sub">No new orders waiting.</span>
-          )}
+          ) : null}
         </div>
         <div className="order-filters" role="radiogroup" aria-label="Show orders">
           {groups.map(([id, label, f]) => {
             const n = orders.filter(f).length
-            return <MButton key={id} role="radio" aria-checked={filter === id} className={`size ${id === 'placed' && n ? 'hot' : ''}`} onClick={() => setFilter(id)}
-              animate={id === 'placed' && n ? { scale: [1, 1.08, 1] } : { scale: 1 }} transition={id === 'placed' && n ? { duration: 1.6, repeat: Infinity } : undefined}>{label} <b>{n}</b></MButton>
+            return <MButton key={id} role="radio" aria-checked={filter === id} className={`size ${id === 'placed' && n ? 'hot' : ''}`} onClick={() => pick(id)}
+              animate={id === 'placed' && n ? { scale: [1, 1.08, 1] } : { scale: 1 }} transition={id === 'placed' && n ? { duration: 1.6, repeat: Infinity } : undefined}>{label}{id !== 'done' && <b>{n}</b>}</MButton>
           })}
         </div>
         {(error || updErr) && <p className="error" role="alert">{updErr || error}</p>}
@@ -347,14 +353,13 @@ function Orders({ feed, all, setAll, onSignedOut, name, goTo }: { feed: Feed; al
 }
 
 // AlertsBar: order alerts on this phone/tablet even when the site or app is closed (Web Push).
-// Off: a nudge with a "Turn on" button. On: one quiet line. Elsewhere: how to get there.
+// Off: a nudge with a "Turn on" button. On: one quiet line. Elsewhere: how to get there. Hidden in
+// the Android app, which rings through Firebase instead.
 type Alerts = ReturnType<typeof usePushAlerts>
 
 function AlertsBar({ alerts: { state, busy, error, toggle } }: { alerts: Alerts }) {
-  const site = `${location.origin}${location.pathname}`.replace(/\/$/, '')
   const msg = state === 'on' ? '📲 This device rings for new orders even when the app is closed.'
     : state === 'off' ? '📲 Get new orders on this phone even when the app is closed.'
-    : state === 'in-app' ? `📲 This app can only ring while it is open. For alerts with it closed, open ${site}/#staff in Chrome, tap Install ("UB Orders") and turn alerts on there.`
     : state === 'ios-install' ? '📲 iPhone: tap Share → Add to Home Screen, open "UB Orders" from the Home Screen, then turn alerts on.'
     : state === 'denied' ? '📲 Notifications are blocked for this site. Allow them in the browser\'s site settings (🔒 next to the address), then reload.'
     : ''

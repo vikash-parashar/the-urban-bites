@@ -8,9 +8,10 @@
 #   JWT_SECRET       long random string, e.g. `openssl rand -base64 48` (keep it; changing it signs everyone out)
 #   ALLOWED_ORIGINS  default https://theurbanbites.in,https://www.theurbanbites.in
 #   AWS_REGION       default ap-south-1 (Mumbai)
-#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY  order alerts with the staff screen closed (Web Push). Make a pair
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY  order alerts with the staff screen closed, in a browser
+#                    or the installed web app (Web Push; the Android app uses Firebase). Make a pair
 #                    once with `cd api && go run ./cmd/seed -vapid` and keep it: a new pair means every
-#                    phone has to turn alerts on again. Without them, alerts only ring while the screen is open.
+#                    browser has to turn alerts on again. Without them, browser alerts are off.
 #   VAPID_SUBJECT    contact for the push services, default https://theurbanbites.in
 set -euo pipefail
 
@@ -47,7 +48,7 @@ cat > "$work/env.json" <<JSON
 {"Variables":{"DATABASE_URL":"$DATABASE_URL","JWT_SECRET":"$JWT_SECRET","ALLOWED_ORIGINS":"$ORIGINS",
  "VAPID_PUBLIC_KEY":"${VAPID_PUBLIC_KEY:-}","VAPID_PRIVATE_KEY":"${VAPID_PRIVATE_KEY:-}","VAPID_SUBJECT":"${VAPID_SUBJECT:-https://theurbanbites.in}"}}
 JSON
-[ -n "${VAPID_PRIVATE_KEY:-}" ] || echo "  ! VAPID keys not set: order alerts will only ring while the staff screen is open"
+[ -n "${VAPID_PRIVATE_KEY:-}" ] || echo "  ! VAPID keys not set: browser order alerts (outside the Android app) are off"
 
 echo "› Lambda function"
 if aws lambda get-function --function-name "$FN" >/dev/null 2>&1; then

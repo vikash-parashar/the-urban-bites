@@ -2,75 +2,89 @@ package push
 
 import (
 	"context"
-	"crypto/ecdh"
 	"crypto/rand"
-	"encoding/base64"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/vikash-parashar/urban-bites/api/internal/store"
 )
 
-func TestNotify(t *testing.T) {
-	pub, priv, err := GenerateKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []*http.Request
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got = append(got, r)
-		if strings.HasSuffix(r.URL.Path, "/gone") {
-			w.WriteHeader(http.StatusGone)
+func testSender(t *testing.T, fcm http.HandlerFunc) (*Sender, *int) {
+	t.Helper()
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	pemKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	tokenCalls := 0
+	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenCalls++
+		_ = r.ParseForm()
+		if r.Form.Get("grant_type") != "urn:ietf:params:oauth:grant-type:jwt-bearer" || r.Form.Get("assertion") == "" {
+			http.Error(w, "bad", 400)
 			return
 		}
-		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"access_token":"acc-1","expires_in":3600}`))
 	}))
-	defer srv.Close()
-
-	s := &Sender{PublicKey: pub, PrivateKey: priv, Subject: "mailto:test@example.com", Client: srv.Client()}
-	subs := []store.PushSub{browser(t, srv.URL+"/ok"), browser(t, srv.URL+"/gone")}
-	gone := s.Notify(context.Background(), subs, Message{Title: "New order", Tag: "order-1a2b-3c4d"})
-
-	if len(gone) != 1 || !strings.HasSuffix(gone[0], "/gone") {
-		t.Fatalf("gone = %v, want the /gone endpoint only", gone)
-	}
-	if len(got) != 2 {
-		t.Fatalf("push service got %d requests, want 2", len(got))
-	}
-	r := got[0]
-	if r.Header.Get("Urgency") != "high" || r.Header.Get("TTL") != "3600" || r.Header.Get("Topic") != "order-1a2b-3c4d" {
-		t.Errorf("headers: Urgency=%q TTL=%q Topic=%q", r.Header.Get("Urgency"), r.Header.Get("TTL"), r.Header.Get("Topic"))
-	}
-	if !strings.HasPrefix(r.Header.Get("Authorization"), "vapid t=") || r.Header.Get("Content-Encoding") != "aes128gcm" {
-		t.Errorf("not a VAPID aes128gcm push: %q %q", r.Header.Get("Authorization"), r.Header.Get("Content-Encoding"))
-	}
-}
-
-func TestNotifyOff(t *testing.T) {
-	if gone := (&Sender{}).Notify(context.Background(), []store.PushSub{{Endpoint: "https://x"}}, Message{}); gone != nil {
-		t.Fatal("an unconfigured sender should send nothing")
-	}
-}
-
-func TestTopic(t *testing.T) {
-	if got := topic("order-0b5c2e1a-1111-2222-3333-444455556666"); len(got) != 32 {
-		t.Errorf("topic too long: %q", got)
-	}
-	if got := topic("a b/c"); got != "abc" {
-		t.Errorf("topic(%q) = %q", "a b/c", got)
-	}
-}
-
-// browser makes the keys a real browser would hand over from PushManager.subscribe().
-func browser(t *testing.T, endpoint string) store.PushSub {
-	k, err := ecdh.P256().GenerateKey(rand.Reader)
+	t.Cleanup(tokenSrv.Close)
+	fcmSrv := httptest.NewServer(fcm)
+	t.Cleanup(fcmSrv.Close)
+	sa, _ := json.Marshal(map[string]string{"project_id": "ub-test", "client_email": "x@ub-test.iam.gserviceaccount.com",
+		"private_key": string(pemKey), "token_uri": tokenSrv.URL})
+	s, err := New(string(sa))
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret := make([]byte, 16)
-	rand.Read(secret)
-	enc := base64.RawURLEncoding.EncodeToString
-	return store.PushSub{Endpoint: endpoint, P256dh: enc(k.PublicKey().Bytes()), Auth: enc(secret)}
+	s.fcmURL = fcmSrv.URL
+	return s, &tokenCalls
+}
+
+func TestSend(t *testing.T) {
+	var got map[string]any
+	s, tokenCalls := testSender(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer acc-1" {
+			http.Error(w, "auth", 401)
+			return
+		}
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		w.Write([]byte(`{"name":"projects/ub-test/messages/1"}`))
+	})
+	m := Message{Title: "नया ऑर्डर #1001", Body: "Rahul जी", Channel: ChannelOrders, Open: "#staff", Tag: "order-1001"}
+	for range 2 {
+		if err := s.Send(context.Background(), "tok-123", m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if *tokenCalls != 1 {
+		t.Fatalf("access token should be cached, fetched %d times", *tokenCalls)
+	}
+	msg := got["message"].(map[string]any)
+	android := msg["android"].(map[string]any)
+	if msg["token"] != "tok-123" || android["priority"] != "HIGH" ||
+		android["notification"].(map[string]any)["channel_id"] != "orders" ||
+		msg["data"].(map[string]any)["open"] != "#staff" {
+		t.Fatalf("unexpected message: %v", got)
+	}
+}
+
+func TestDeadToken(t *testing.T) {
+	s, _ := testSender(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+		w.Write([]byte(`{"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}}`))
+	})
+	if err := s.Send(context.Background(), "old", Message{Title: "x"}); !errors.Is(err, ErrDeadToken) {
+		t.Fatalf("want ErrDeadToken, got %v", err)
+	}
+}
+
+func TestNewOff(t *testing.T) {
+	s, err := New("  ")
+	if err != nil || s.Enabled() {
+		t.Fatal("empty credentials should turn pushes off")
+	}
+	if _, err := New("not json"); err == nil || !strings.Contains(err.Error(), "FIREBASE") {
+		t.Fatalf("bad credentials should say so, got %v", err)
+	}
 }

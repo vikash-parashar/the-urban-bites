@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Bike, ChefHat, CircleCheck, Hand, MapPin, Navigation, Phone, Timer } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { staffApi, type RiderAction, type StaffAccount, type StaffOrder } from './staffApi'
@@ -233,6 +234,13 @@ export function NavView({ order, onClose }: { order: StaffOrder; onClose: () => 
 
 // ---------- the delivery partner's screen ----------
 
+// Rough bike time: roads are about 1.4× the straight line, 25 km/h in town, at least 3 minutes.
+const rideMinutes = (km: number) => Math.max(3, Math.round((km * 1.4 / 25) * 60))
+function readyIn(readyAt: string) {
+  const m = Math.round((Date.parse(readyAt) - Date.now()) / 60_000)
+  return m > 0 ? `Ready in ~${m} min` : 'Ready any moment'
+}
+
 export function RiderBoard({ onSignedOut, meId }: { onSignedOut: () => void; meId: string }) {
   const [orders, setOrders] = useState<StaffOrder[]>([])
   const [nav, setNav] = useState<StaffOrder | null>(null)
@@ -274,6 +282,8 @@ export function RiderBoard({ onSignedOut, meId }: { onSignedOut: () => void; meI
 
   const mine = orders.filter((o) => o.rider_id === meId && o.status !== 'completed')
   const free = orders.filter((o) => !o.rider_id && o.status !== 'completed')
+  const freeReady = free.filter((o) => o.status === 'ready')
+  const freeCooking = free.filter((o) => o.status !== 'ready')
   const done = orders.filter((o) => o.status === 'completed')
 
   const card = (o: StaffOrder) => {
@@ -288,27 +298,32 @@ export function RiderBoard({ onSignedOut, meId }: { onSignedOut: () => void; meI
           <span className="oc-total">{rupees(o.total)}</span>
         </div>
         <span className="oc-tags">
-          <PaymentTag method={o.payment_method} paid={!owe} ref={o.payment_ref} />
-          {owe && o.payment_method === 'cash' && <span className="tag tag-warn">Collect {rupees(o.total)} cash</span>}
+          {owe && o.payment_method === 'cash'
+            ? <span className="tag tag-warn">Collect {rupees(o.total)} cash</span>
+            : <PaymentTag method={o.payment_method} paid={!owe} ref={o.payment_ref} />}
         </span>
         <p className="rider-who"><strong>{o.customer_name}</strong>{o.customer_city ? ` · ${o.customer_city}` : ''}<br /><span className="menu-sub">{o.address}</span></p>
-        {o.delivery_km != null && <p className="menu-sub">About {o.delivery_km.toFixed(1)} km from the cart (straight line)</p>}
+        <p className="rider-facts">
+          {o.delivery_km != null && <span><MapPin size={16} aria-hidden="true" /> {o.delivery_km.toFixed(1)} km</span>}
+          {o.delivery_km != null && <span><Timer size={16} aria-hidden="true" /> ~{rideMinutes(o.delivery_km)} min ride</span>}
+          {!ready && !out && o.ready_at && <span><ChefHat size={16} aria-hidden="true" /> {readyIn(o.ready_at)}</span>}
+        </p>
         <p className="oc-items">{o.items.map((l) => `${l.qty}× ${l.name}`).join(', ')}</p>
         {o.note && <p className="note">Note: {o.note}</p>}
         {o.status !== 'completed' && (
           <div className="rider-actions">
-            {!o.rider_id && <MButton className="btn btn-gold" onClick={() => act(o, 'take')}>🙋 I'll deliver this</MButton>}
+            {!o.rider_id && <MButton className="btn btn-gold" onClick={() => act(o, 'take')}><Hand size={18} aria-hidden="true" /> I'll deliver this</MButton>}
             {o.rider_id && !out && (
-              <MButton className="btn btn-gold" onClick={() => act(o, 'start')}>{ready ? '🛵 Picked up · start trip' : '🛵 Start trip (food not marked ready)'}</MButton>
+              <MButton className="btn btn-gold" onClick={() => act(o, 'start')}><Bike size={18} aria-hidden="true" /> {ready ? 'Picked up · start trip' : 'Start trip (food not marked ready)'}</MButton>
             )}
-            {o.delivery_lat != null && o.delivery_lng != null && <MButton className="btn btn-ghost" onClick={() => setNav(o)}>🧭 Navigate</MButton>}
-            {o.customer_phone && <MA className="btn btn-ghost" href={`tel:${o.customer_phone}`}>📞 Call</MA>}
+            {o.delivery_lat != null && o.delivery_lng != null && <MButton className="btn btn-ghost" onClick={() => setNav(o)}><Navigation size={18} aria-hidden="true" /> Map</MButton>}
+            {o.customer_phone && <MA className="btn btn-ghost" href={`tel:${o.customer_phone}`}><Phone size={18} aria-hidden="true" /> Call</MA>}
             {out && (
               <span className="rider-deliver">
                 {owe && o.payment_method === 'cash' && (
                   <label className="check"><input type="checkbox" checked={!!cash[o.id]} onChange={(e) => setCash((c) => ({ ...c, [o.id]: e.target.checked }))} /> Got {rupees(o.total)} cash</label>
                 )}
-                <MButton className="btn btn-ok" onClick={() => act(o, 'delivered')}>✅ Delivered</MButton>
+                <MButton className="btn btn-ok" onClick={() => act(o, 'delivered')}><CircleCheck size={18} aria-hidden="true" /> Delivered</MButton>
               </span>
             )}
             {o.rider_id && !out && <MButton className="btn btn-ghost btn-sm" onClick={() => act(o, 'leave')}>Give it back</MButton>}
@@ -322,10 +337,22 @@ export function RiderBoard({ onSignedOut, meId }: { onSignedOut: () => void; meI
     <div className="rider">
       {nav && <NavView order={nav} onClose={() => setNav(null)} />}
       {error && <p className="error" role="alert">{error}</p>}
-      <h2 className="staff-h">My deliveries</h2>
-      {mine.length ? mine.map(card) : <p className="menu-sub">Nothing in your bag. Take an order below.</p>}
-      <h2 className="staff-h">Waiting for a rider {free.length > 0 && <b className="tab-badge">{free.length}</b>}</h2>
-      {free.length ? free.map(card) : <p className="menu-sub">{loaded ? 'No delivery orders waiting. New ones ring here within 10 seconds.' : 'Loading…'}</p>}
+      <div className="rider-sum" aria-label="Today at a glance">
+        <span><b>{mine.length}</b>With you</span>
+        <span><b>{freeReady.length}</b>Ready to go</span>
+        <span><b>{freeCooking.length}</b>Being cooked</span>
+        <span><b>{done.length}</b>Delivered</span>
+      </div>
+      {mine.length > 0 && <h2 className="staff-h">With you</h2>}
+      {mine.map(card)}
+      <h2 className="staff-h">Ready to go {freeReady.length > 0 && <b className="tab-badge">{freeReady.length}</b>}</h2>
+      {freeReady.length ? freeReady.map(card) : <p className="menu-sub">{loaded ? 'Nothing ready right now. New ones ring here.' : 'Loading…'}</p>}
+      {freeCooking.length > 0 && (
+        <>
+          <h2 className="staff-h">Being cooked</h2>
+          {freeCooking.map(card)}
+        </>
+      )}
       {done.length > 0 && (
         <>
           <h2 className="staff-h">Delivered today</h2>
