@@ -21,7 +21,7 @@ function brandPlugin(): Plugin {
   return {
     name: 'brand',
     transformIndexHtml: (html) => html
-      .replaceAll('%BRAND_NAME%', esc(brand.name)).replaceAll('%BRAND_DESCRIPTION%', esc(brand.description))
+      .replaceAll('%BRAND_SEO_TITLE%', esc(brand.seo_title)).replaceAll('%BRAND_NAME%', esc(brand.name)).replaceAll('%BRAND_DESCRIPTION%', esc(brand.description))
       .replaceAll('%BRAND_SHARE%', esc(brand.share)).replaceAll('%BRAND_DOMAIN%', esc(brand.domain)),
     configureServer(server) {
       server.middlewares.use('/manifest.webmanifest', (_req, res) => { res.setHeader('Content-Type', 'application/manifest+json'); res.end(manifest()) })
