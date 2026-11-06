@@ -7,4 +7,3 @@ app/android/local.properties
 app/android/.gradle/
 *.apk
 .neon
-config.bat
