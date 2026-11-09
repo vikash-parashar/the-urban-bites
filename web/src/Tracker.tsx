@@ -1,3 +1,4 @@
+import { AdSlot } from './Ads'
 import { useEffect, useState } from 'react'
 import { cookingKey, firstName, say, sayText, setVoiceOn, spokenNumber, voiceOn, type VoiceKey } from './voice'
 import { play } from './sounds'
@@ -225,6 +226,7 @@ export default function Tracker({ order, phone, shop }: { order: PlacedOrder; ph
       {data && data.payment_status === 'paid' && data.status !== 'cancelled' && (
         <p className="paybox-paid" role="status">✅ Bill paid · {rupees(data.total)} {(data.payment_method ?? order.payment_method) === 'online' ? 'by UPI' : 'in cash'}. Thank you!</p>
       )}
+      <AdSlot place="tracker" />
       {finished && social.googleReview && (
         <div className="tracker-review">
           <p><strong>Enjoyed it?</strong> A quick Google review helps a small cart a lot.</p>

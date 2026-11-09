@@ -253,8 +253,22 @@ export const staffApi = {
   endOffer: (id: string) => call<null>('POST', `/v1/owner/offers/${id}/end`),
   counterSale: (s: { customer_name?: string; customer_phone?: string; payment_method: string; amount?: number; items?: { item_id: string; size: string; qty: number }[] }) =>
     call<StaffOrder>('POST', '/v1/owner/counter-sales', s),
+  ads: () => call<{ ads: Ad[] }>('GET', '/v1/admin/ads'),
+  createAd: (a: AdInput) => call<Ad>('POST', '/v1/admin/ads', a),
+  updateAd: (id: string, a: AdInput) => call<Ad>('PUT', `/v1/admin/ads/${id}`, a),
+  deleteAd: (id: string) => call<null>('DELETE', `/v1/admin/ads/${id}`),
   users: () => call<{ users: StaffAccount[] }>('GET', '/v1/admin/users'),
   createUser: (u: { email: string; name: string; role: string; password: string }) => call<StaffAccount>('POST', '/v1/admin/users', u),
   updateUser: (id: string, u: { active?: boolean; password?: string; role?: string }) =>
     call<StaffAccount>('PATCH', `/v1/admin/users/${id}`, u),
+}
+
+export type Ad = {
+  id: string; title: string; body: string; cta: string; link_url: string; phone: string
+  place: 'home' | 'tracker' | 'staff'; active: boolean; starts_on: string | null; ends_on: string | null
+  sort: number; has_image: boolean; views: number; clicks: number; updated_at: string
+}
+export type AdInput = {
+  title: string; body: string; cta: string; link_url: string; phone: string; place: Ad['place']
+  active: boolean; starts_on?: string; ends_on?: string; sort: number; image: string
 }

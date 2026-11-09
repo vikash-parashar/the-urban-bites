@@ -75,6 +75,9 @@ func (s *Server) Routes() http.Handler {
 		r.Post("/orders/{id}/voice", s.uploadVoiceNote)
 		r.Post("/orders/{id}/push-token", s.orderPushToken)
 		r.Get("/push/key", s.webPushKey)
+		r.Get("/ads", s.liveAds)
+		r.Get("/ads/{id}/image", s.adImage)
+		r.Post("/ads/{id}/click", s.adClick)
 		r.Get("/shop", s.getShop)
 		r.Get("/offers", s.liveOffers)
 		r.Get("/badge", s.badge)
@@ -134,6 +137,10 @@ func (s *Server) Routes() http.Handler {
 					r.Get("/admin/users", s.listUsers)
 					r.Post("/admin/users", s.createUser)
 					r.Patch("/admin/users/{id}", s.updateUser)
+					r.Get("/admin/ads", s.allAds)
+					r.Post("/admin/ads", s.createAd)
+					r.Put("/admin/ads/{id}", s.updateAd)
+					r.Delete("/admin/ads/{id}", s.deleteAd)
 				})
 			})
 		})
@@ -193,8 +200,11 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-func decode(r *http.Request, v any) error {
-	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 64<<10))
+func decode(r *http.Request, v any) error { return decodeMax(r, v, 64<<10) }
+
+// decodeMax is decode with a bigger body limit, for requests that carry a photo.
+func decodeMax(r *http.Request, v any, limit int64) error {
+	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, limit))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
 		return fmt.Errorf("%w: %v", store.ErrInvalid, err)

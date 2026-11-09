@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { onPushToken } from './push'
-import { Bell, BellOff, Bike, CircleHelp, KeyRound, LogOut, ReceiptText, Settings, ShieldOff, ShoppingBag, Tag, TrendingUp, Users, UtensilsCrossed, Wallet, type LucideIcon } from 'lucide-react'
+import { Bell, BellOff, Bike, Megaphone, CircleHelp, KeyRound, LogOut, ReceiptText, Settings, ShieldOff, ShoppingBag, Tag, TrendingUp, Users, UtensilsCrossed, Wallet, type LucideIcon } from 'lucide-react'
 import { loadSession, signOut, signOutEverywhere, staffApi, type Staff, type StaffAccount, type StaffOrder, type OrderChange } from './staffApi'
 import { rupees } from './menu'
 import { CustomerTag, OffersEditor, ShopSettings, sourceLabel, useGuard, WalkIn } from './StaffExtras'
@@ -20,10 +20,11 @@ import { voiceNoteUrl } from './staffApi'
 import { EmptyOrders, PickHint, TodayStrip } from './OrdersHome'
 import Tour, { ownerSteps } from './Tour'
 import { usePushAlerts } from './pushAlerts'
+import { AdSlot, AdsManager } from './Ads'
 
 const PREP = [5, 10, 15, 20, 30, 45]
 
-type Tab = 'dashboard' | 'orders' | 'walkin' | 'offers' | 'menu' | 'expenses' | 'shop' | 'staff' | 'riders' | 'deliveries'
+type Tab = 'dashboard' | 'orders' | 'walkin' | 'offers' | 'menu' | 'expenses' | 'shop' | 'staff' | 'riders' | 'deliveries' | 'ads'
 
 // Staff area of the website (#staff): orders, menu, offers, sales dashboard and accounts.
 export default function StaffApp({ hash }: { hash: string }) {
@@ -68,7 +69,7 @@ export default function StaffApp({ hash }: { hash: string }) {
   const tabs: [Tab, string, LucideIcon][] = isRider
     ? [['deliveries', 'Deliveries', Bike]]
     : isAdmin
-    ? [['orders', 'Orders', ReceiptText], ['walkin', 'Walk-in', ShoppingBag], ['dashboard', 'Sales', TrendingUp], ['menu', 'Menu', UtensilsCrossed], ['offers', 'Offers', Tag], ['expenses', 'Expenses', Wallet], ['shop', 'Settings', Settings], ['riders', 'Riders', Bike], ['staff', 'Staff', Users]]
+    ? [['orders', 'Orders', ReceiptText], ['walkin', 'Walk-in', ShoppingBag], ['dashboard', 'Sales', TrendingUp], ['menu', 'Menu', UtensilsCrossed], ['offers', 'Offers', Tag], ['expenses', 'Expenses', Wallet], ['shop', 'Settings', Settings], ['riders', 'Riders', Bike], ['ads', 'Ads', Megaphone], ['staff', 'Staff', Users]]
     : [['orders', 'Orders', ReceiptText], ['walkin', 'Walk-in', ShoppingBag], ['dashboard', 'Sales', TrendingUp], ['menu', 'Sold out', UtensilsCrossed], ['shop', 'Settings', Settings]]
   const shown: Tab = isRider ? 'deliveries' : tab
   // Phones get a bottom tab bar: up to 5 slots, the rest behind "More".
@@ -129,6 +130,7 @@ export default function StaffApp({ hash }: { hash: string }) {
         {!isRider && tab === 'dashboard' && <DashboardView onSignedOut={onSignedOut} goTo={setTab} isAdmin={isAdmin} />}
         {shown === 'deliveries' && <RiderBoard onSignedOut={onSignedOut} meId={user.id} />}
         {!isRider && shown === 'riders' && <Riders onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'orders' && <AdSlot place="staff" />}
         {!isRider && tab === 'orders' && <Orders feed={feed} setAll={setAll} onSignedOut={onSignedOut} name={user.name} goTo={setTab} />}
         {!isRider && tab === 'walkin' && <WalkIn onSignedOut={onSignedOut} />}
         {!isRider && tab === 'offers' && isAdmin && <OffersEditor onSignedOut={onSignedOut} />}
@@ -136,6 +138,7 @@ export default function StaffApp({ hash }: { hash: string }) {
         {!isRider && tab === 'expenses' && isAdmin && <Expenses onSignedOut={onSignedOut} />}
         {!isRider && tab === 'shop' && <ShopSettings onSignedOut={onSignedOut} isAdmin={isAdmin} />}
         {!isRider && !isAdmin && tab === 'shop' && <Riders onSignedOut={onSignedOut} />}
+        {!isRider && tab === 'ads' && isAdmin && <AdsManager onSignedOut={onSignedOut} />}
         {!isRider && tab === 'staff' && isAdmin && <StaffAccounts me={user} onSignedOut={onSignedOut} />}
       </main>
       {tabs.length > 1 && (

@@ -14,6 +14,7 @@ import { greetOnce, sayFun } from './voice'
 import HeroSound from './HeroSound'
 import FavouritesPopup from './Favourites'
 import RopeNav from './RopeNav'
+import { AdSlot } from './Ads'
 import { DeliveryBanner, Offers, Promise as OurPromise, Regulars, ShopNotice, Social } from './Extras'
 import Intro from './Intro'
 import MyOrders from './MyOrders'
@@ -225,6 +226,8 @@ export default function App() {
       <Offers offers={offers} cart={cart} onOpenCart={openCart} />
 
       <Menu cart={cart} offersVersion={offersVersion} />
+
+      <AdSlot place="home" className="ad-wrap" />
 
  {!app && <Regulars localOrders={myOrders.orders.length} />}
 
