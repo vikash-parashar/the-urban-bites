@@ -129,13 +129,14 @@ func (s *Server) pushOrderChange(before, after *store.Order) {
 	msg := func(title, body string) push.Message {
 		return push.Message{Title: title, Body: body, Channel: push.ChannelUpdates, Open: "#", Tag: tag}
 	}
+	// The cooking time was set or changed. The staff screen sends it together with the move to
+	// "preparing", so this must not depend on the status staying the same.
+	if after.PrepMinutes != nil && (before.PrepMinutes == nil || *before.PrepMinutes != *after.PrepMinutes) &&
+		(after.Status == "placed" || after.Status == "accepted" || after.Status == "preparing") {
+		s.pushCustomer(after.ID, msg(fmt.Sprintf("👨‍🍳 ऑर्डर #%d बन रहा है", after.Number),
+			fmt.Sprintf("लगभग %d मिनट में तैयार हो जायेगा जी", *after.PrepMinutes)))
+	}
 	if after.Status == before.Status {
-		// The cooking time was set or changed.
-		if after.PrepMinutes != nil && (before.PrepMinutes == nil || *before.PrepMinutes != *after.PrepMinutes) &&
-			after.Status != "ready" && after.Status != "out_for_delivery" && after.Status != "completed" && after.Status != "cancelled" {
-			s.pushCustomer(after.ID, msg(fmt.Sprintf("👨‍🍳 ऑर्डर #%d बन रहा है", after.Number),
-				fmt.Sprintf("लगभग %d मिनट में तैयार हो जायेगा जी", *after.PrepMinutes)))
-		}
 		return
 	}
 	switch after.Status {
