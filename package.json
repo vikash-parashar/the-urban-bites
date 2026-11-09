@@ -1,8 +1,6 @@
 {
   "dependencies": {
     "@neon/config": "^1.9.4",
-    "@neon/env": "^1.6.5",
-    "dotenv": "^8.2.0",
-    "node-fetch": "^3.3.2"
+    "@neon/env": "^1.6.5"
   }
 }

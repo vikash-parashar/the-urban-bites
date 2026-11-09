@@ -1,0 +1,18 @@
+# Fails if the malware planted on 2026-11-03 and 2026-11-06 comes back (it rode in on merge commits).
+name: Guard
+on: [push, pull_request]
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for planted loader files and hooks
+        run: |
+          bad=0
+          for f in .env web/init .vscode/tasks.json config.bat; do
+            if [ -e "$f" ]; then echo "::error file=$f::$f must not be in the repo"; bad=1; fi
+          done
+          if git ls-files | grep -qiE '/public/fonts/|\.orc$'; then echo "::error::fake font folder is back"; bad=1; fi
+          if grep -nE '"(dev|build|start|pre[a-z]*|post[a-z]*|prepare)": *"[^"]*node +init' package.json web/package.json; then echo "::error::npm script runs node init"; bad=1; fi
+          if git grep -nE 'eval\(|files\.catbox\.moe|AUTH_API_KEY' -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' '*.json' ':!**/node_modules/**' ':!.github/**'; then echo "::error::remote-code loader found"; bad=1; fi
+          exit $bad
