@@ -47,6 +47,14 @@ services:
         value: https://the-urban-bites-api.onrender.com
       - key: NODE_VERSION
         value: "22"
+      # Google AdSense (optional). Publisher ID like ca-pub-1234567890123456 and a display ad unit's
+      # slot ID, both from adsense.google.com. Setting the publisher ID writes /ads.txt and Google's
+      # site-check tag into the build; ads only show once the admin ticks "Google AdSense ads" in
+      # Shop settings. Fill these in the Render dashboard, then redeploy.
+      - key: VITE_ADSENSE_CLIENT
+        sync: false
+      - key: VITE_ADSENSE_SLOT
+        sync: false
     headers:
       - path: /assets/*
         name: Cache-Control
