@@ -1,4 +1,5 @@
 import InstallApp from './InstallApp'
+import { adsenseSetup } from './Ads'
 import { EVENTS, SOUNDS, loadPrefs, play, savePrefs, type SoundId, type SoundPrefs } from './sounds'
 import { cleanMobile } from './kit'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
@@ -303,6 +304,19 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
     }, 'Payment options saved. The website shows them within a minute.')
   }
 
+  function saveAds(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    const url = String(f.get('sponsor_url') || '').trim()
+    const name = String(f.get('sponsor_name') || '').trim()
+    const sponsorOn = f.get('sponsor_enabled') === 'on'
+    if (sponsorOn && !name) return setMsg('Add the sponsor\'s name before turning the sponsor card on.')
+    patch({
+      ads_enabled: f.get('ads_enabled') === 'on', sponsor_enabled: sponsorOn,
+      sponsor_name: name, sponsor_text: String(f.get('sponsor_text') || '').trim(), sponsor_url: url,
+    }, 'Ad settings saved. The website shows them within a minute.')
+  }
+
   function setHere() {
     navigator.geolocation?.getCurrentPosition(
       (p) => patch({ cart_lat: Math.round(p.coords.latitude * 1e5) / 1e5, cart_lng: Math.round(p.coords.longitude * 1e5) / 1e5 }, 'Cart location saved. Delivery distances are measured from here.'),
@@ -384,6 +398,26 @@ export function ShopSettings({ onSignedOut, isAdmin }: { onSignedOut: () => void
             {[shop.accept_cash && 'Cash', shop.accept_upi && shop.upi_id && `UPI to ${shop.upi_id}`].filter(Boolean).join(' · ') || 'Cash'}. Managed by your website support team; call them to change these.
           </small></span>
         </div>
+      )}
+
+      {isAdmin && (
+        <form className="panel shop-form" onSubmit={saveAds} key={`ads-${shop.updated_at}`}>
+          <h3 className="panel-h">📣 Ads on the website <span className="tag-chip">Admin only</span></h3>
+          <p className="menu-sub">Ads show between sections of the home page only, never in the order drawer, checkout, order tracking or these staff screens. The owner can't see or change this.</p>
+          <label className="check"><input type="checkbox" name="ads_enabled" defaultChecked={shop.ads_enabled} /> Google AdSense ads on the website (not inside the app: Google doesn't allow AdSense there)</label>
+          <p className="menu-sub ads-status">
+            {adsenseSetup.ready
+              ? <>Publisher <code>{adsenseSetup.client}</code>{adsenseSetup.slot ? <>, ad unit <code>{adsenseSetup.slot}</code>.</> : <>. No ad unit ID yet, so only Google's site check runs; set VITE_ADSENSE_SLOT on Render to show ads.</>}</>
+              : <>AdSense isn't set up in this build yet. Set VITE_ADSENSE_CLIENT (ca-pub-…) and VITE_ADSENSE_SLOT on the Render static site, then redeploy.</>}
+          </p>
+          <label className="check"><input type="checkbox" name="sponsor_enabled" defaultChecked={shop.sponsor_enabled} /> Local sponsor card (website and app)</label>
+          <div className="add-staff">
+            <label className="field" htmlFor="ad-sp-name">Sponsor name<input id="ad-sp-name" name="sponsor_name" maxLength={60} placeholder="Sharma Motors, Julana" defaultValue={shop.sponsor_name} /></label>
+            <label className="field" htmlFor="ad-sp-url">Link <span className="opt">https://…, https://wa.me/91… or tel:+91…</span><input id="ad-sp-url" name="sponsor_url" maxLength={300} inputMode="url" autoComplete="off" pattern="(https://\S+|tel:\+?[0-9 \-]{6,20})" title="Starts with https:// or tel:" defaultValue={shop.sponsor_url} /></label>
+          </div>
+          <label className="field" htmlFor="ad-sp-text">One line about them <span className="opt">optional</span><input id="ad-sp-text" name="sponsor_text" maxLength={140} placeholder="Bike service and spare parts, 2 km from the cart" defaultValue={shop.sponsor_text} /></label>
+          <MButton className="btn btn-gold">Save ad settings</MButton>
+        </form>
       )}
 
       {isAdmin && <div className="me-row">

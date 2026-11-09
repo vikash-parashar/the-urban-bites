@@ -2239,3 +2239,37 @@ button.kpi-tile:hover { border-color: var(--gold); }
 .push-bar p { margin: 0; flex: 1 1 14rem; }
 .push-bar.is-on { background: none; padding: 0 0.1rem; opacity: 0.8; font-size: 0.85rem; }
 .push-bar .error { flex-basis: 100%; }
+
+/* Ad slots (Ads.tsx): a quiet, clearly labelled band between sections. No glow. */
+.ad-slot {
+  max-width: var(--wrap);
+  margin: 28px auto;
+  padding: 0 var(--gutter-r) 0 var(--gutter-l);
+  display: grid;
+  gap: 6px;
+}
+.ad-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ad-slot .adsbygoogle { min-height: 90px; border-radius: 12px; overflow: hidden; }
+/* Google had nothing to show: hide the whole slot instead of leaving a hole. */
+.ad-slot:has(ins[data-ad-status="unfilled"]) { display: none; }
+.sponsor-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--ink);
+}
+.sponsor-copy { min-width: 0; flex: 1 1 220px; }
+.sponsor-copy strong { font-size: 1.05rem; }
+.sponsor-copy p { margin: 2px 0 0; color: var(--muted); font-size: 0.95rem; line-height: 1.45; }
+.ads-status { font-size: 0.9rem; }
+.ads-status code { overflow-wrap: anywhere; }

@@ -22,6 +22,12 @@ export interface Shop {
   upi_name: string
   accept_cash: boolean
   accept_upi: boolean
+  // Ad slots (admin only). ads_enabled: Google AdSense on the website. sponsor_*: a local sponsor card.
+  ads_enabled: boolean
+  sponsor_enabled: boolean
+  sponsor_name: string
+  sponsor_text: string
+  sponsor_url: string
   updated_at?: string
 }
 
@@ -75,6 +81,11 @@ export const defaultShop: Shop = {
   upi_name: brand.name,
   accept_cash: true,
   accept_upi: true,
+  ads_enabled: false,
+  sponsor_enabled: false,
+  sponsor_name: '',
+  sponsor_text: '',
+  sponsor_url: '',
 }
 
 export const defaultTiers: Tier[] = [
@@ -103,10 +114,16 @@ async function get<T>(path: string): Promise<T> {
   return body as T
 }
 
+// The preview also shows a sample sponsor card so the ad slot can be seen.
+const previewShop: Shop = {
+  ...defaultShop, upi_id: 'demo.urbanbites@upi',
+  sponsor_enabled: true, sponsor_name: 'Your shop here', sponsor_text: 'Reach hungry customers on the Julana Bypass. Ask about a sponsor spot.', sponsor_url: 'tel:+918398907216',
+}
+
 // useShop loads the shop rules and today's offers once per visit.
 export function useShop() {
   // The preview shows UPI with a demo ID so the payment screen can be seen.
-  const [shop, setShop] = useState<Shop>(isPreview ? { ...defaultShop, upi_id: 'demo.urbanbites@upi' } : defaultShop)
+  const [shop, setShop] = useState<Shop>(isPreview ? previewShop : defaultShop)
   const [offers, setOffers] = useState<Offer[]>(isPreview ? sampleOffers : [])
   useEffect(() => {
     if (isPreview) return

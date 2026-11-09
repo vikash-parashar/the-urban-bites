@@ -25,6 +25,11 @@ type Shop struct {
 	UpiName          string    `json:"upi_name"`
 	AcceptCash       bool      `json:"accept_cash"`
 	AcceptUpi        bool      `json:"accept_upi"`
+	AdsEnabled       bool      `json:"ads_enabled"`
+	SponsorEnabled   bool      `json:"sponsor_enabled"`
+	SponsorName      string    `json:"sponsor_name"`
+	SponsorText      string    `json:"sponsor_text"`
+	SponsorURL       string    `json:"sponsor_url"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
@@ -32,10 +37,12 @@ func (s *Store) Shop(ctx context.Context) (*Shop, error) {
 	var sh Shop
 	err := s.db.QueryRow(ctx, `
 		SELECT accepting_orders, min_order_delivery, min_order_pickup, free_delivery_min, free_delivery_km::float8,
-			max_delivery_km::float8, delivery_fee, cart_lat, cart_lng, notice, upi_id, upi_name, accept_cash, accept_upi, updated_at
+			max_delivery_km::float8, delivery_fee, cart_lat, cart_lng, notice, upi_id, upi_name, accept_cash, accept_upi,
+			ads_enabled, sponsor_enabled, sponsor_name, sponsor_text, sponsor_url, updated_at
 		FROM shop_settings WHERE id = 1`).
 		Scan(&sh.AcceptingOrders, &sh.MinOrderDelivery, &sh.MinOrderPickup, &sh.FreeDeliveryMin, &sh.FreeDeliveryKm,
-			&sh.MaxDeliveryKm, &sh.DeliveryFee, &sh.CartLat, &sh.CartLng, &sh.Notice, &sh.UpiID, &sh.UpiName, &sh.AcceptCash, &sh.AcceptUpi, &sh.UpdatedAt)
+			&sh.MaxDeliveryKm, &sh.DeliveryFee, &sh.CartLat, &sh.CartLng, &sh.Notice, &sh.UpiID, &sh.UpiName, &sh.AcceptCash, &sh.AcceptUpi,
+			&sh.AdsEnabled, &sh.SponsorEnabled, &sh.SponsorName, &sh.SponsorText, &sh.SponsorURL, &sh.UpdatedAt)
 	return &sh, err
 }
 
@@ -54,13 +61,23 @@ type ShopUpdate struct {
 	UpiName          *string  `json:"upi_name"`
 	AcceptCash       *bool    `json:"accept_cash"`
 	AcceptUpi        *bool    `json:"accept_upi"`
+	AdsEnabled       *bool    `json:"ads_enabled"`
+	SponsorEnabled   *bool    `json:"sponsor_enabled"`
+	SponsorName      *string  `json:"sponsor_name"`
+	SponsorText      *string  `json:"sponsor_text"`
+	SponsorURL       *string  `json:"sponsor_url"`
 }
 
 // OwnerMay is true when the update only touches what the owner may change: pausing orders and the delivery range.
 func (u ShopUpdate) OwnerMay() bool {
 	return (u.AcceptingOrders != nil || u.MaxDeliveryKm != nil) && u.MinOrderDelivery == nil && u.MinOrderPickup == nil &&
 		u.FreeDeliveryMin == nil && u.FreeDeliveryKm == nil && u.DeliveryFee == nil && u.CartLat == nil && u.CartLng == nil &&
-		u.Notice == nil && !u.TouchesPayments()
+		u.Notice == nil && !u.TouchesPayments() && !u.TouchesAds()
+}
+
+// TouchesAds reports whether the update changes the ad slots (admin-only: the ad money goes to the admin).
+func (u ShopUpdate) TouchesAds() bool {
+	return u.AdsEnabled != nil || u.SponsorEnabled != nil || u.SponsorName != nil || u.SponsorText != nil || u.SponsorURL != nil
 }
 
 // TouchesPayments reports whether the update changes how the shop gets paid (admin-only fields).
@@ -117,6 +134,9 @@ func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 		}
 		u.UpiName = &v
 	}
+	if err := cleanSponsor(&u); err != nil {
+		return nil, err
+	}
 	if u.AcceptCash != nil || u.AcceptUpi != nil {
 		cur, err := s.Shop(ctx)
 		if err != nil {
@@ -149,15 +169,46 @@ func (s *Store) UpdateShop(ctx context.Context, u ShopUpdate) (*Shop, error) {
 			upi_name           = COALESCE($12, upi_name),
 			accept_cash        = COALESCE($13, accept_cash),
 			accept_upi         = COALESCE($14, accept_upi),
+			ads_enabled        = COALESCE($15, ads_enabled),
+			sponsor_enabled    = COALESCE($16, sponsor_enabled),
+			sponsor_name       = COALESCE($17, sponsor_name),
+			sponsor_text       = COALESCE($18, sponsor_text),
+			sponsor_url        = COALESCE($19, sponsor_url),
 			updated_at         = now()
 		WHERE id = 1`,
 		u.AcceptingOrders, u.MinOrderDelivery, u.MinOrderPickup, u.FreeDeliveryMin, u.FreeDeliveryKm,
-		u.MaxDeliveryKm, u.DeliveryFee, u.CartLat, u.CartLng, u.Notice, u.UpiID, u.UpiName, u.AcceptCash, u.AcceptUpi)
+		u.MaxDeliveryKm, u.DeliveryFee, u.CartLat, u.CartLng, u.Notice, u.UpiID, u.UpiName, u.AcceptCash, u.AcceptUpi,
+		u.AdsEnabled, u.SponsorEnabled, u.SponsorName, u.SponsorText, u.SponsorURL)
 	if err != nil {
 		return nil, err
 	}
 	return s.Shop(ctx)
 }
+
+// cleanSponsor trims the sponsor card fields and checks their lengths and the link.
+// The link must be https (or a tel:/WhatsApp link), so the card can't carry javascript: or a plain-http page.
+func cleanSponsor(u *ShopUpdate) error {
+	for _, f := range []struct {
+		v    **string
+		max  int
+		name string
+	}{{&u.SponsorName, 60, "sponsor name"}, {&u.SponsorText, 140, "sponsor line"}, {&u.SponsorURL, 300, "sponsor link"}} {
+		if *f.v == nil {
+			continue
+		}
+		t := strings.TrimSpace(**f.v)
+		if len(t) > f.max {
+			return fmt.Errorf("%w: %s is limited to %d characters", ErrInvalid, f.name, f.max)
+		}
+		*f.v = &t
+	}
+	if u.SponsorURL != nil && *u.SponsorURL != "" && !sponsorURLRe.MatchString(*u.SponsorURL) {
+		return fmt.Errorf("%w: sponsor link must start with https:// (a website or https://wa.me/ number) or tel:", ErrInvalid)
+	}
+	return nil
+}
+
+var sponsorURLRe = regexp.MustCompile(`^(https://[^\s<>"']+|tel:\+?[0-9 \-]{6,20})$`)
 
 // DistanceKm is the straight-line distance from the cart, or nil when either location is unknown.
 // Road distance is a little longer; the owner can see the figure on the order and call if needed.

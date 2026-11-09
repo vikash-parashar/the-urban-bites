@@ -24,6 +24,7 @@ import Wordmark from './Wordmark'
 import { developer, social } from './social'
 import { inApp } from './install'
 import { UserRound } from 'lucide-react'
+import { AdUnit, SponsorCard } from './Ads'
 
 // The opening waits for the intro card on the first visit of the session.
 function introDelay() {
@@ -226,6 +227,10 @@ export default function App() {
 
       <Menu cart={cart} offersVersion={offersVersion} />
 
+      {/* Ad slots (admin switches them on). Between sections only, never in the order drawer or checkout. */}
+      <SponsorCard shop={shop} />
+      <AdUnit shop={shop} />
+
  {!app && <Regulars localOrders={myOrders.orders.length} />}
 
       {!app && <section className="reel" aria-labelledby="reel-title" ref={reel}>
@@ -287,6 +292,8 @@ export default function App() {
       {!app && <Gallery />}
 
       {!app && <Social lat={business.lat} lng={business.lng} />}
+
+      {!app && <AdUnit shop={shop} />}
 
       {!app && <HeroSound />}
       <FavouritesPopup orders={myOrders.orders} cart={cart} accepting={shop.accepting_orders} onOpenCart={openCart} />
