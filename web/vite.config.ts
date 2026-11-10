@@ -34,11 +34,28 @@ function brandPlugin(): Plugin {
   }
 }
 
+// Google AdSense: when VITE_ADSENSE_CLIENT (ca-pub-…) is set at build time, write /ads.txt and the
+// google-adsense-account tag Google checks during site review. Ads still stay off until the admin turns
+// them on in Shop settings.
+function adsPlugin(): Plugin {
+  const client = (process.env.VITE_ADSENSE_CLIENT || '').trim()
+  const ok = /^ca-pub-\d{10,20}$/.test(client)
+  if (client && !ok) console.warn(`VITE_ADSENSE_CLIENT "${client}" doesn't look like ca-pub-1234567890123456; ads are left out of this build.`)
+  const pub = client.replace(/^ca-/, '')
+  return {
+    name: 'ads',
+    transformIndexHtml: (html) => ok ? html.replace('</head>', `    <meta name="google-adsense-account" content="${client}" />\n  </head>`) : html,
+    generateBundle() {
+      if (ok) this.emitFile({ type: 'asset', fileName: 'ads.txt', source: `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n` })
+    },
+  }
+}
+
 // Relative base so the build can be served from S3/CloudFront at any path.
 export default defineConfig({
   base: './',
   // Older phones: keep the JavaScript readable by Chrome/WebView 87+ (Android 7 phones that got updates).
   build: { target: ['es2020', 'chrome87', 'safari14'] },
-  plugins: [react(), brandPlugin()],
+  plugins: [react(), brandPlugin(), adsPlugin()],
   server: { fs: { allow: ['..'] } },
 })
